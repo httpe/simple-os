@@ -1,5 +1,6 @@
 ; extern print
 ; global print_hex
+; Taken from https://github.com/cfenollosa/os-tutorial/tree/master/05-bootsector-functions-strings
 
 ; receiving the data in 'dx'
 ; For the examples we'll assume that we're called with dx=0x1234

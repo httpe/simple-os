@@ -1,4 +1,5 @@
 ; global gdt_descriptor, CODE_SEG, DATA_SEG
+; Based on https://github.com/cfenollosa/os-tutorial/tree/master/09-32bit-gdt
 
 push CODE_SEG
 push DATA_SEG

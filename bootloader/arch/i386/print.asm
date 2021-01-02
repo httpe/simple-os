@@ -1,5 +1,5 @@
 ; global print, print_nl
-; from https://github.com/cfenollosa/os-tutorial/tree/master/05-bootsector-functions-strings
+; Taken from https://github.com/cfenollosa/os-tutorial/tree/master/05-bootsector-functions-strings
 
 ; real mode print using BIOS interrupt
 ; print at current cursor location

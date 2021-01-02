@@ -74,15 +74,6 @@ BEGIN_PM: ; after the switch we will get here
     mov ah, WHITE_ON_BLACK
     call print_pm ; Note that this will be written at the top left corner
 
-    ; mov dl, 0x34
-    ; call byte_to_hex_string
-    ; mov word [0x00100000], dx
-    ; mov byte [0x00100002], 0
-    ; mov edi, 15*80
-    ; mov esi, 0x00100000
-    ; call print_pm
-    ; jmp $
-
     ; test print_memory_hex
     mov esi, 0x7c00
     mov ecx, 32

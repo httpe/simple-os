@@ -1,3 +1,7 @@
+; global disk_load
+; Taken from https://github.com/cfenollosa/os-tutorial/blob/master/07-bootsector-disk/boot_sect_disk.asm
+
+
 ; load 'dh' sectors from drive 'dl' into ES:BX
 disk_load:
     pusha
