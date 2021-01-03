@@ -6,7 +6,7 @@ CC= ~/opt/cross/bin/i686-elf-gcc
 KERNEL_ROOT=../kernel
 KERNEL_BOOT_IMG=$(KERNEL_ROOT)/boot/kernel.bin
 # Pad the final binary to 8192 bytes (16 512 byte sectors)
-# This variable must be in sync with bootloader.asm, search "BOOTLOADER_MAX_SIZE" there
+# This variable must be in sync with: bootloader.asm and main.c, search "BOOTLOADER_MAX_SIZE" there
 BOOTLOADER_MAX_SIZE=8192
 
 # Start of the Makefile
@@ -47,7 +47,7 @@ bootloader.bin: $(OBJS)
 # Any line of script will terminate the make if the shell returns a non-zero exit code after executing it
 bootloader_padded.bin: bootloader.bin
 	# Make sure the bootloader is less than the max size and pad it to the max size
-	if [ "$(shell stat --format=%s bootloader.bin)" -lt "$(BOOTLOADER_MAX_SIZE)" ]; then exit 1; fi
+	if [ "$(shell stat --format=%s bootloader.bin)" -ge "$(BOOTLOADER_MAX_SIZE)" ]; then exit 1; fi
 	cp $< $@
 	fallocate -l $(BOOTLOADER_MAX_SIZE) $@
 
