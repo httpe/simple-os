@@ -89,6 +89,44 @@ void write_sectors_ATA_28bit_PIO(uint32_t LBA, uint8_t sector_count, uint16_t* w
     outb(0x1F7,0xE7);
 }
 
+
+uint8_t ATA_Identify(uint16_t* target)
+{
+	ATA_wait_BSY();
+    // select a target drive by sending 0xA0 for the master drive, or 0xB0 for the slave, to the "drive select" IO port (0x1F6)
+	outb(0x1F6,0xA0);
+    // Then set the Sectorcount, LBAlo, LBAmid, and LBAhi IO ports to 0 (port 0x1F2 to 0x1F5)
+	outb(0x1F2,0);
+	outb(0x1F3, 0);
+	outb(0x1F4, 0);
+	outb(0x1F5, 0);
+    // Then send the IDENTIFY command (0xEC) to the Command IO port (0x1F7
+	outb(0x1F7,0xEC);
+
+	// Then read the Status port (0x1F7) again. If the value read is 0, the drive does not exist.
+	ATA_delay_400ns();
+	uint8_t status = inb(0x1F7);
+	if(status == 0) return 1;
+	// For any other value: poll the Status port (0x1F7) until bit 7 (BSY, value = 0x80) clears.
+	// Because of some ATAPI drives that do not follow spec, at this point you need to check the LBAmid and LBAhi ports (0x1F4 and 0x1F5) 
+	// to see if they are non-zero. If so, the drive is not ATA, and you should stop polling.
+	while(inb(0x1F7)&STATUS_BSY)
+	{
+		if(inb(0x1F4)!=0 || inb(0x1F5)!=0) return 2;
+	};
+	
+	// Otherwise, continue polling one of the Status ports until bit 3 (DRQ, value = 8) sets, or until bit 0 (ERR, value = 1) sets.
+	ATA_wait_DRQ();
+
+	// At that point, if ERR is clear, the data is ready to read from the Data port (0x1F0). Read 256 16-bit values, and store them.
+	if((inb(0x1F7)&STATUS_ERR)) return 3;
+	for(int i=0;i<256;i++) 
+	{
+		target[i] = inw(0x1F0);
+	}
+	return 9;
+}
+
 static void ATA_delay_400ns() 
 {
     inb(0x1F7);
@@ -106,9 +144,9 @@ static void ATA_wait_BSY()   //Wait for BSY to be 0
 {
 	while(inb(0x1F7)&STATUS_BSY);
 }
-static void ATA_wait_DRQ()  //Wait fot DRQ to be 1
+static void ATA_wait_DRQ()  //Wait fot DRQ or ERR to be 1
 {
-	while(!(inb(0x1F7)&STATUS_RDY));
+	while(!(inb(0x1F7)&(STATUS_RDY|STATUS_ERR)));
 }
 
 #endif
