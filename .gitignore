@@ -1,2 +1,3 @@
 temp/
 bootloader/bootloader.bin
+*.o
