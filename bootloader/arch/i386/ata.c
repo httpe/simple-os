@@ -79,7 +79,7 @@ void write_sectors_ATA_28bit_PIO(uint32_t LBA, uint8_t sector_count, uint16_t* s
 // 
 // return: zero = success, otherwise failed
 // 
-uint8_t ATA_Identify(uint16_t* target)
+int8_t ATA_Identify(uint16_t* target)
 {
 	ATA_wait_BSY();
     // select a target drive by sending 0xA0 for the master drive, or 0xB0 for the slave, to the "drive select" IO port (0x1F6)
@@ -95,13 +95,13 @@ uint8_t ATA_Identify(uint16_t* target)
 	// Then read the Status port (0x1F7) again. If the value read is 0, the drive does not exist.
 	ATA_delay_400ns();
 	uint8_t status = inb(0x1F7);
-	if(status == 0) return 1;
+	if(status == 0) return -1;
 	// For any other value: poll the Status port (0x1F7) until bit 7 (BSY, value = 0x80) clears.
 	// Because of some ATAPI drives that do not follow spec, at this point you need to check the LBAmid and LBAhi ports (0x1F4 and 0x1F5) 
 	// to see if they are non-zero. If so, the drive is not ATA, and you should stop polling.
 	while(inb(0x1F7)&STATUS_BSY)
 	{
-		if(inb(0x1F4)!=0 || inb(0x1F5)!=0) return 2;
+		if(inb(0x1F4)!=0 || inb(0x1F5)!=0) return -2;
 	};
 	
 	// Otherwise, continue polling one of the Status ports until bit 3 (DRQ, value = 8) sets, or until bit 0 (ERR, value = 1) sets.
@@ -115,6 +115,19 @@ uint8_t ATA_Identify(uint16_t* target)
 	}
 	return 0;
 }
+
+uint32_t get_total_28bit_sectors() {
+    uint16_t identifier[256];
+    uint8_t ret = ATA_Identify(identifier);
+    if(ret != 0) {
+        return ret;
+    }
+    // uint16_t 60 & 61 taken as a uint32_t contain the total number of 28 bit LBA addressable sectors on the drive. (If non-zero, the drive supports LBA28.)
+    // uint16_t 100 through 103 taken as a uint64_t contain the total number of 48 bit addressable sectors on the drive. (Probably also proof that LBA48 is supported.)
+    uint32_t max_sector_28bit_lba = (((uint32_t) identifier[61]) << 16) + identifier[60];
+    return max_sector_28bit_lba;
+}
+
 
 // Nedd to add 400ns delays before all the status registers are up to date
 // https://wiki.osdev.org/ATA_PIO_Mode#400ns_delays

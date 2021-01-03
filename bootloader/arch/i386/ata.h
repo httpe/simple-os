@@ -28,7 +28,7 @@ ERR: a 1 indicates that an error occured. An error code has been placed in the e
 void read_sectors_ATA_28bit_PIO(uint16_t* target, uint32_t LBA, uint8_t sector_count);
 void write_sectors_ATA_28bit_PIO(uint32_t LBA, uint8_t sector_count, uint16_t* words);
 
-uint8_t ATA_Identify(uint16_t* target);
-
+int8_t ATA_Identify(uint16_t* target);
+uint32_t get_total_28bit_sectors();
 
 #endif
