@@ -2,3 +2,4 @@ temp/
 bootloader/bootloader.bin
 *.o
 *.tar
+*.bin
