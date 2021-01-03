@@ -23,12 +23,13 @@ boot:
     call print ; This will be written after the BIOS messages
     call print_nl
 
-    ; the boot loader is assume to have 8 sectors, load the other 7 sectors here
-    ; This file will yield 4 sectors (the assembly part), and the C part will yield the other 4 sectors
+    ; the boot loader is assume to have 16 sectors, load the other 15 sectors here
+    ; This file will yield 4 sectors (the assembly part), and the C part will yield the other 12 sectors
     ; load to right after this MBR sector
     ; real mode addressing is segment*16 + offset, so the 512 bytes MBR take 0x200 bytes
     ; and thus we choose to load from disk to 0x7c20:0, i.e. starting at 0x7c200
-    mov dh, 7     
+    ; must be in sync of BOOTLOADER_MAX_SIZE in Makefile
+    mov dh, 15
     mov bx, 0x7e00
     call disk_load  ; dl shall be loaded automatically during system boot to point to the current disk/media of this MBR
 
