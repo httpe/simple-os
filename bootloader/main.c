@@ -67,9 +67,13 @@ void bootloader_main(void) {
     }
     
     // Test ATA_Identify
-    uint16_t* identifier = (uint16_t*) 0x01000400;
-    uint8_t ret = ATA_Identify(identifier);
     uint8_t* buff2 = (uint8_t*) 0x01000800;
+    uint16_t* identifier = (uint16_t*) 0x01000400;
+    
+    uint8_t ret = ATA_Identify(identifier);
+    bytes2hex(&ret, 1, buff2);
+    print_str(buff2, 19, 0, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK));
+
     // uint16_t 60 & 61 taken as a uint32_t contain the total number of 28 bit LBA addressable sectors on the drive. (If non-zero, the drive supports LBA28.)
     // uint16_t 100 through 103 taken as a uint64_t contain the total number of 48 bit addressable sectors on the drive. (Probably also proof that LBA48 is supported.)
     uint32_t max_sector_28bit_lba = (((uint32_t) identifier[61]) << 16) + identifier[60];
@@ -83,8 +87,7 @@ void bootloader_main(void) {
     // bytes2hex((uint8_t*) (identifier + 100), 16, buff2);
     // print_str(buff2, 18, 0, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK));
 
-    // bytes2hex(&ret, 1, buff2);
-    // print_str(buff2, 19, 0, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK));
+
 
     // bytes2hex((uint8_t*) 0x7c00 + 0x1FE, 2, buff2);
     // print_str(buff2, 20, 0, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK));
