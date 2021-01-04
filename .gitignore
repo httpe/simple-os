@@ -3,3 +3,4 @@ bootloader/bootloader.bin
 *.o
 *.tar
 *.bin
+*.elf
