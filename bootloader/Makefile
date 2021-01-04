@@ -29,7 +29,7 @@ KERNEL_ROOT!=realpath $(KERNEL_ROOT)
 KERNEL_BOOT_IMG!=realpath $(KERNEL_ROOT)
 
 
-.PHONY: all clean bootloader_padded.bin
+.PHONY: all clean
 
 all: bootable_kernel.bin bootloader.elf
 
