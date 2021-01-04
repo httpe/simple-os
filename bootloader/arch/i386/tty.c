@@ -23,7 +23,8 @@ void print_memory_hex(const char* buff, size_t size, uint8_t row) {
     }
     size_t cursor = (row-1)*VGA_WIDTH;
     for(uint32_t i=0; i<size; i++) {
-        uint8_t high = (buff[i]>>4) + 0x30;
+        // >> on signed char is arithmetic shift rather than logical, so we need to mask the significant bits
+        uint8_t high = ((buff[i]>>4)&0x0F) + 0x30;
         if(high>0x39) {
             high += 7;
         }
