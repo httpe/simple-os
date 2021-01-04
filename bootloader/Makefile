@@ -20,6 +20,8 @@ $(BOOTLOADER_ARCH_OBJS) \
 bootloader/main.o \
 string/string.o \
 tar/tar.o \
+elf/elf.o \
+
 
 # shell assignment operator ‘!=’
 # Ref: https://www.gnu.org/software/make/manual/html_node/Setting.html#Setting
@@ -29,17 +31,21 @@ KERNEL_BOOT_IMG!=realpath $(KERNEL_ROOT)
 
 .PHONY: all clean bootloader_padded.bin
 
-all: bootable_kernel.bin
+all: bootable_kernel.bin bootloader.elf
 
 $(ARCHDIR)/bootloader.o: $(BOOTLOADER_ASM) $(BOOTLOADER_INCLUDES)
 	$(AS) -f elf32 -o $@ -i $(ARCHDIR) $(BOOTLOADER_ASM)
 
 # Comming from https://wiki.osdev.org/Bare_Bones
 %.o: %.c
-	$(CC) -c $< -o $@ -std=gnu99 -ffreestanding -O2 -Wall -Wextra
+	$(CC) -g -c $< -o $@ -std=gnu99 -ffreestanding -Wall -Wextra
 	
 bootloader.bin: $(OBJS) 
-	$(CC) -T $(ARCHDIR)/linker.ld -o $@ -ffreestanding -O2 -nostdlib $(OBJS) -lgcc
+	$(CC) -T $(ARCHDIR)/linker.ld -o $@ -ffreestanding -nostdlib $(OBJS) -lgcc -Wl,--oformat,binary
+
+# Generate elf version to allow gdb debugging
+bootloader.elf: $(OBJS) 
+	$(CC) -g -T $(ARCHDIR)/linker.ld -o $@ -ffreestanding -nostdlib $(OBJS) -lgcc -Wl,--oformat,"elf32-i386"
 
 # Note: Each script line is executed in a different shell
 # $(VAR) will be expanded before sending to the shell

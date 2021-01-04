@@ -27,7 +27,7 @@ boot:
     ; This file will yield 4 sectors (the assembly part), and the C part will yield the other 12 sectors
     ; load to right after this MBR sector
     ; real mode addressing is segment*16 + offset, so the 512 bytes MBR take 0x200 bytes
-    ; and thus we choose to load from disk to 0x7c20:0, i.e. starting at 0x7c200
+    ; and thus we choose to load from disk to 0:0x7e00
     ; must be in sync of BOOTLOADER_MAX_SIZE in Makefile
     mov dh, 15
     mov bx, 0x7e00

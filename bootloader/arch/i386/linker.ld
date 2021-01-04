@@ -3,7 +3,6 @@ From: http://3zanders.co.uk/2017/10/18/writing-a-bootloader3/
 */
 
 ENTRY(boot)
-OUTPUT_FORMAT("binary")
 SECTIONS {
 	/* Telling the linker that the bootloader will be loaded at 0x7c00, the convensional boot sector address */
     . = 0x7c00;
