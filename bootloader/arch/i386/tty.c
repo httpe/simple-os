@@ -4,10 +4,20 @@ static const size_t VGA_WIDTH = 80;
 static const size_t VGA_HEIGHT = 25;
 static uint16_t* const VGA_MEMORY = (uint16_t*) 0xB8000;
 
+// Print a null terminated string
+//
+// str: null terminated string
+// row: printing start at this screen row (0 ~ (VGA_HEIGHT-1))
+// col: printing start at this screen column (0 ~ (VGA_HEIGHT-1))
 void print_str(const char* str, uint8_t row, uint8_t col) {
     print_memory(str, strlen(str), row, col);
 }
 
+// Print the content of a memory location in ASCII
+// buff: address of a memory location
+// size: length in bytes to print
+// row: printing start at this screen row (0 ~ (VGA_HEIGHT-1))
+// col: printing start at this screen column (0 ~ (VGA_HEIGHT-1))
 void print_memory(const char* buff, size_t size, uint8_t row, uint8_t col) {
     if(row >= VGA_HEIGHT || col >= VGA_WIDTH) {
         return;
@@ -17,6 +27,10 @@ void print_memory(const char* buff, size_t size, uint8_t row, uint8_t col) {
     }
 }
 
+// Print the content of a memory location in hex, 16 bytes per row
+// buff: address of a memory location
+// size: length in bytes to print
+// row: printing start at this screen row (0 ~ (VGA_HEIGHT-1))
 void print_memory_hex(const char* buff, size_t size, uint8_t row) {
     if(row >= VGA_HEIGHT) {
         return;

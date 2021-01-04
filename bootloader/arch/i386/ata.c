@@ -116,6 +116,9 @@ int8_t ATA_Identify(uint16_t* target)
 	return 0;
 }
 
+// Get count of all sectors available to address using a 28bit LBA
+//
+// return: number of 28bit LBA available
 uint32_t get_total_28bit_sectors() {
     uint16_t identifier[256];
     uint8_t ret = ATA_Identify(identifier);
