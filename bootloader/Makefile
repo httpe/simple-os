@@ -3,8 +3,9 @@
 AS=nasm
 HOSTARCH=i386
 CC= ~/opt/cross/bin/i686-elf-gcc
-KERNEL_ROOT=../kernel
-KERNEL_BOOT_IMG=$(KERNEL_ROOT)/boot/kernel.bin
+KERNEL_ROOT=../../meaty-skeleton/sysroot
+# This must be in sync of KERNEL_BOOT_IMG in main.c
+KERNEL_BOOT_IMG=$(KERNEL_ROOT)/boot/myos.kernel
 # Pad the final binary to 8192 bytes (16 512 byte sectors)
 # This variable must be in sync with: bootloader.asm and main.c, search "BOOTLOADER_MAX_SIZE" there
 BOOTLOADER_MAX_SIZE=8192

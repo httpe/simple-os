@@ -12,6 +12,7 @@
 // The whole bootloader binary is assumed to take the first 16 sectors
 // must be in sync of BOOTLOADER_MAX_SIZE in Makefile
 #define BOOTLOADER_SECTORS 16
+#define KERNEL_BOOT_IMG "/boot/myos.kernel"
 
 int tar_loopup_lazy(uint32_t LBA, char *filename, unsigned char* buffer) {
     uint32_t max_lba = get_total_28bit_sectors();
@@ -71,7 +72,7 @@ void bootloader_main(void) {
     
     // Load kernel
     uint8_t* kernel_buffer = (uint8_t*) 0x00100000;
-    int kernel_size = tar_loopup_lazy(BOOTLOADER_SECTORS, "/boot/kernel.bin", kernel_buffer);
+    int kernel_size = tar_loopup_lazy(BOOTLOADER_SECTORS, KERNEL_BOOT_IMG, kernel_buffer);
     const char* msg = "Kernel Loaded at 0x00100000, Kernel size (Little Endian Hex):";
     print_str(msg, 15, 0);
     print_memory_hex((char*) &kernel_size, sizeof(int), 16);
