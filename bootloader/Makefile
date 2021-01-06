@@ -3,7 +3,7 @@
 AS=nasm
 HOSTARCH=i386
 CC= ~/opt/cross/bin/i686-elf-gcc
-KERNEL_ROOT=../../meaty-skeleton/sysroot
+KERNEL_ROOT=../kernel/sysroot
 # This must be in sync of KERNEL_BOOT_IMG in main.c
 KERNEL_BOOT_IMG=$(KERNEL_ROOT)/boot/myos.kernel
 # Pad the final binary to 8192 bytes (16 512 byte sectors)
