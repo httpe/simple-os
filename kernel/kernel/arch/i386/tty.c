@@ -40,13 +40,39 @@ void terminal_putentryat(unsigned char c, uint8_t color, size_t x, size_t y) {
 
 void terminal_putchar(char c) {
 	unsigned char uc = c;
-	terminal_putentryat(uc, terminal_color, terminal_column, terminal_row);
-	if (++terminal_column == VGA_WIDTH) {
+
+	if(c == '\n'){
 		terminal_column = 0;
-		if (++terminal_row == VGA_HEIGHT)
-			terminal_row = 0;
+		terminal_row += 1;
+	} else if(c == '\b'){
+		// Backspace
+		if(terminal_column==0) {
+			if(terminal_row>0) {
+				terminal_column = VGA_WIDTH - 1;
+				terminal_row--;
+			}
+		} else {
+			terminal_column--;
+		}
+		terminal_putentryat(' ', terminal_color, terminal_column, terminal_row);
+	} else {
+		terminal_putentryat(uc, terminal_color, terminal_column, terminal_row);
+		if (++terminal_column == VGA_WIDTH) {
+			terminal_column = 0;
+			if (++terminal_row == VGA_HEIGHT)
+				terminal_row = 0;
+		}
 	}
+
+	if(terminal_row >= VGA_HEIGHT){  
+		// Scroll up.
+		memmove(VGA_MEMORY, VGA_MEMORY+VGA_WIDTH, sizeof(VGA_MEMORY[0])*VGA_HEIGHT*VGA_WIDTH);
+		terminal_row -= 1;
+	}
+
+
 }
+
 
 void terminal_write(const char* data, size_t size) {
 	for (size_t i = 0; i < size; i++)

@@ -12,6 +12,38 @@ static bool print(const char* data, size_t length) {
 	return true;
 }
 
+// Adapted from https://github.com/mit-pdos/xv6-public/blob/master/printf.c
+static int int2str(int xx, int base, int sgn, char* out)
+{
+	static char digits[] = "0123456789ABCDEF";
+	char buf[16];
+	int i, neg, j;
+	unsigned int x;
+
+	neg = 0;
+	if(sgn && xx < 0){
+		neg = 1;
+		x = -xx;
+	} else {
+		x = xx;
+	}
+
+	i = 0;
+	do{
+		buf[i++] = digits[x % base];
+	}while((x /= base) != 0);
+	if(neg)
+		buf[i++] = '-';
+
+	//Reverse
+	j = 0;
+	while(--i >= 0)
+		out[j++] = buf[i];
+	
+	return j;
+}
+
+
 int printf(const char* restrict format, ...) {
 	va_list parameters;
 	va_start(parameters, format);
@@ -54,6 +86,32 @@ int printf(const char* restrict format, ...) {
 			format++;
 			const char* str = va_arg(parameters, const char*);
 			size_t len = strlen(str);
+			if (maxrem < len) {
+				// TODO: Set errno to EOVERFLOW.
+				return -1;
+			}
+			if (!print(str, len))
+				return -1;
+			written += len;
+		} else if (*format == 'd') {
+			format++;
+			int number = va_arg(parameters, int);
+			char str[16];
+
+			size_t len = int2str(number, 10, 1, str);
+			if (maxrem < len) {
+				// TODO: Set errno to EOVERFLOW.
+				return -1;
+			}
+			if (!print(str, len))
+				return -1;
+			written += len;
+		} else if (*format == 'x' || *format == 'p') {
+			format++;
+			int number = va_arg(parameters, int);
+			char str[16];
+
+			size_t len = int2str(number, 16, 0, str);
 			if (maxrem < len) {
 				// TODO: Set errno to EOVERFLOW.
 				return -1;

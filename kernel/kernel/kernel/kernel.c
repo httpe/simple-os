@@ -4,5 +4,7 @@
 
 void kernel_main(void) {
 	terminal_initialize();
-	printf("Hello, kernel World!\n");
+	// Test print int and scrolling
+	int x = 999;
+	printf("Hello, kernel World!\n%d\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nHello, kernel World!\b\b", x);
 }
