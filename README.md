@@ -87,9 +87,11 @@ The `bootloader/arch/i386/` folder contains various initialization subroutine wr
   - `gdt.asm`: Initialize the [GDT](https://github.com/cfenollosa/os-tutorial/tree/master/09-32bit-gdt).
 - Disk I/O:
   - `disk.asm`: [Read data from disk using BIOS interrupt](https://github.com/cfenollosa/os-tutorial/tree/master/07-bootsector-disk) (work in read mode).
+- Printing:
   - `print.asm`: [Print using BIOS interrupt](https://github.com/cfenollosa/os-tutorial/tree/master/02-bootsector-print).
   - `print_hex.asm`: [Print data as hex numbers](https://github.com/cfenollosa/os-tutorial/tree/master/05-bootsector-functions-strings).
   - `print_pm.asm`: [Print in protected mode](https://github.com/cfenollosa/os-tutorial/tree/master/08-32bit-print), using VGA video buffer.
+- `linker.ld`: [Linker script](https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_chapter/ld_3.html#SEC6)
 
 Once we finish switching to protected mode, we start to write the remaining part in C.
 
@@ -104,7 +106,7 @@ Once we finish switching to protected mode, we start to write the remaining part
 
 ### Kernel
 
-The `kernel/` folder is basically a clone from the [Meaty Skeleton](https://wiki.osdev.org/Meaty_Skeleton) tutorial, with assembly code being translated to use intel/NASM syntax. Please see detail explanation there.
+The `kernel/` folder is basically a clone from the [Meaty Skeleton](https://wiki.osdev.org/Meaty_Skeleton) tutorial, with booting assembly code `boot.asm` being translated into Intel/NASM syntax. Please see the tutorial for detail explanation.
 
 The entry point is `kernel/kernel/kernel.c`.
 
@@ -120,13 +122,13 @@ Multiple tutorials have been referenced in the development of this project.
 
 1. For tutorial in **Chinese**, I would recommend the [INWOX project](https://github.com/qvjp/INWOX/wiki)
 
-1. [os-tutorial](https://github.com/cfenollosa/os-tutorial): A very user friendly step by step OS dev tutorial. Many files of the bootloader or the kernel are modified from this repo. This tutorial also combine a lot of pieces from some of the following tutorials. In addition, this tutorial assumes a **MacOS** environment.
+1. [os-tutorial](https://github.com/cfenollosa/os-tutorial): A very user friendly step by step OS dev tutorial. Many files of the bootloader or the kernel are modified from this repo. This tutorial also combine a lot of pieces from some of the following tutorials. In addition, this tutorial assumes a **macOS** environment.
 
 1. [Roll your own toy UNIX-clone OS](http://www.jamesmolloy.co.uk/tutorial_html/) a well known tutorial, very concise and easy to understand. You shall read it with the [errata](https://wiki.osdev.org/James_Molloy%27s_Tutorial_Known_Bugs) at hand.
 
 1. [The little book about OS development](http://littleosbook.github.io/#) and [Writing a Simple Operating System - from Scratch](https://www.cs.bham.ac.uk/~exr/lectures/opsys/10_11/lectures/os-dev.pdf). They provide some useful explanations to OS concepts and have many exemplary code. It can used as a complement to the OSDev Wiki.
 
-1. [MIT 6.S081 Operating System Engineering Course](https://pdos.csail.mit.edu/6.828/2020/schedule.html). This course provide lecture video this year, and it is based on a very popular educational system Xv6, which is a full functioning multi-process OS within less than 10K lines of code. It can be serve as our reference implementation. The course switched to RISC-V architecture in 2019 ([Xv6-RISC](https://github.com/mit-pdos/xv6-riscv)), however for our purpose, the [x86 version](https://github.com/mit-pdos/xv6-public) will be more useful. It also provide a [functional classification](https://pdos.csail.mit.edu/6.828/2018/xv6/xv6-rev10.pdf) of each file in the x86 version.
+1. [MIT 6.S081 Operating System Engineering Course](https://pdos.csail.mit.edu/6.828/2020/schedule.html). This course provide lecture video this year, and it is based on a very popular educational system Xv6, which is a full functioning multi-process OS implemented within 10K lines of code. It can be serve as our reference implementation. The course switched to RISC-V architecture in 2019 ([Xv6-RISC](https://github.com/mit-pdos/xv6-riscv)), however for our purpose, the [x86 version](https://github.com/mit-pdos/xv6-public) will be more useful. It also provide a [functional classification](https://pdos.csail.mit.edu/6.828/2018/xv6/xv6-rev10.pdf) of each file in the x86 version.
 
 ### Documentation
 
