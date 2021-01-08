@@ -2,7 +2,7 @@
 
 Simple-OS is targeted to be a self-hosting operating system, i.e. you can compile itself in itself.
 
-The CPU architecture currently supported is x86-32.
+The currently supported CPU architecture is x86-32.
 
 ## Prerequisite
 
@@ -47,25 +47,73 @@ If compile successfully, `kernel/bootable_kernel.bin` will be generated. You can
 qemu-system-i386.exe -hda .\bootable_kernel.bin
 ```
 
+It is possible to debug the kernel by GDB. See [QEMU GDB Usage](https://www.qemu.org/docs/master/system/gdb.html).
+
+Start QEMU in Windows as:
+
+```ps
+qemu-system-i386.exe -s -S -hda .\bootable_kernel.bin
+```
+
+In WSL:
+
+```bash
+gdb -ex "target remote localhost:1234" -ex "symbol-file bootloader.elf"
+```
+
+This trick is also describe in the [os-tutorial](https://github.com/cfenollosa/os-tutorial/tree/master/14-checkpoint) for Mac OS.
+
 ## Folder Structure
 
+### Bootloader
 
+The `bootloader/` folder contains a standalone bootloader that can load any ELF kernel into memory and kick it started. 
+
+Files in the `bootloader/` folder are mostly combination of pieces scattered across many topics on the OsDev Wiki.
+
+The entry point is at the `boot` label in `bootloader/arch/i386/bootloader.asm`.
+
+The `bootloader/arch/i386/` folder contains various initialization subroutine written in assembly.
+
+- Entering 32-bit protected mode:
+  - `swith_pm.asm`: switch to protected mode
+  - `a20.asm`: Enabling A20 address line
+  - `gdt.asm`: Initialize the GDT
+- Disk I/O:
+  - `disk.asm`: Read data from disk using BIOS interrupt (work in read mode)
+  - `ata.asm`: Read data from disk by ATA PIO mode (work in protected mode)
+- Printing utilities:
+  - `print.asm`: print using BIOS interrupt
+  - `print_hex.asm`: print data as hex numbers
+  - `print_pm.asm`: print routine to be used after entering protected mode, using VGA video buffer
+
+Once we finish switching to protected mode, we start to write the remaining part in C.
+
+- `bootloader/main.c`: The main C entry point
+- `elf/elf.*`: Parse ELF format binary and loader it to memory
+- `tar/tar.*`: Provide basic utility to read a USTAR "file system"
+- `arch/i386/port_io.h`: Provide port I/O using C inline assembly 
+- Printing utilities:
+  - `arch/i386/tty.*`, `arch/i386/vga.h`: Write string to screen using VGA text mode 
+  - `string/string.*`: string processing utilities
+
+### Kernel
+
+The `kernel/` folder is basically a clone from the [Meaty Skeleton](https://wiki.osdev.org/Meaty_Skeleton) tutorial, with assembly code being translated to use intel/NASM syntax. Please see detail explanation there.
+
+The main development later on will happen in `kernel/` folder.
 
 ## Reference
 
 Multiple tutorials have been referenced in the development of this project.
 
-The `kernel/` folder is basically a clone from the [Meaty Skeleton](https://wiki.osdev.org/Meaty_Skeleton) tutorial, with assembly code being translated to use intel/NASM syntax. The main development later on will happen in `kernel/` folder.
-
-Files in the `bootloader/` folder are mostly combination of pieces scattered across many topics on the OsDev Wiki.
-
 ### OS Development Tutorials
 
 1. [OsDev WikiTutorial Series](https://wiki.osdev.org/Tutorials): Very useful starting point of OS development. You can start with [Bare Bones](https://wiki.osdev.org/Bare_Bones) and then look into [Meaty Skeleton](https://wiki.osdev.org/Meaty_Skeleton), which we actual use in this project.
 
-1. For tutorial in Chinese, I would recommend the [INWOX project](https://github.com/qvjp/INWOX/wiki)
+1. For tutorial in **Chinese**, I would recommend the [INWOX project](https://github.com/qvjp/INWOX/wiki)
 
-1. [os-tutorial](https://github.com/cfenollosa/os-tutorial): A very user friendly step by step OS dev tutorial. Many files of the bootloader or the kernel are modified from this repo. This tutorial also combine a lot of pieces from some of the following tutorials.
+1. [os-tutorial](https://github.com/cfenollosa/os-tutorial): A very user friendly step by step OS dev tutorial. Many files of the bootloader or the kernel are modified from this repo. This tutorial also combine a lot of pieces from some of the following tutorials. In addition, this tutorial assumes a **MacOS** environment.
 
 1. [Roll your own toy UNIX-clone OS](http://www.jamesmolloy.co.uk/tutorial_html/) a well known tutorial, very concise and easy to understand. You shall read it with the [errata](https://wiki.osdev.org/James_Molloy%27s_Tutorial_Known_Bugs) at hand.
 
