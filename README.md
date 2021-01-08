@@ -24,13 +24,15 @@ To compile this project, you need to install the following dependencies:
 
 1. [QEMU](https://www.qemu.org/) Emulator: We will use QEMU to emulate our system, avoiding restarting computer again and again to test it.
 
-1. (Optional) GRUB: The `kernel/` part can use GRUB to generate a bootable ISO image (`kernel/iso.sh`), but since we have our own `bootloader/` implemented, it is not required.
+1. (Optional) [GRUB](https://www.gnu.org/software/grub/): The `kernel/` part can use GRUB to generate a bootable ISO image `kernel/iso.sh`, but since we have our own `bootloader/` implemented, it is not required.
 
 ## Compilation
 
 Firstly, you can need to change the `CROSSCOMPILERBIN` variable in `kernel/config.sh` and to point to the folder containing the cross-compiling GCC/Binutils binaries (see *Dependecies* section). Also point `CC` variable in `bootloader/Makefile` to your cross-compiling GCC.
 
-Then you can compile the project by:
+Here we assume a Windows + [WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10) environment. We install QEMU in Windows, because QEMU needs GTK and WSL graphical support is limited.
+
+Then you can compile the project by running in WSL:
 
 ```bash
 cd kernel
@@ -41,7 +43,11 @@ make clean
 make
 ```
 
-If compile successfully, `kernel/bootable_kernel.bin` will be generated. You can then test it using QEMU. Here we installed QEMU in Windows, because QEMU needs GTK and WSL graphical support is limited. We can run the QEMU from Windows PowerShell:
+If compile successfully, `kernel/bootable_kernel.bin` will be generated. 
+
+You can then test it using QEMU. 
+
+We can run the compiled kernel in QEMU by running in Windows PowerShell:
 
 ```ps
 qemu-system-i386.exe -hda .\bootable_kernel.bin
@@ -49,25 +55,25 @@ qemu-system-i386.exe -hda .\bootable_kernel.bin
 
 It is possible to debug the kernel by GDB. See [QEMU GDB Usage](https://www.qemu.org/docs/master/system/gdb.html).
 
-Start QEMU in Windows as:
+Start QEMU in Windows PowerShell by:
 
 ```ps
 qemu-system-i386.exe -s -S -hda .\bootable_kernel.bin
 ```
 
-In WSL:
+And then attach GDB to the QEMU instance in WSL by:
 
 ```bash
 gdb -ex "target remote localhost:1234" -ex "symbol-file bootloader.elf"
 ```
 
-This trick is also describe in the [os-tutorial](https://github.com/cfenollosa/os-tutorial/tree/master/14-checkpoint) for Mac OS.
+This trick is also describe in the [os-tutorial](https://github.com/cfenollosa/os-tutorial/tree/master/14-checkpoint) for macOS.
 
 ## Folder Structure
 
 ### Bootloader
 
-The `bootloader/` folder contains a standalone bootloader that can load any ELF kernel into memory and kick it started. 
+The `bootloader/` folder contains a standalone bootloader that can load any [ELF](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format) format kernel binary into memory and kick it started.
 
 Files in the `bootloader/` folder are mostly combination of pieces scattered across many topics on the OsDev Wiki.
 
@@ -75,31 +81,32 @@ The entry point is at the `boot` label in `bootloader/arch/i386/bootloader.asm`.
 
 The `bootloader/arch/i386/` folder contains various initialization subroutine written in assembly.
 
-- Entering 32-bit protected mode:
-  - `swith_pm.asm`: switch to protected mode
-  - `a20.asm`: Enabling A20 address line
-  - `gdt.asm`: Initialize the GDT
+- Entering 32-bit [Protected Mode](https://en.wikipedia.org/wiki/Protected_mode):
+  - `switch_pm.asm`: [Switch to Protected Mode](https://github.com/cfenollosa/os-tutorial/tree/master/10-32bit-enter).
+  - `a20.asm`: Enabling [A20 address line](https://wiki.osdev.org/A20).
+  - `gdt.asm`: Initialize the [GDT](https://github.com/cfenollosa/os-tutorial/tree/master/09-32bit-gdt).
 - Disk I/O:
-  - `disk.asm`: Read data from disk using BIOS interrupt (work in read mode)
-  - `ata.asm`: Read data from disk by ATA PIO mode (work in protected mode)
-- Printing utilities:
-  - `print.asm`: print using BIOS interrupt
-  - `print_hex.asm`: print data as hex numbers
-  - `print_pm.asm`: print routine to be used after entering protected mode, using VGA video buffer
+  - `disk.asm`: [Read data from disk using BIOS interrupt](https://github.com/cfenollosa/os-tutorial/tree/master/07-bootsector-disk) (work in read mode).
+  - `print.asm`: [Print using BIOS interrupt](https://github.com/cfenollosa/os-tutorial/tree/master/02-bootsector-print).
+  - `print_hex.asm`: [Print data as hex numbers](https://github.com/cfenollosa/os-tutorial/tree/master/05-bootsector-functions-strings).
+  - `print_pm.asm`: [Print in protected mode](https://github.com/cfenollosa/os-tutorial/tree/master/08-32bit-print), using VGA video buffer.
 
 Once we finish switching to protected mode, we start to write the remaining part in C.
 
-- `bootloader/main.c`: The main C entry point
-- `elf/elf.*`: Parse ELF format binary and loader it to memory
-- `tar/tar.*`: Provide basic utility to read a USTAR "file system"
-- `arch/i386/port_io.h`: Provide port I/O using C inline assembly 
+- `bootloader/main.c`: The main C entry point, load kernel and pass control to it.
+- `elf/elf.*`: Parse ELF format binary and loader it to memory.
+- `tar/tar.*`: Provide basic utility to read a [USTAR](https://wiki.osdev.org/USTAR) "file system".
+- `arch/i386/port_io.h`: Provide port I/O using [C inline assembly](https://wiki.osdev.org/Inline_Assembly/Examples).
+- `arch/i386/ata.*`: Read data from disk by [ATA PIO mode](https://wiki.osdev.org/ATA_PIO_Mode) (work in protected mode), referencing [this tutorial](http://learnitonweb.com/2020/05/22/12-developing-an-operating-system-tutorial-episode-6-ata-pio-driver-osdev/)
 - Printing utilities:
-  - `arch/i386/tty.*`, `arch/i386/vga.h`: Write string to screen using VGA text mode 
-  - `string/string.*`: string processing utilities
+  - `arch/i386/tty.*`, `arch/i386/vga.h`: Write string to screen using [VGA Text Mode](https://wiki.osdev.org/Printing_To_Screen)
+  - `string/string.*`: String processing utilities
 
 ### Kernel
 
 The `kernel/` folder is basically a clone from the [Meaty Skeleton](https://wiki.osdev.org/Meaty_Skeleton) tutorial, with assembly code being translated to use intel/NASM syntax. Please see detail explanation there.
+
+The entry point is `kernel/kernel/kernel.c`.
 
 The main development later on will happen in `kernel/` folder.
 
@@ -133,13 +140,13 @@ Multiple tutorials have been referenced in the development of this project.
 Although the final goal is to make the system self-hosting, we planned for several practical milestone:
 
 1. **Milestone One: Bootloader**
-    Many of the existing tutorials rely on [GRUB](https://en.wikipedia.org/wiki/GNU_GRUB) to boot the system and do some initialize (like entering Protected Mode), which I don't like. For educational purpose, I want to have have full control from the boot to the very end. Therefore, we choose to implement a standalone bootloader as our first step.
+    Many of the existing tutorials rely on GRUB to boot the system and do some initialize (like entering Protected Mode), which I don't like. For educational purpose, I want to have have full control from the boot to the very end. Therefore, we choose to implement a standalone bootloader as our first step.
     - Enter 32-bit protected mode and do various initialize before passing control to the kernel
     - Provide disk I/O routines and a (read-only) file system to host the kernel
     - Able to parse and load a ELF kernel written in C
     - Provide basic printing utilities for debugging
     - Code should be self-contained, i.e. no external dependency.
-    - **Finished**: Implemented under the folder `bootloader`, we choose [USTAR](https://wiki.osdev.org/USTAR) as the read-only filesystem.
+    - **Finished**: Implemented under the folder `bootloader`
 
 1. **Milestone Two: Kernel with Input and Output**
     - Write in C, compile to a Multiboot ELF kernel file
