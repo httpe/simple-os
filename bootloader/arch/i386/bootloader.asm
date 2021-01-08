@@ -1,7 +1,5 @@
 ; Modified from https://github.com/cfenollosa/os-tutorial/blob/master/13-kernel-barebones/bootsect.asm
-; nasm -f bin -i arch/i386 -o mbr.bin arch/i386/mbr.asm
 
-; [org 0x7c00] ; boot loader offset fixed by BIOS convention
 section .boot
 [bits 16]
 global boot:function
