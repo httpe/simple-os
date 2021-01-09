@@ -35,12 +35,7 @@ Here we assume a Windows + [WSL](https://docs.microsoft.com/en-us/windows/wsl/in
 Then you can compile the project by running in WSL:
 
 ```bash
-cd kernel
-./clean.sh
 ./build.sh
-cd ../bootloader
-make clean
-make
 ```
 
 If compile finish successfully, `bootloader/bootable_kernel.bin` will be generated.
@@ -50,8 +45,7 @@ You can then test it using QEMU.
 We can run the compiled kernel in QEMU by running in Windows PowerShell:
 
 ```ps
-cd bootloader
-qemu-system-i386.exe -hda .\bootable_kernel.bin
+qemu-system-i386.exe -hda bootloader\bootable_kernel.bin
 ```
 
 It is possible to debug the kernel by GDB. See [QEMU GDB Usage](https://www.qemu.org/docs/master/system/gdb.html).
@@ -59,14 +53,19 @@ It is possible to debug the kernel by GDB. See [QEMU GDB Usage](https://www.qemu
 Start QEMU in Windows PowerShell by:
 
 ```ps
-cd bootloader
-qemu-system-i386.exe -s -S -hda .\bootable_kernel.bin
+qemu-system-i386.exe -s -S -hda bootloader\bootable_kernel.bin
 ```
 
 And then attach GDB to the QEMU instance in WSL by:
 
 ```bash
-gdb -ex "target remote localhost:1234" -ex "symbol-file bootloader.elf"
+gdb -ex "target remote localhost:1234" -ex "symbol-file kernel/sysroot/boot/myos.kernel"
+```
+
+The above loads debug symbols for the kernel, to debug our own bootloader:
+
+```bash
+gdb -ex "target remote localhost:1234" -ex "symbol-file bootloader/bootloader.elf" 
 ```
 
 The `bootloader.elf` is generated solely to provide the debug symbols.
