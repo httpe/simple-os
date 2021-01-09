@@ -37,7 +37,7 @@ stack_top:
 ; doesn't make sense to return from this function as the bootloader is gone.
 ; Declare _start as a function symbol with the given symbol size.
 section .text
-global _start:function (_start.end - _start)
+global _start:function (_start_end - _start)
 _start:
 	; The bootloader has loaded us into 32-bit protected mode on a x86
 	; machine. Interrupts are disabled. Paging is disabled. The processor
@@ -63,7 +63,20 @@ _start:
 	; yet. The GDT should be loaded here. Paging should be enabled here.
 	; C++ features such as global constructors and exceptions will require
 	; runtime support to work as well.
-	extern _init
+	
+	; Start Loading GDT (Needed for GRUB, no need for our own bootloader)
+    lgdt [gdt_descriptor]   ; 1. load the GDT descriptor
+    jmp CODE_SEG:init_pm    ; 2. Far jump by using a different segment, basically setting CS to point to the correct protected mode segment (GDT entry)
+
+init_pm:
+    mov ax, DATA_SEG        ; 3. update the segment registers other than CS
+    mov ds, ax
+    mov ss, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+	extern _init			; 4. https://wiki.osdev.org/Calling_Global_Constructors
     call _init
  
 	; Enter the high-level kernel. The ABI requires the stack is 16-byte
@@ -89,4 +102,6 @@ _start:
 	cli
 .hang:	hlt
 	jmp .hang
-.end:
+_start_end:
+
+%include "gdt.asm"
