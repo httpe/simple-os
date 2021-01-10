@@ -1,11 +1,10 @@
+DEFAULT_HOST!=../default-host.sh
+HOST?=$(DEFAULT_HOST)
+HOSTARCH!=../target-triplet-to-arch.sh $(HOST)
 
-# Parameters
-AS=nasm
-HOSTARCH=i386
-CC= ~/opt/cross/bin/i686-elf-gcc
-KERNEL_ROOT=../kernel/sysroot
+KERNEL_ROOT=$(SYSROOT)
 # This must be in sync of KERNEL_BOOT_IMG in main.c
-KERNEL_BOOT_IMG=$(KERNEL_ROOT)/boot/myos.kernel
+KERNEL_BOOT_IMG=$(SYSROOT)$(BOOTDIR)/myos.kernel
 # Pad the final binary to 8192 bytes (16 512 byte sectors)
 # This variable must be in sync with: bootloader.asm and main.c, search "BOOTLOADER_MAX_SIZE" there
 BOOTLOADER_MAX_SIZE=8192
@@ -29,7 +28,7 @@ KERNEL_ROOT!=realpath $(KERNEL_ROOT)
 KERNEL_BOOT_IMG!=realpath $(KERNEL_ROOT)
 
 
-.PHONY: all clean
+.PHONY: all clean install
 
 all: bootable_kernel.bin bootloader.elf
 
@@ -74,3 +73,7 @@ clean:
 	rm -f kernel.tar
 	rm -f *.o
 	rm -f $(OBJS) *.o */*.o */*/*.o
+
+install: bootable_kernel.bin bootloader.elf
+	cp bootable_kernel.bin ..
+	cp bootloader.elf ..
