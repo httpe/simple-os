@@ -6,6 +6,7 @@
 #include <kernel/tty.h>
 
 #include "vga.h"
+#include "port_io.h"
 
 static const size_t VGA_WIDTH = 80;
 static const size_t VGA_HEIGHT = 25;
@@ -19,6 +20,7 @@ static uint16_t* terminal_buffer;
 void terminal_initialize(void) {
 	terminal_row = 0;
 	terminal_column = 0;
+	update_cursor();
 	terminal_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
 	terminal_buffer = VGA_MEMORY;
 	for (size_t y = 0; y < VGA_HEIGHT; y++) {
@@ -81,4 +83,28 @@ void terminal_write(const char* data, size_t size) {
 
 void terminal_writestring(const char* data) {
 	terminal_write(data, strlen(data));
+}
+
+// Ref: https://wiki.osdev.org/Text_Mode_Cursor
+// Update text cursor to where the last char was printed
+void update_cursor(void)
+{
+	uint16_t pos = terminal_row * VGA_WIDTH + terminal_column;
+ 
+	outb(0x3D4, 0x0F);
+	outb(0x3D5, (uint8_t) (pos & 0xFF));
+	outb(0x3D4, 0x0E);
+	outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
+}
+
+// With this code, you get: pos = y * VGA_WIDTH + x
+// To obtain the coordinates, just calculate: y = pos / VGA_WIDTH; x = pos % VGA_WIDTH
+uint16_t get_cursor_position(void)
+{
+    uint16_t pos = 0;
+    outb(0x3D4, 0x0F);
+    pos |= inb(0x3D5);
+    outb(0x3D4, 0x0E);
+    pos |= ((uint16_t)inb(0x3D5)) << 8;
+    return pos;
 }
