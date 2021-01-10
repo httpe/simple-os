@@ -4,7 +4,6 @@
             "name": "Win32",
             "includePath": [
                 "${default}",
-                "${workspaceFolder}/kernel/include",
                 "${workspaceFolder}/sysroot/usr/include"
             ],
             "defines": [
