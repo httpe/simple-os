@@ -7,7 +7,7 @@ export HOST=${HOST:-$(./default-host.sh)}
 export CROSSCOMPILERBIN=~/opt/cross/bin
 
 export AR=${CROSSCOMPILERBIN}/${HOST}-ar
-export AS=nasm
+export AS="${AS:-nasm}"
 export CC=${CROSSCOMPILERBIN}/${HOST}-gcc
 
 export PREFIX=/usr
