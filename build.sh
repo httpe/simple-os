@@ -1,10 +1,7 @@
 #!/bin/sh
 set -e
+. ./headers.sh
 
-cd kernel
-. ./clean.sh
-. ./build.sh
-
-cd ../bootloader
-make clean
-make
+for PROJECT in $PROJECTS; do
+  (cd $PROJECT && DESTDIR="$SYSROOT" $MAKE install)
+done

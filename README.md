@@ -24,53 +24,87 @@ To compile this project, you need to install the following dependencies:
 
 1. [QEMU](https://www.qemu.org/) Emulator: We will use QEMU to emulate our system, avoiding restarting computer again and again just to test the system.
 
-1. (Optional) [GRUB](https://www.gnu.org/software/grub/): The `kernel/` part can use GRUB to generate a bootable ISO image through `kernel/iso.sh`, but since we have our own `bootloader/` implemented, it is not required.
+1. (Optional) [GRUB](https://www.gnu.org/software/grub/): The `iso.sh` uses GRUB to generate a bootable ISO image, but since we have our own `bootloader/` implemented, it is not required.
 
-## Compilation
+## Build
 
-Firstly, you need to change the `CROSSCOMPILERBIN` variable in `kernel/config.sh` to point it to the folder containing the cross-compiling GCC/Binutils binaries (see *Dependecies* section). Also point `CC` variable in `bootloader/Makefile` to your cross-compiling GCC.
+### Configure
+
+Firstly, you need to change the `CROSSCOMPILERBIN` variable in `config.sh` to point it to the folder containing the cross-compiling GCC/Binutils binaries (see *Dependecies* section). Note that the env variable `AS` is assumed to be the system wide NASM assembler, if not set, `nasm` is used.
 
 Here we assume a Windows + [WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10) environment. We install QEMU in Windows, because QEMU needs GTK and WSL graphical support is limited.
 
-Then you can compile the project by running in WSL:
+### Compile
+
+Then you can **build** the project by running in WSL:
 
 ```bash
+./clean.sh
 ./build.sh
 ```
 
-If compile finish successfully, `bootloader/bootable_kernel.bin` will be generated.
+If compile finish successfully, `bootable_kernel.bin` will be generated.
+
+### Emulate
+
 
 You can then test it using QEMU.
 
 We can run the compiled kernel in QEMU by running in Windows PowerShell:
 
 ```ps
-qemu-system-i386.exe -hda bootloader\bootable_kernel.bin
+qemu-system-i386.exe -hda bootable_kernel.bin
 ```
+
+### Debug
 
 It is possible to debug the kernel by GDB. See [QEMU GDB Usage](https://www.qemu.org/docs/master/system/gdb.html).
 
 Start QEMU in Windows PowerShell by:
 
 ```ps
-qemu-system-i386.exe -s -S -hda bootloader\bootable_kernel.bin
+qemu-system-i386.exe -s -S -hda bootable_kernel.bin
 ```
 
 And then attach GDB to the QEMU instance in WSL by:
 
 ```bash
-gdb -ex "target remote localhost:1234" -ex "symbol-file kernel/sysroot/boot/myos.kernel"
+gdb -ex "target remote localhost:1234" -ex "symbol-file sysroot/boot/myos.kernel"
 ```
 
 The above loads debug symbols for the kernel, to debug our own bootloader:
 
 ```bash
-gdb -ex "target remote localhost:1234" -ex "symbol-file bootloader/bootloader.elf" 
+gdb -ex "target remote localhost:1234" -ex "symbol-file bootloader.elf" 
 ```
 
 The `bootloader.elf` is generated solely to provide the debug symbols.
 
 This trick is also describe in the [os-tutorial](https://github.com/cfenollosa/os-tutorial/tree/master/14-checkpoint) for macOS.
+
+### (Optional) Generate Bootable ISO
+
+If you have GRUB installed, you can build a bootable CD-ROM image of the operating system by invoking:
+
+```bash
+./iso.sh
+```
+
+In this case, GRUB is used instead of our home made bootloader to boot the system.
+
+To emulate it, run in Powershell:
+
+```ps
+qemu-system-i386.exe -cdrom .\myos.iso
+```
+
+### (Optional) Install Header Only
+
+You can install all the system headers into the system root without relying on the compiler at all, which will be useful later on when switching to a Hosted GCC Cross-Compiler, by invoking:
+
+```bash
+./headers.sh
+```
 
 ## Folder Structure
 
@@ -107,13 +141,11 @@ Once we finish switching to protected mode, we start to write the remaining part
   - `arch/i386/tty.*`, `arch/i386/vga.h`: Write string to screen using [VGA Text Mode](https://wiki.osdev.org/Printing_To_Screen)
   - `string/string.*`: String processing utilities
 
-### Kernel
+### Kernel & Libc
 
-The `kernel/` folder is basically a clone from the [Meaty Skeleton](https://wiki.osdev.org/Meaty_Skeleton) tutorial, with booting assembly code `boot.asm` being translated into Intel/NASM syntax. Please see the tutorial for detail explanation.
+The `kernel/` and `libc` folders are basically a clone from the [Meaty Skeleton](https://wiki.osdev.org/Meaty_Skeleton) tutorial, with booting assembly code `boot.asm` being translated into the Intel/NASM syntax. Please see the tutorial for detailed explanation.
 
-The entry point is `kernel/kernel/kernel.c`.
-
-The main development later on will happen in `kernel/` folder.
+The kernel entry point is `kernel/kernel/kernel.c`.
 
 ## Reference
 

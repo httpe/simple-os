@@ -1,6 +1,9 @@
-temp/
-bootloader/bootloader.bin
+*.iso
+isodir
+sysroot
 *.o
 *.tar
 *.bin
 *.elf
+*.d
+myos.kernel
