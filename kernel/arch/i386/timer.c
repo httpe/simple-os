@@ -11,11 +11,6 @@ uint32_t tick = 0;
 
 static void timer_callback(registers_t *regs) {
     tick++;
-
-    if(tick%50==0) {
-        printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\bTimer Tick: %d\n", tick);
-    }
-
 }
 
 /*

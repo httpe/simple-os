@@ -8,8 +8,6 @@
 #include "vga.h"
 #include "port_io.h"
 
-static const size_t VGA_WIDTH = 80;
-static const size_t VGA_HEIGHT = 25;
 static uint16_t* const VGA_MEMORY = (uint16_t*) 0xB8000;
 
 static size_t terminal_row;
@@ -35,8 +33,8 @@ void terminal_setcolor(uint8_t color) {
 	terminal_color = color;
 }
 
-void terminal_putentryat(unsigned char c, uint8_t color, size_t x, size_t y) {
-	const size_t index = y * VGA_WIDTH + x;
+void terminal_putentryat(unsigned char c, uint8_t color, size_t col, size_t row) {
+	const size_t index = row * VGA_WIDTH + col;
 	terminal_buffer[index] = vga_entry(c, color);
 }
 
@@ -86,15 +84,18 @@ void terminal_writestring(const char* data) {
 }
 
 // Ref: https://wiki.osdev.org/Text_Mode_Cursor
-// Update text cursor to where the last char was printed
-void update_cursor(void)
-{
-	uint16_t pos = terminal_row * VGA_WIDTH + terminal_column;
- 
+void set_cursor(size_t row, size_t col) {
+	uint16_t pos = row * VGA_WIDTH + col;
 	outb(0x3D4, 0x0F);
 	outb(0x3D5, (uint8_t) (pos & 0xFF));
 	outb(0x3D4, 0x0E);
 	outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
+}
+
+// Update text cursor to where the last char was printed
+void update_cursor(void)
+{
+	set_cursor(terminal_row, terminal_column);
 }
 
 // With this code, you get: pos = y * VGA_WIDTH + x

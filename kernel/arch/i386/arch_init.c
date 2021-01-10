@@ -2,7 +2,7 @@
 
 #include "isr.h"
 #include "timer.h"
-
+#include "keyboard.h"
 
 
 // x86-32 architecture specific initialization sequence
@@ -11,11 +11,13 @@ void initialize_architecture() {
     // Including remapping the IRQs
     isr_install();
 
-    // Enable interruptions (it was disabled by the bootloader)
-    asm volatile("sti");
-
     // Set up system timer using PIT(Programmable Interval Timer)
     init_timer(50);
+
+    init_keyboard();
+
+    // Enable interruptions (it was disabled by the bootloader)
+    asm volatile("sti");
 
 }
 

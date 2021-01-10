@@ -47,7 +47,6 @@ If compile finish successfully, `bootable_kernel.bin` will be generated.
 
 ### Emulate
 
-
 You can then test it using QEMU.
 
 We can run the compiled kernel in QEMU by running in Windows PowerShell:
