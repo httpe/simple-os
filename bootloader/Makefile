@@ -25,7 +25,7 @@ elf/elf.o \
 # shell assignment operator ‘!=’
 # Ref: https://www.gnu.org/software/make/manual/html_node/Setting.html#Setting
 KERNEL_ROOT!=realpath $(KERNEL_ROOT)
-KERNEL_BOOT_IMG!=realpath $(KERNEL_ROOT)
+KERNEL_BOOT_IMG!=realpath $(KERNEL_BOOT_IMG)
 
 
 .PHONY: all clean install
