@@ -142,9 +142,23 @@ Once we finish switching to protected mode, we start to write the remaining part
 
 ### Kernel & Libc
 
-The `kernel/` and `libc` folders are basically a clone from the [Meaty Skeleton](https://wiki.osdev.org/Meaty_Skeleton) tutorial, with booting assembly code `boot.asm` being translated into the Intel/NASM syntax. Please see the tutorial for detailed explanation.
+The `kernel/` and `libc/` folders are build upon a clone from the [Meaty Skeleton](https://wiki.osdev.org/Meaty_Skeleton) tutorial.
 
 The kernel entry point is `kernel/kernel/kernel.c`.
+
+- `kernel/arch/i386/`
+  - `boot.asm`: Intel/NASM syntax version of Meaty skeleton's boot.S
+  - `gdt.asm`: Same as bootloader's flat mode GDT
+  - Interrupt related
+    - `idt.*`: [IDT](https://wiki.osdev.org/IDT) initialization and interrupt gate installation
+    - `isr.*` and `interrupt.asm`: [CPU exceptions](https://wiki.osdev.org/Exceptions) and IRQs handlers ([ISRs](https://wiki.osdev.org/Interrupt_Service_Routines))
+    - `pic.*`: [PIC](https://wiki.osdev.org/PIC) utility for IRQs
+  - `port_io.h`: Inline assembly for port I/O, e.g. inb/outb ([Examples](https://wiki.osdev.org/Inline_Assembly/Examples))
+  - `keyboard.*`: Keyboard driver
+  - `timer.*`: [PIT](https://wiki.osdev.org/PIT) timer
+  - `tty.*` and `vga.h`: VGA Text Mode driver
+  - `arch_init.c`: Collection of architecture specific initializations
+- `libc/`: Progressive implementation of the standard C library
 
 ## Reference
 
@@ -170,6 +184,7 @@ Multiple tutorials have been referenced in the development of this project.
 1. [GNU Make Documentation](https://www.gnu.org/software/make/manual/make.html)
 1. [ELF Format](http://www.skyfree.org/linux/references/ELF_Format.pdf)
 1. [x86 Instuction Set Manual](https://www.felixcloutier.com/x86/)
+1. [GCC Inline Assembly](https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html)
 
 ## Current Status & Goal
 
