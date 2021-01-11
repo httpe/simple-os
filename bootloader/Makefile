@@ -27,6 +27,8 @@ elf/elf.o \
 KERNEL_ROOT!=realpath $(KERNEL_ROOT)
 KERNEL_BOOT_IMG!=realpath $(KERNEL_BOOT_IMG)
 
+# Detecting Linux vs macOS
+UNAME := $(shell uname)
 
 .PHONY: all clean install
 
@@ -53,9 +55,14 @@ bootloader.elf: $(OBJS)
 # Any line of script will terminate the make if the shell returns a non-zero exit code after executing it
 bootloader_padded.bin: bootloader.bin
 	# Make sure the bootloader is less than the max size and pad it to the max size
+ifeq ($(UNAME), Linux)
 	if [ "$(shell stat --format=%s bootloader.bin)" -ge "$(BOOTLOADER_MAX_SIZE)" ]; then exit 1; fi
+endif
+ifeq ($(UNAME), Darwin)
+	if [ "$(shell stat -f%z bootloader.bin)" -ge "$(BOOTLOADER_MAX_SIZE)" ]; then exit 1; fi
+endif
 	cp $< $@
-	fallocate -l $(BOOTLOADER_MAX_SIZE) $@
+	dd if=/dev/zero of=$@ bs=1 count=0 seek=$(BOOTLOADER_MAX_SIZE)
 
 # Hardcoded path /kernel.bin to be loaded by bootloader
 kernel.tar: $(KERNEL_BOOT_IMG) $(KERNEL_ROOT)
