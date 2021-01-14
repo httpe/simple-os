@@ -202,7 +202,7 @@ Although the final goal is to make the system self-hosting, we planned for sever
 1. **Milestone Two: Kernel with Input and Output**
     - Write in C, compile to a [Multiboot](https://wiki.osdev.org/Multiboot) ELF kernel file
     - Initialize [IDT](https://wiki.osdev.org/IDT) and [ISR](https://wiki.osdev.org/ISR)
-    - Enable [Paging](https://wiki.osdev.org/Paging)
+    - Enable [Paging](https://wiki.osdev.org/Paging) and [Higher Half Kernel](https://wiki.osdev.org/Higher_Half_x86_Bare_Bones)
     - Support `printf` to write various type of data as string to the screen
     - Support reading user input from keyboard
     - After initialization, run a program that user can enter some text to the screen and edit/delete it
