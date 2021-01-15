@@ -9,7 +9,9 @@ page_table_t page_tables[PAGE_TO_MAP] __attribute__((aligned(4096)));
 page_directory_t first_page_directory __attribute__((aligned(4096)));
 
 static void page_fault_callback(registers_t *regs) {
-    printf("KERNEL PANIC: PAGE FAULT!");
+    uint32_t cr2;
+    asm volatile("mov %%cr2, %0": "=r"(cr2));
+    printf("KERNEL PANIC: PAGE FAULT! Address: 0x%x", cr2);
     while(1);
 }
 
