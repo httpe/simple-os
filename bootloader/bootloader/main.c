@@ -56,10 +56,10 @@ void bootloader_main(void) {
     
     if(is_elf(kernel_buffer)) {
         print_str("ELF Kernel Detected, now loading...", 19, 0);
-        Elf32_Addr e_entry = load_elf(kernel_buffer);
-        print_memory_hex((char*) e_entry, 16, 20);
+        Elf32_Addr entry_pioint_physical = load_elf(kernel_buffer);
+        print_memory_hex((char*) entry_pioint_physical, 16, 20);
         // Jump to the loaded ELF entry point
-        void *entry_point = (void *) e_entry;  
+        void *entry_point = (void *) entry_pioint_physical;
         goto *entry_point;
     }
 
