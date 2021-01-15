@@ -8,7 +8,7 @@
 // x86-32 architecture specific initialization sequence
 void initialize_architecture() {
 
-    initialize_paging();
+    // initialize_paging();
 
     // Initialize IDT(Interrupt Descriptor Table) with ISR(Interrupt Service Routines) for Interrupts/IRQs
     // Including remapping the IRQs

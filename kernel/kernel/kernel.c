@@ -12,6 +12,12 @@ void kernel_main(void) {
 
 	printf("Welcome to Simple-OS!\n");
 
+	// Using the property of recursive page directory
+    uint32_t *ptr_page_directory = (uint32_t*)0xFFFFFFFC; // 1111_1111_1111_1111_1111_1111_1111_1100b
+	printf("Page Directory Physical Address: 0x%x!\n", (*ptr_page_directory) - 3); // 3 are the flag bits
+    uint32_t *ptr_boot_page_table = (uint32_t*)0xFFFFFC00; // 1111_1111_1111_1111_1111_1100_0000_0000b
+	printf("Boot Page Table Physical Address: 0x%x!\n", (*ptr_boot_page_table) - 3); // 3 are the flag bits
+
 	// Manually triggering a page fault
 	// Use volatile to avoid it get optimized away
     uint32_t *ptr = (uint32_t*)0xA0000000;

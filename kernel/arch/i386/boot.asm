@@ -26,11 +26,22 @@ align 4
 ; System V ABI standard and de-facto extensions. The compiler will assume the
 ; stack is properly aligned and failure to align the stack will result in
 ; undefined behavior.
-section .bss
+section .bss align=4096
 align 16
 stack_bottom:
 resb 16384 ; 16 KiB
 stack_top:
+
+; Preallocate pages used for paging. Don't hard-code addresses and assume they
+; are available, as the bootloader might have loaded its multiboot structures or
+; modules there. This lets the bootloader know it must avoid the addresses.
+alignb 4096
+boot_page_directory:
+resb 4096
+; boot_page_table1:
+boot_page_table:
+resb 4096
+; Further page tables may be required if the kernel grows beyond 3 MiB.
 
 ; The linker script specifies _start as the entry point to the kernel and the
 ; bootloader will jump to this position once the kernel has been loaded. It
@@ -49,7 +60,90 @@ _start:
 	; safeguards, no debugging mechanisms, only what the kernel provides
 	; itself. It has absolute and complete power over the
 	; machine.
- 
+
+	; Build the boot_page_table, mapping a block of virtual address space to the first 4MiB in physical memory
+	; The actual starting virtual address of the block is determined by which page directory entry is pointing to this page table
+	; We will use this fact to point two page directory entry to this same boot_page_table table
+	; To achieve that:
+	; 1. Map first 4MB virtual address to the same physical address
+	; 2. Map the same 4MB physical address space from virtual address space starting at 0xC0000000, so the kernel code will start at 0xC0100000 (1MiB into that space)
+	; The 1. ensure the CPU can still find the next instruction in memory once we enable paging
+	; And 2. is the start of a Higher Half Kernel, see https://wiki.osdev.org/Higher_Half_x86_Bare_Bones
+	; Basically to allow later user space program to load at virtual address 0x0 while not overriding the kernel code
+
+	mov esi, 0			; physical address to map
+	mov edi, 0			; offset into the page table
+	mov ecx, 1024		; there are 1024 page entries in a page table
+
+.loop:
+	; A page table entry if masking out the lower 12 bits to zero should give the physical address of the 4KiB memory block (page) mapped
+	; Since our physical address to be mapped are multiple of 4096 bytes, the lower 12 bits are already zero
+	mov eax, esi
+	; Attributes: supervisor level (bit 2: user=0), read/write (bit 1: rw=1), present (bit 0: p=1)
+	; See https://wiki.osdev.org/Paging
+	add eax, 0000_0011b
+	
+	; The "- 0xC0000000" part is because in the linker script, we assume the whole kernel will be loaded at 0xC0000000
+	;   meaning all absolute address is based on 0xC0000000, while in reality the bootloader will load this assembly at 1MiB (0x100000)
+	; So we need to cancel out the base address set by linker for any label before we enabled paging 
+	mov [(boot_page_table - 0xC0000000) + edi], eax
+	
+	add esi, 4096		; page size is 4KiB
+	add edi, 4			; page table entry size is 32 bits (4 bytes)
+	loop .loop
+
+	; set up the identity mapping entry in page directory
+	; page directory entry if masking out the lower 12 bits to zero should give the physical address of the page table pointed to
+	; attributes: supervisor level (bit 2: user=0), read/write (bit 1: rw=1), present (bit 0: p=1)
+	mov eax, (boot_page_table - 0xC0000000)
+	add eax, 3
+	mov [(boot_page_directory - 0xC0000000)], eax
+
+	; set up higher half kernel mapping in page directory
+	; 0xC0000000 should be the (0xC0000000 >> 22)th entry in the page directory
+	; Since the virtual address is 32[10bits page directory index; 10bits page table index; 12bits memory address offset]0
+	; See https://en.wikipedia.org/wiki/Protected_mode#/media/File:080810-protected-386-paging.svg
+	; And that entry should be (0xC0000000 >> 22)*4 = 768*4 = 3072 bytes into the page directory, since page directory entry is 4 bytes long
+	mov [(boot_page_directory - 0xC0000000)  + (0xC0000000 >> 22)*4], eax
+
+	; Point the last page directory entry to the page directory itself
+	; This is so called Recursive Page Directory (https://blog.inlow.online/2019/02/25/Memory-Management/)
+	; English Ref: http://www.rohitab.com/discuss/topic/31139-tutorial-paging-memory-mapping-with-a-recursive-page-directory/
+	; In this way, accessing last 4MiB virtual memory is accessing the page tables or the page directory itself
+	; e.g. read 4 bytes from virtual address [10 bits of 1;10bits of 1;0, 4, 8 etc.]
+	;      you can get back the last page directory entry, which contains the physical address of the page tables
+	;      and the last page directory entry contains the physical address of the directory itself
+	mov eax, (boot_page_directory - 0xC0000000)
+	add eax, 3
+	mov [(boot_page_directory - 0xC0000000) + 1023*4], eax
+
+	; Start enabling paging
+	; Set cr3 to the address of the boot_page_directory.
+	mov eax, (boot_page_directory - 0xC0000000)
+	mov cr3, eax
+	
+	mov eax, cr0
+	; Set Paging (bit 31) and Protection Mode (bit 0) bits
+	; See https://en.wikipedia.org/wiki/Control_register#CR0
+	or eax, 0x80000001
+	mov cr0, eax
+
+	; Jump to higher half with an absolute jump. 
+    lea ebx, [higher_half] ; load the address of the label in ebx
+    jmp ebx                ; jump to the label
+
+higher_half:
+	; code here executes in the higher half kernel
+	; eip is larger than 0xC0000000
+	; can continue kernel initialization, calling C code, etc.
+
+	; Unmap the identity mapping as it is now unnecessary. 
+	mov dword [boot_page_directory], 0
+
+	; Reload CR3 to force a TLB flush so the changes to take effect.
+	mov eax, cr3
+	mov cr3, eax
+
 	; To set up a stack, we set the esp register to point to the top of our
 	; stack (as it grows downwards on x86 systems). This is necessarily done
 	; in assembly as languages such as C cannot function without a stack.
@@ -86,6 +180,7 @@ init_pm:
 	; stack since (pushed 0 bytes so far) and the alignment is thus
 	; preserved and the call is well defined.
         ; note, that if you are building on Windows, C functions may have "_" prefix in assembly: _kernel_main
+
 	extern kernel_main
 	call kernel_main
  

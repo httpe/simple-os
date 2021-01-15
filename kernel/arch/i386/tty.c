@@ -8,7 +8,8 @@
 #include "vga.h"
 #include "port_io.h"
 
-static uint16_t* const VGA_MEMORY = (uint16_t*) 0xB8000;
+// It is assumed that the first 1MiB physical address space is mapped to virtual address starting at 0xC0000000
+static uint16_t* const VGA_MEMORY = (uint16_t*) (0xB8000 + 0xC0000000);
 
 static size_t terminal_row;
 static size_t terminal_column;
