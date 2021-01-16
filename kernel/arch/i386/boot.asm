@@ -29,7 +29,7 @@ align 4
 section .bss align=4096
 align 16
 stack_bottom:
-resb 16384 ; 16 KiB
+resb 524288 ; 512 KiB
 stack_top:
 
 ; Preallocate pages used for paging. Don't hard-code addresses and assume they
