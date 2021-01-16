@@ -239,9 +239,6 @@ struct multiboot_mmap_entry
 #define MULTIBOOT_MEMORY_ACPI_RECLAIMABLE       3
 #define MULTIBOOT_MEMORY_NVS                    4
 #define MULTIBOOT_MEMORY_BADRAM                 5
-/* This is added to the original GNU header file to be compatible with the ACPI3.0 
-     See https://wiki.osdev.org/Detecting_Memory_(x86)#BIOS_Function:_INT_0x15.2C_EAX_.3D_0xE820
-*/
   multiboot_uint32_t type; 
 } __attribute__((packed));
 typedef struct multiboot_mmap_entry multiboot_memory_map_t;
