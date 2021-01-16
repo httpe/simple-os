@@ -4,7 +4,7 @@ MEMINFO  equ  1 << 1            ; provide memory map
 FLAGS    equ  MBALIGN | MEMINFO ; this is the Multiboot 'flag' field
 MAGIC    equ  0x1BADB002        ; 'magic number' lets bootloader find the header
 CHECKSUM equ -(MAGIC + FLAGS)   ; checksum of above, to prove we are multiboot
- 
+
 ; Declare a multiboot header that marks the program as a kernel. These are magic
 ; values that are documented in the multiboot standard. The bootloader will
 ; search for this signature in the first 8 KiB of the kernel file, aligned at a
@@ -82,10 +82,11 @@ _start:
 	; Attributes: supervisor level (bit 2: user=0), read/write (bit 1: rw=1), present (bit 0: p=1)
 	; See https://wiki.osdev.org/Paging
 	add eax, 0000_0011b
-	
+
 	; The "- 0xC0000000" part is because in the linker script, we assume the whole kernel will be loaded at 0xC0000000
 	;   meaning all absolute address is based on 0xC0000000, while in reality the bootloader will load this assembly at 1MiB (0x100000)
-	; So we need to cancel out the base address set by linker for any label before we enabled paging 
+	; So we need to cancel out the base address set by linker for any label in order to get the physical address
+	; We need to keep doing this before we actually have paging enabled 
 	mov [(boot_page_table - 0xC0000000) + edi], eax
 	
 	add esi, 4096		; page size is 4KiB
@@ -129,8 +130,8 @@ _start:
 	mov cr0, eax
 
 	; Jump to higher half with an absolute jump. 
-    lea ebx, [higher_half] ; load the address of the label in ebx
-    jmp ebx                ; jump to the label
+    lea eax, [higher_half] ; load the address of the label in ebx
+    jmp eax                ; jump to the label
 
 higher_half:
 	; code here executes in the higher half kernel
@@ -148,7 +149,10 @@ higher_half:
 	; stack (as it grows downwards on x86 systems). This is necessarily done
 	; in assembly as languages such as C cannot function without a stack.
 	mov esp, stack_top
- 
+	
+	; Save ebx passed by the bootloader, pointing to the multiboot_info structure
+	push ebx
+
 	; This is a good place to initialize crucial processor state before the
 	; high-level kernel is entered. It's best to minimize the early
 	; environment where crucial features are offline. Note that the

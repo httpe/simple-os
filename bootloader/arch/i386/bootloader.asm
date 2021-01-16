@@ -39,6 +39,11 @@ boot:
     ; mov dx, [0x7e00]
     ; call print_hex
 
+    ; Detect memory layout using BIOS interrupt 0x15, eax=0xE820 
+    ; The entry count will be stored at 0x0500
+    ; The actual memory layout/map entries will be stored starting at 0x0504
+    call do_e820
+
     call switch_to_pm
     jmp $       ; infinite loop, shall not reach here
 
@@ -60,7 +65,8 @@ times 510-($-$$) db 0
 ; MBR magic number
 dw 0xaa55
 
-
+; utility to detect memory layout
+%include "memory.asm"
 ; utility to enable A20 address line
 ; symbol provided: enable_a20
 %include "a20.asm"
