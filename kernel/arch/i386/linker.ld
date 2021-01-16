@@ -33,7 +33,7 @@ SECTIONS
 	/* Next we'll put the .text section. */
 	/* The section is aligned in 4KiB boundary */
 	/* AT(addr) means to actually ask the ELF loader to load this section at addr */
-	/* In combination of ". = 0xC0000000", we generated the binary with all address based on 0xC0000000 
+	/* In combination of ". += 0xC0000000", we generated the binary with all address based on 0xC0000000 
 	   but actually ask the bootloader to load the sections starting from 0x100000 (1MiB) */
 	.text ALIGN (4K) : AT (ADDR (.text) - MAP_MEM_PA_ZERO_TO)
 	{
