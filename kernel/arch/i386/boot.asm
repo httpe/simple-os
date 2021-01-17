@@ -4,6 +4,8 @@ MEMINFO  equ  1 << 1            ; provide memory map
 FLAGS    equ  MBALIGN | MEMINFO ; this is the Multiboot 'flag' field
 MAGIC    equ  0x1BADB002        ; 'magic number' lets bootloader find the header
 CHECKSUM equ -(MAGIC + FLAGS)   ; checksum of above, to prove we are multiboot
+N_BOOT_PAGE_TABLE equ 2			; Initialize N boot-time page table for identity mapping
+								;  supporting a kernel of memory image size < N*4 - 1 MiB
 
 ; Declare a multiboot header that marks the program as a kernel. These are magic
 ; values that are documented in the multiboot standard. The bootloader will
@@ -38,10 +40,9 @@ stack_top:
 alignb 4096
 boot_page_directory:
 resb 4096
-; boot_page_table1:
 boot_page_table:
-resb 4096
-; Further page tables may be required if the kernel grows beyond 3 MiB.
+resb 4096 * N_BOOT_PAGE_TABLE
+; Bigger kernel memory image will need a bigger N_BOOT_PAGE_TABLE
 
 ; The linker script specifies _start as the entry point to the kernel and the
 ; bootloader will jump to this position once the kernel has been loaded. It
@@ -71,9 +72,9 @@ _start:
 	; And 2. is the start of a Higher Half Kernel, see https://wiki.osdev.org/Higher_Half_x86_Bare_Bones
 	; Basically to allow later user space program to load at virtual address 0x0 while not overriding the kernel code
 
-	mov esi, 0			; physical address to map
-	mov edi, 0			; offset into the page table
-	mov ecx, 1024		; there are 1024 page entries in a page table
+	mov esi, 0							; physical address to map
+	mov edi, 0							; offset into the page table
+	mov ecx, 1024*N_BOOT_PAGE_TABLE		; there are 1024 page entries in a page table
 
 .loop:
 	; A page table entry if masking out the lower 12 bits to zero should give the physical address of the 4KiB memory block (page) mapped
@@ -96,16 +97,30 @@ _start:
 	; set up the identity mapping entry in page directory
 	; page directory entry if masking out the lower 12 bits to zero should give the physical address of the page table pointed to
 	; attributes: supervisor level (bit 2: user=0), read/write (bit 1: rw=1), present (bit 0: p=1)
+	mov ecx, N_BOOT_PAGE_TABLE
 	mov eax, (boot_page_table - 0xC0000000)
 	add eax, 3
-	mov [(boot_page_directory - 0xC0000000)], eax
+	mov edi, 0
+.identity_mapping:
+	mov [(boot_page_directory - 0xC0000000) + edi*4], eax
+	add eax, 4096		; page table size is 4KiB
+	inc edi
+	loop .identity_mapping
 
 	; set up higher half kernel mapping in page directory
 	; 0xC0000000 should be the (0xC0000000 >> 22)th entry in the page directory
 	; Since the virtual address is 32[10bits page directory index; 10bits page table index; 12bits memory address offset]0
 	; See https://en.wikipedia.org/wiki/Protected_mode#/media/File:080810-protected-386-paging.svg
 	; And that entry should be (0xC0000000 >> 22)*4 = 768*4 = 3072 bytes into the page directory, since page directory entry is 4 bytes long
-	mov [(boot_page_directory - 0xC0000000)  + (0xC0000000 >> 22)*4], eax
+	mov ecx, N_BOOT_PAGE_TABLE
+	mov eax, (boot_page_table - 0xC0000000)
+	add eax, 3
+	mov edi, 0
+.high_half_mapping:
+	mov [(boot_page_directory - 0xC0000000)  + (0xC0000000 >> 22)*4 + edi*4], eax
+	add eax, 4096
+	inc edi
+	loop .high_half_mapping
 
 	; Point the last page directory entry to the page directory itself
 	; This is so called Recursive Page Directory (https://blog.inlow.online/2019/02/25/Memory-Management/)
@@ -139,7 +154,12 @@ higher_half:
 	; can continue kernel initialization, calling C code, etc.
 
 	; Unmap the identity mapping as it is now unnecessary. 
-	mov dword [boot_page_directory], 0
+	mov ecx, N_BOOT_PAGE_TABLE
+	mov edi, 0
+.rm_identity_mapping:
+	mov dword [boot_page_directory + 4*edi], 0
+	inc edi
+	loop .rm_identity_mapping
 
 	; Reload CR3 to force a TLB flush so the changes to take effect.
 	mov eax, cr3
