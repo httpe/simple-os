@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 // Ref: https://blog.inlow.online/2019/01/21/Paging/
 // Ref: http://www.jamesmolloy.co.uk/tutorial_html/6.-Paging.html
@@ -63,9 +64,9 @@ typedef struct page_directory_entry
 // } page_directory_t;
 
 
-void initialize_paging(uint32_t mbt_physical_addr);
+void initialize_paging();
 void install_page_fault_handler();
 
-uint32_t kmalloc(size_t size);
+uint32_t kmalloc(size_t size, bool is_kernel, bool is_writeable);
 
 #endif
