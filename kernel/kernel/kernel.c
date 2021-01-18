@@ -7,11 +7,11 @@
 #include <kernel/multiboot.h>
 
 void kernel_main(uint32_t mbt_physical_addr) {
-	// Clear screen
-	terminal_initialize();
 
 	// Architecture specific initialization
 	initialize_architecture(mbt_physical_addr);
+
+	terminal_clear_screen();
 
 	printf("Welcome to Simple-OS!\n");
 

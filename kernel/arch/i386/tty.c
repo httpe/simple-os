@@ -7,6 +7,7 @@
 
 #include "vga.h"
 #include "port_io.h"
+#include "serial.h"
 
 // It is assumed that the first 1MiB physical address space is mapped to virtual address starting at 0xC0000000
 static uint16_t* const VGA_MEMORY = (uint16_t*) (0xB8000 + 0xC0000000);
@@ -17,17 +18,21 @@ static uint8_t terminal_color;
 static uint16_t* terminal_buffer;
 
 void terminal_initialize(void) {
-	terminal_row = 0;
-	terminal_column = 0;
 	update_cursor();
 	terminal_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
 	terminal_buffer = VGA_MEMORY;
+}
+
+void terminal_clear_screen(void) {
 	for (size_t y = 0; y < VGA_HEIGHT; y++) {
 		for (size_t x = 0; x < VGA_WIDTH; x++) {
 			const size_t index = y * VGA_WIDTH + x;
 			terminal_buffer[index] = vga_entry(' ', terminal_color);
 		}
 	}
+	terminal_row = 0;
+	terminal_column = 0;
+	update_cursor();
 }
 
 void terminal_setcolor(uint8_t color) {
@@ -71,7 +76,9 @@ void terminal_putchar(char c) {
 		terminal_row -= 1;
 	}
 
-
+	if(is_serial_port_initialized()) {
+		write_serial(c);
+	}
 }
 
 
