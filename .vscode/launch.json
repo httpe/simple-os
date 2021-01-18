@@ -1,0 +1,19 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    // This config is for VSCode to use gdb to connect to a remote QEMU session
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch",
+            "type": "gdb",
+            "request": "attach",
+            "executable": "${workspaceFolder}/kernel/myos.kernel",
+            "target": "localhost:1234",
+            "remote": true,
+            "cwd": "${workspaceRoot}",
+            "gdbpath": "/usr/bin/gdb"
+        }
+    ]
+}
