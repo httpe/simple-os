@@ -118,7 +118,7 @@ char *exception_messages[] = {
 };
 
 void isr_handler(registers_t* r) {
-    printf("received interrupt: %d\n%s\n", r->int_no, exception_messages[r->int_no]);
+    printf("Received interrupt: %s\n", exception_messages[r->int_no]);
     if (interrupt_handlers[r->int_no] != 0) {
         isr_t handler = interrupt_handlers[r->int_no];
         handler(r);

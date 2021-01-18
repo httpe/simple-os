@@ -8,6 +8,20 @@
 // Ref: https://blog.inlow.online/2019/01/21/Paging/
 // Ref: http://www.jamesmolloy.co.uk/tutorial_html/6.-Paging.html
 
+// Entries per page directory
+#define PAGE_DIR_SIZE 1024
+// Entries per page table
+#define PAGE_TABLE_SIZE 1024
+
+// A page is 4KiB in size
+#define PAGE_SIZE 0x1000
+// Get 0-based page index from virtual address, one page is 4KiB in size
+#define PAGE_INDEX_FROM_VADDR(vaddr) ((vaddr) / PAGE_SIZE)
+// Get the 4KiB aligned virtual address from page index
+#define VADDR_FROM_PAGE_INDEX(idx) ((idx) * PAGE_SIZE)
+
+#define PAGE_FAULT_INTERRUPT 14
+
 typedef struct page
 {
    uint32_t present    : 1;   // Page present in memory
@@ -33,6 +47,18 @@ typedef struct page_directory_entry
    uint32_t avaible         : 3;   // Available to OS
    uint32_t page_table_addr : 20;  // Physical address to the page table (shifted right 12 bits)
 } page_directory_entry_t;
+
+
+// By using the recursive page directory trick, we can access page dir entry via
+// virtual address [10 bits of 1;10bits of 1;0, 4, 8 etc. 12bits of page dir index * 4]
+// where [10 bits of 1;10bits of 1;12bits of 0] = 0xFFFFF000
+#define PAGE_DIR_PTR ((page_directory_entry_t*) 0xFFFFF000)
+// To access page table entries, do similarly [10 bits of 1; 10bits of page dir index for the table; 0, 4, 8 etc. 12bits of page table index * 4]
+#define PAGE_TABLE_PTR(idx) ((page_t*) (0xFFC00000 + ((idx) << 12)))
+// We can also get page directory's physical address by acessing it's last entry, which point to itself, thus being recursive
+#define PAGE_DIR_PHYSICAL_ADDR (((page_directory_entry_t*) 0xFFFFF000)[1023].page_table_addr << 12)
+
+#define PAGE_COUNT_FROM_BYTES(n_bytes) ((n_bytes)/PAGE_SIZE + ((n_bytes) % PAGE_SIZE) != 0) 
 
 // typedef struct page_table
 // {
@@ -67,6 +93,10 @@ typedef struct page_directory_entry
 void initialize_paging();
 void install_page_fault_handler();
 
-uint32_t kmalloc(size_t size, bool is_kernel, bool is_writeable);
+uint32_t alloc_pages(size_t page_count, bool is_kernel, bool is_writeable);
+uint32_t alloc_frame(uint32_t page_index, bool is_kernel, bool is_writeable);
+void free_frame(uint32_t page_index);
+
+bool is_vaddr_accessible(uint32_t vaddr, bool is_from_kernel_code, bool is_writing);
 
 #endif
