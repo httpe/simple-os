@@ -11,7 +11,8 @@
 #define KERNEL_HEAP_INIT_SIZE_IN_PAGES 2
 #define KERNEL_HEAP_MAX_SIZE_IN_PAGES 1024
 #define HEAP_FOOTER_FROM_HEADER(header_ptr) (heap_footer_t*) ((uint32_t) (header_ptr) + sizeof(heap_header_t) + (header_ptr)->size)
-#define ASSERT_VALID_HEADER(header) ASSERT((header)->magic == HEAP_HEADER_MAGIC)
+#define ASSERT_VALID_HEAP_HEADER(header) ASSERT((header)->magic == HEAP_HEADER_MAGIC)
+#define ASSERT_VALID_HEAP_FOOTER(footer) ASSERT((footer)->magic == HEAP_FOOTER_MAGIC)
 
 typedef struct heap_header {
     uint32_t magic;
@@ -78,7 +79,7 @@ void initialize_kernel_heap()
 void insert_free_space(heap_t* heap, heap_header_t* free_header)
 {
     ASSERT(free_header != NULL);
-    ASSERT_VALID_HEADER(free_header);
+    ASSERT_VALID_HEAP_HEADER(free_header);
     heap_header_t* header = heap->smallest_free_header;
     if(!header) {
         // heap has no free space
@@ -99,7 +100,7 @@ void insert_free_space(heap_t* heap, heap_header_t* free_header)
             return;
         }
         header = header->next;
-        ASSERT_VALID_HEADER(header);
+        ASSERT_VALID_HEAP_HEADER(header);
     }
     if(header == heap->smallest_free_header) {
         // free_header is the smallest
@@ -120,9 +121,9 @@ void insert_free_space(heap_t* heap, heap_header_t* free_header)
 void claim_free_space(heap_t* heap, heap_header_t* free_header)
 {
     ASSERT(free_header != NULL);
-    ASSERT_VALID_HEADER(free_header);
+    ASSERT_VALID_HEAP_HEADER(free_header);
     if(free_header->prev) {
-        ASSERT_VALID_HEADER(free_header->prev);
+        ASSERT_VALID_HEAP_HEADER(free_header->prev);
         ASSERT(free_header->prev->next == free_header);
         ASSERT(free_header->next != NULL); // make sure free_header it is free
         if(free_header->next == free_header) {
@@ -152,7 +153,7 @@ void claim_free_space(heap_t* heap, heap_header_t* free_header)
 }
 
 heap_header_t* unify_free_space(heap_t* heap, heap_header_t* free_header) {
-    ASSERT_VALID_HEADER(free_header);
+    ASSERT_VALID_HEAP_HEADER(free_header);
     ASSERT(free_header->next != NULL); // assert is a free block
     heap_footer_t* free_footer = HEAP_FOOTER_FROM_HEADER(free_header);
 
@@ -160,9 +161,9 @@ heap_header_t* unify_free_space(heap_t* heap, heap_header_t* free_header) {
     if(is_vaddr_accessible((uint32_t) left_footer, heap->is_kernel, true)) {
         if(left_footer->magic == HEAP_FOOTER_MAGIC){
             heap_header_t* left_header = left_footer->header;
-            ASSERT_VALID_HEADER(left_header);
+            ASSERT_VALID_HEAP_HEADER(left_header);
             if(left_header->next != NULL) {
-                printf("Unify Left\n");
+                printf("Heap unify left\n");
                 // if on the left there is a free block, merge free_header into it
                 // [left_header | left_header->size | left_footer | free_header | free_header->size | free_footer]
                 // =>
@@ -180,13 +181,13 @@ heap_header_t* unify_free_space(heap_t* heap, heap_header_t* free_header) {
     heap_header_t* right_header = (heap_header_t*) ((uint32_t) free_footer + sizeof(heap_footer_t));
     if(is_vaddr_accessible((uint32_t) right_header, heap->is_kernel, true)) {
         if(right_header->magic == HEAP_HEADER_MAGIC && right_header->next != NULL){
-            printf("Unify Right\n");
+            printf("Heap unify right\n");
             // if on the right there is a free block, merge it into free_header
             // [free_header | free_header->size|free_footer|right_header|right_header->size|right_footer]
             // =>
             // [free_header | free_header->size + sizeof(free_footer) + sizeof(right_header) + right_header->size | right_footer pointing to free_header]
             heap_footer_t* right_footer = HEAP_FOOTER_FROM_HEADER(right_header);
-            ASSERT(right_footer->magic == HEAP_FOOTER_MAGIC);
+            ASSERT_VALID_HEAP_FOOTER(right_footer);
 
             claim_free_space(heap, free_header);
             claim_free_space(heap, right_header);
@@ -204,7 +205,7 @@ heap_header_t* unify_free_space(heap_t* heap, heap_header_t* free_header) {
 void heap_free(heap_t* heap, uint32_t vaddr)
 {
     heap_header_t* header = (heap_header_t*) (vaddr - sizeof(heap_header_t));
-    ASSERT_VALID_HEADER(header); // assert it is a heap managed space
+    ASSERT_VALID_HEAP_HEADER(header); // assert it is a heap managed space
     ASSERT(header->next == NULL); // assert it is marked as used, not a free space
     insert_free_space(heap, header);
     unify_free_space(heap, header);
@@ -223,7 +224,7 @@ heap_header_t* expand_heap(heap_t* heap, heap_header_t* largest_free_header, siz
 
     ASSERT(requested_size>0);
     if(largest_free_header) {
-        ASSERT_VALID_HEADER(largest_free_header);
+        ASSERT_VALID_HEAP_HEADER(largest_free_header);
         ASSERT(largest_free_header->size < requested_size);
     }
 
@@ -272,7 +273,7 @@ heap_header_t* find_free_heap_node_fit_size(heap_t* heap, size_t size)
     heap_header_t* header = heap->smallest_free_header;
     while(header) // if heap->smallest_free_header is NULL, skip
     {
-        ASSERT_VALID_HEADER(header);
+        ASSERT_VALID_HEAP_HEADER(header);
         if(header->size >= size) {
             return header;
         }
@@ -297,7 +298,7 @@ void* heap_alloc(heap_t* heap, size_t size)
             // allocation failed because of expansion failure 
             return 0;
         }
-        ASSERT_VALID_HEADER(header);
+        ASSERT_VALID_HEAP_HEADER(header);
         ASSERT(header->size >= size);
     }
 
@@ -312,7 +313,7 @@ void* heap_alloc(heap_t* heap, size_t size)
     // [header| header->size |footer] => [header (used)| size | new_footer to header | new_header | new free space | footer to new header ]
 
     heap_footer_t* footer = (heap_footer_t*) ((uint32_t) header + sizeof(heap_header_t) + header->size);
-    ASSERT(footer->magic == HEAP_FOOTER_MAGIC);
+    ASSERT_VALID_HEAP_FOOTER(footer);
 
     heap_header_t* new_header = (heap_header_t*) ((uint32_t) header + sizeof(heap_header_t) + size + sizeof(heap_footer_t));
     new_header->magic = HEAP_HEADER_MAGIC;
