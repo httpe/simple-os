@@ -4,30 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 
-
-// Entries per page directory
-#define PAGE_DIR_SIZE 1024
-// Entries per page table
-#define PAGE_TABLE_SIZE 1024
-// By using the recursive page directory trick, we can access page dir entry via
-// virtual address [10 bits of 1;10bits of 1;0, 4, 8 etc. 12bits of page dir index * 4]
-// where [10 bits of 1;10bits of 1;12bits of 0] = 0xFFFFF000
-#define PAGE_DIR_PTR ((page_directory_entry_t*) 0xFFFFF000)
-// To access page table entries, do similarly [10 bits of 1; 10bits of page dir index for the table; 0, 4, 8 etc. 12bits of page table index * 4]
-#define PAGE_TABLE_PTR(idx) ((page_t*) (0xFFC00000 + ((idx) << 12)))
-// We can also get page directory's physical address by acessing it's last entry, which point to itself, thus being recursive
-#define PAGE_DIR_PHYSICAL_ADDR (((page_directory_entry_t*) 0xFFFFF000)[1023].page_table_addr << 12)
-
-// A page is 4KiB in size
-#define PAGE_SIZE 0x1000
-// Get 0-based page index from virtual address, one page is 4KiB in size
-#define PAGE_INDEX_FROM_VADDR(vaddr) ((vaddr) / PAGE_SIZE)
-// Get the 4KiB aligned virtual address from page index
-#define VADDR_FROM_PAGE_INDEX(idx) ((idx) * PAGE_SIZE)
-
-
-
-#define PAGE_FAULT_INTERRUPT 14
 // #define PAGE_TO_MAP 4
 // page_table_t page_tables[PAGE_TO_MAP] __attribute__((aligned(4096)));
 // page_directory_t first_page_directory __attribute__((aligned(4096)));
@@ -137,16 +113,11 @@ uint32_t first_contiguous_page_index(size_t page_count) {
 
 }
 
-uint32_t kmalloc(size_t size, bool is_kernel, bool is_writeable)
+uint32_t alloc_pages(size_t page_count, bool is_kernel, bool is_writeable)
 {
-    if(size == 0)
+    if(page_count == 0)
     {
         return 0;
-    }
-    uint32_t page_count = size / 4096;
-    if(size % 4096 != 0) 
-    {
-        page_count++;
     }
 
     uint32_t page_index = first_contiguous_page_index(page_count);
@@ -160,6 +131,32 @@ uint32_t kmalloc(size_t size, bool is_kernel, bool is_writeable)
     return VADDR_FROM_PAGE_INDEX(page_index);
 }
 
+bool is_vaddr_accessible(uint32_t vaddr, bool is_from_kernel_code, bool is_writing) {
+    uint32_t page_index = PAGE_INDEX_FROM_VADDR(vaddr);
+    uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
+    uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
+    if(!PAGE_DIR_PTR[page_dir_idx].present){
+        return false;
+    }
+    if(!PAGE_TABLE_PTR(page_dir_idx)[page_table_idx].present) {
+        return false;
+    }
+    // Kernel can do anything, assuming we are not in write protected mode
+    // "The WP bit in CR0 determines if this is only applied to userland, 
+    //   always giving the kernel write access (the default) or both userland and the kernel 
+    //   (see Intel Manuals 3A 2-20)"
+    if(is_from_kernel_code) {
+        return true;
+    }
+    if(PAGE_DIR_PTR[page_dir_idx].rw < is_writing){
+        return false;
+    }
+    if(!PAGE_DIR_PTR[page_dir_idx].user < is_from_kernel_code){
+        return false;
+    }
+    return true;
+}
+
 void initialize_paging()
 {
     install_page_fault_handler();
@@ -170,18 +167,18 @@ void initialize_paging()
     page_t page_table_entry_0 = PAGE_TABLE_PTR(0xC0000000 >> 22)[0];
     printf("Boot page table entry 0 point to physical addr: 0x%x\n", page_table_entry_0.frame << 12);
 
-    uint32_t array_len = 0x9FC00;
-    uint32_t alloc_addr = kmalloc(array_len, true, true);
-    printf("Allocated an uint32_t[%d] array at virtual address: 0x%x\n", array_len, alloc_addr);
-    uint8_t *array = (uint8_t*) alloc_addr;
-    array[0] = 1;
-    array[array_len-1] = 10;
-    printf("Array[0]=%d; Array[%d]=%d\n", array[0], array_len-1, array[array_len-1]);
+    // uint32_t array_len = 0x9FC00;
+    // uint32_t alloc_addr = kmalloc(PAGE_COUNT_FROM_BYTES(array_len), true, true);
+    // printf("Allocated an uint32_t[%d] array at virtual address: 0x%x\n", array_len, alloc_addr);
+    // uint8_t *array = (uint8_t*) alloc_addr;
+    // array[0] = 1;
+    // array[array_len-1] = 10;
+    // printf("Array[0]=%d; Array[%d]=%d\n", array[0], array_len-1, array[array_len-1]);
     
-    uint32_t alloc_addr2 = kmalloc(0x3000, true, true);
-    printf("Allocated second uint32_t[0x3000] array at virtual address: 0x%x\n", alloc_addr2);
-    uint8_t *array2 = (uint8_t*) alloc_addr2;
-    array2[0] = 6;
-    array2[0x3000-1] = 9;
-    printf("Array2[0]=%d; Array2[0x3000-1]=%d\n", array2[0], array2[0x3000-1]);
+    // uint32_t alloc_addr2 = kmalloc(PAGE_COUNT_FROM_BYTES(0x3000), true, true);
+    // printf("Allocated second uint32_t[0x3000] array at virtual address: 0x%x\n", alloc_addr2);
+    // uint8_t *array2 = (uint8_t*) alloc_addr2;
+    // array2[0] = 6;
+    // array2[0x3000-1] = 9;
+    // printf("Array2[0]=%d; Array2[0x3000-1]=%d\n", array2[0], array2[0x3000-1]);
 }
