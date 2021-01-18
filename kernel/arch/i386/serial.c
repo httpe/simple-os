@@ -1,4 +1,4 @@
-#include "serial.h"
+#include <kernel/serial.h>
 #include "port_io.h"
 
 // Serial port I/O utilities

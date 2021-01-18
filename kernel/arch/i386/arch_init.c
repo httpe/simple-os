@@ -1,12 +1,13 @@
 #include <kernel/arch_init.h>
+#include <kernel/heap.h>
+#include <kernel/serial.h>
 
 #include "isr.h"
 #include "timer.h"
 #include "keyboard.h"
 #include "paging.h"
 #include "memory_bitmap.h"
-#include <kernel/heap.h>
-#include "serial.h"
+
 
 // x86-32 architecture specific initialization sequence
 void initialize_architecture(uint32_t mbt_physical_addr) {
