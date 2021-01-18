@@ -67,7 +67,7 @@ endif
 # Hardcoded path /kernel.bin to be loaded by bootloader
 kernel.tar: $(KERNEL_BOOT_IMG) $(KERNEL_ROOT)
 	# Use KERNEL_ROOT as file name root, i.e. $(KERNEL_ROOT)/kernel.bin -> /kernel.bin in the tar ball
-	tar -P -cvf $@ --transform="s,^$(KERNEL_ROOT)/,/," $(KERNEL_ROOT)/*
+	$(TAR) -P -cvf $@ --transform="s,^$(KERNEL_ROOT)/,/," $(KERNEL_ROOT)/*
 
 bootable_kernel.bin: bootloader_padded.bin kernel.tar
 	# concat the kernel tarball
