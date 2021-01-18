@@ -3,6 +3,7 @@ PROJECTS="libc kernel bootloader"
 
 export MAKE=${MAKE:-make}
 export HOST=${HOST:-$(./default-host.sh)}
+export TAR=${TAR:-tar}
  
 export CROSSCOMPILERBIN=~/opt/cross/bin
 
