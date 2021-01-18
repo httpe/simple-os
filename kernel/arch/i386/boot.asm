@@ -44,6 +44,12 @@ boot_page_table:
 resb 4096 * N_BOOT_PAGE_TABLE
 ; Bigger kernel memory image will need a bigger N_BOOT_PAGE_TABLE
 
+; Note on GDB usage:
+; gdb cannot break at code before we set up higher half page mapping
+; i.e. before symbol higher_half
+; The reason is we tricked the linker to assume everything will be loaded at 0xC0000000
+; See explanation on "- 0xC0000000" below
+
 ; The linker script specifies _start as the entry point to the kernel and the
 ; bootloader will jump to this position once the kernel has been loaded. It
 ; doesn't make sense to return from this function as the bootloader is gone.
@@ -184,9 +190,9 @@ higher_half:
 	
 	; Start Loading GDT (Needed for GRUB, no need for our own bootloader)
     lgdt [gdt_descriptor]   ; 1. load the GDT descriptor
-    jmp CODE_SEG:init_pm    ; 2. Far jump by using a different segment, basically setting CS to point to the correct protected mode segment (GDT entry)
+    jmp CODE_SEG:init_higher_half_pm    ; 2. Far jump by using a different segment, basically setting CS to point to the correct protected mode segment (GDT entry)
 
-init_pm:
+init_higher_half_pm:
     mov ax, DATA_SEG        ; 3. update the segment registers other than CS
     mov ds, ax
     mov ss, ax

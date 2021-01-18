@@ -18,7 +18,7 @@ export LIBDIR=$EXEC_PREFIX/lib
 export INCLUDEDIR=$PREFIX/include
 
 export CFLAGS='-O0 -g'
-export ASMFLAGS='-f elf32'
+export ASMFLAGS='-f elf32 -g -F dwarf'
 export CPPFLAGS=''
 
 # Configure the cross-compiler to use the desired system root.

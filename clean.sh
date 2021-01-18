@@ -9,3 +9,4 @@ done
 rm -rf sysroot
 rm -rf isodir
 rm -rf myos.iso
+rm -f bootable_kernel.bin

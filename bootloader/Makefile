@@ -35,7 +35,7 @@ UNAME := $(shell uname)
 all: bootable_kernel.bin bootloader.elf
 
 $(ARCHDIR)/bootloader.o: $(BOOTLOADER_ASM) $(BOOTLOADER_INCLUDES)
-	$(AS) -f elf32 -o $@ -i $(ARCHDIR) $(BOOTLOADER_ASM)
+	$(AS) $(ASMFLAGS) -o $@ -i $(ARCHDIR) $(BOOTLOADER_ASM)
 
 # Comming from https://wiki.osdev.org/Bare_Bones
 %.o: %.c
@@ -79,9 +79,9 @@ clean:
 	rm -f bootloader_padded.bin
 	rm -f bootable_kernel.bin
 	rm -f kernel.tar
+	rm -f bootloader.elf
 	rm -f *.o
 	rm -f $(OBJS) *.o */*.o */*/*.o
 
 install: bootable_kernel.bin bootloader.elf
 	cp bootable_kernel.bin ..
-	cp bootloader.elf ..

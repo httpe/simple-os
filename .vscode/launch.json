@@ -1,4 +1,6 @@
 {
+    // Source: https://stackoverflow.com/questions/53519668/how-to-attach-to-remote-gdb-with-vscode
+
     // Use IntelliSense to learn about possible attributes.
     // Hover to view descriptions of existing attributes.
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
@@ -6,14 +8,48 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch",
-            "type": "gdb",
+            "name": "Debug All",
+            "type": "gdb", // Provided by "Native Debug" extension
             "request": "attach",
             "executable": "${workspaceFolder}/kernel/myos.kernel",
             "target": "localhost:1234",
             "remote": true,
-            "cwd": "${workspaceRoot}",
-            "gdbpath": "/usr/bin/gdb"
+            "cwd": "${workspaceFolder}",
+            "gdbpath": "/usr/bin/gdb",
+            "preLaunchTask": "Emulate (Debug)",
+            "autorun": [
+                "add-symbol-file bootloader/bootloader.elf 0x7c00",
+                "dir kernel",
+                "dir bootloader"
+            ]
+        },
+        {
+            "name": "Debug Kernel",
+            "type": "gdb", // Provided by "Native Debug" extension
+            "request": "attach",
+            "executable": "${workspaceFolder}/kernel/myos.kernel",
+            "target": "localhost:1234",
+            "remote": true,
+            "cwd": "${workspaceFolder}",
+            "gdbpath": "/usr/bin/gdb",
+            "preLaunchTask": "Emulate (Debug)",
+            "autorun": [
+                "dir kernel"
+            ]
+        },
+        {
+            "name": "Debug Bootloader",
+            "type": "gdb", // Provided by "Native Debug" extension
+            "request": "attach",
+            "executable": "${workspaceFolder}/bootloader/bootloader.elf",
+            "target": "localhost:1234",
+            "remote": true,
+            "cwd": "${workspaceFolder}",
+            "gdbpath": "/usr/bin/gdb",
+            "preLaunchTask": "Emulate (Debug)",
+            "autorun": [
+                "dir bootloader"
+            ]
         }
     ]
 }

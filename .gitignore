@@ -7,3 +7,4 @@ sysroot
 *.elf
 *.d
 myos.kernel
+serial_port_output.txt

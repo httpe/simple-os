@@ -24,6 +24,8 @@ To compile this project, you need to install the following dependencies:
 
 1. [QEMU](https://www.qemu.org/) Emulator: We will use QEMU to emulate our system, avoiding restarting computer again and again just to test the system.
 
+1. (Optional) [VSCode](https://code.visualstudio.com/): We provide some integration of the building/debugging process with VSCode, but it is optional. To debug using VSCode, you need to install the extension `Native Debug`.
+
 1. (Optional) [GRUB](https://www.gnu.org/software/grub/): The `iso.sh` uses GRUB to generate a bootable ISO image, but since we have our own `bootloader/` implemented, it is not required.
 
 ## Build
@@ -49,20 +51,24 @@ If compile finish successfully, `bootable_kernel.bin` will be generated.
 
 You can then test it using QEMU.
 
-We can run the compiled kernel in QEMU by running in Windows PowerShell:
+We can run the compiled kernel through QEMU in WSL:
 
-```ps
-qemu-system-i386.exe -hda bootable_kernel.bin
+```bash
+./qemu.sh
 ```
+
+If the environment is detected to be WSL, the script will run the Windows version of QEMU.
+
+Anything written to the serial port will be logged in `serial_port_output.txt`.
 
 ### Debug
 
 It is possible to debug the kernel by GDB. See [QEMU GDB Usage](https://www.qemu.org/docs/master/system/gdb.html).
 
-Start QEMU in Windows PowerShell by:
+Start QEMU in WSL by:
 
-```ps
-qemu-system-i386.exe -s -S -hda bootable_kernel.bin
+```bash
+./qemu.sh debug
 ```
 
 And then attach GDB to the QEMU instance in WSL by:
@@ -74,14 +80,34 @@ gdb -ex "target remote localhost:1234" -ex "symbol-file sysroot/boot/myos.kernel
 The above loads debug symbols for the kernel, to debug our own bootloader:
 
 ```bash
-gdb -ex "target remote localhost:1234" -ex "symbol-file bootloader.elf" 
+gdb -ex "target remote localhost:1234" -ex "symbol-file bootloader/bootloader.elf" 
 ```
 
 The `bootloader.elf` is generated solely to provide the debug symbols.
 
 This trick is also describe in the [os-tutorial](https://github.com/cfenollosa/os-tutorial/tree/master/14-checkpoint) for macOS.
 
-### (Optional) Generate Bootable ISO
+### VSCode Integration
+
+Better still, it is possible to do all above graphically in VSCode.
+
+`.vscode/tasks.json` provide integrated Clean/Build/Emulate task.
+
+You can trigger them in Command Palette (Ctrl+Shift+P).
+
+`.vscode/launch.json` provides the debug gdb debug profiles. Note  the "Native Debug" extension is required to debug in VSCode.
+
+With all of the setup, the debugging process is streamlined to:
+
+1. Set break points in any source file
+1. Trigger `Build` task in Command Palette, make sure it runs successfully
+1. Go to VSCode debugger, run `Debug All`
+1. A QEMU session will be fired up and the system will run until a break point
+1. After finishing debugging, click detach debugger and close the QEMU window
+
+**Note:** Some code in `bootloader/arch/i386/bootloader.asm` and `kernel/arch/i386/boot.asm` are not breakable in this way, please see the comments there.  
+
+### (Optional) Generate GRUB Bootable ISO
 
 If you have GRUB installed, you can build a bootable CD-ROM image of the operating system by invoking:
 

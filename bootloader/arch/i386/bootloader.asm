@@ -1,6 +1,9 @@
 ; Modified from https://github.com/cfenollosa/os-tutorial/blob/master/13-kernel-barebones/bootsect.asm
 
 section .boot
+; Note that .boot section will not generate debug symbol
+;   so you cannot debug this section in gdb without using absolute address
+;   e.g. gdb command: "break *0x7c00"
 [bits 16]
 global boot:function
 boot:
@@ -67,6 +70,10 @@ MSG_LOAD_FROM_DISK db "Loaded remaining sectors", 0
 times 510-($-$$) db 0 ; padding 510 - (279 - 0) = 231's 0
 ; MBR magic number
 dw 0xaa55 ; write 0xaa55 in 511 and 512 bytes
+
+
+; switch to .text section so the symbol are exported
+section .text
 
 ; utility to detect memory layout
 %include "memory.asm"
