@@ -184,7 +184,12 @@ The kernel entry point is `kernel/kernel/kernel.c`.
   - `timer.*`: [PIT](https://wiki.osdev.org/PIT) timer
   - `tty.*` and `vga.h`: VGA Text Mode driver
   - `arch_init.c`: Collection of architecture specific initializations
+  - `paging.*` and `memory_bitmap.*`: Paging code, with a physical memory manager / page frame allocator implemented as [bitmap](http://www.jamesmolloy.co.uk/tutorial_html/6.-Paging.html)
+  - `serial.c`: [Serial port I/O](https://wiki.osdev.org/Serial_ports) utilities. We output all printing though serial port so QEMU can export the printed content to a file `serial_port_output.txt`.
+  - `heap.c`: [Heap]((http://www.jamesmolloy.co.uk/tutorial_html/7.-The%20Heap.html)), dynamic memory allocation and [virtual memory manager](https://wiki.osdev.org/Writing_a_memory_manager), implemented as a sorted linked list of free memory blocks with memory header and footer inspired by [INWOX](https://github.com/qvjp/INWOX/wiki/010-malloc()-&-free())
+
 - `libc/`: Progressive implementation of the standard C library
+  - Mostly from Meaty Skeleton, and some are from Xv6.
 
 ## Reference
 
@@ -232,13 +237,14 @@ Although the final goal is to make the system self-hosting, we planned for sever
     - Support `printf` to write various type of data as string to the screen
     - Support reading user input from keyboard
     - After initialization, run a program that user can enter some text to the screen and edit/delete it
-    - **In Progress**
+    - **Finished**: Implemented under the folder `kernel`
 
 1. **Milestone Three: Memory Management, Filesystem and Shell**
-    - Implement standard C library memory allocation functions
+    - Implement [heap](https://en.wikipedia.org/wiki/Memory_management#HEAP)/[dynamic memory allocation](https://en.wikipedia.org/wiki/C_dynamic_memory_allocation)
     - Provide a readable & writable file system (FAT/Ext) and corresponding system calls/functions
     - Write a shell to allow navigating through the file system
     - Write a editor to show file content, edit and save it
+    - **In progress**: Heap implemented
 
 1. **Milestone Four: User Space and Multiprocessing**
     - Enrich the system standard C library
