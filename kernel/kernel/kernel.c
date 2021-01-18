@@ -42,6 +42,8 @@ void kernel_main(uint32_t mbt_physical_addr) {
 	// uint32_t* ptr = (uint32_t*)0xA0000000;
 	// uint32_t volatile do_page_fault = *ptr;
 
+	printf("\nPress any key to start typing on the screen!\n");
+
 	// Hang by infinite loop
 	while (1);
 }
