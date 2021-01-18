@@ -13,9 +13,9 @@ enum tar_error_code {
 	TAR_ERR_LBA_GT_MAX_SECTOR = -4
 };
 
-int tar_lookup(unsigned char *archive, const char *filename, char **out);
-bool is_tar_header(unsigned char *archive);
-int tar_match_filename(unsigned char *archive, const char *filename);
-int tar_get_filesize(unsigned char *archive);
+int tar_lookup(unsigned char* archive, const char* filename, char** out);
+bool is_tar_header(unsigned char* archive);
+int tar_match_filename(unsigned char* archive, const char* filename);
+int tar_get_filesize(unsigned char* archive);
 
 #endif

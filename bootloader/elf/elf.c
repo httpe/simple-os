@@ -13,28 +13,28 @@ bool is_elf(const char* buff) {
 //
 // return: the physical address of the program entry point
 Elf32_Addr load_elf(const char* buff) {
-    const Elf32_Ehdr* header = (const Elf32_Ehdr*) buff;
+    const Elf32_Ehdr* header = (const Elf32_Ehdr*)buff;
     Elf32_Half n_program_header = header->e_phnum;
-    const Elf32_Phdr* program_header_table = (const Elf32_Phdr*) (((uint32_t) buff) + header->e_phoff);
+    const Elf32_Phdr* program_header_table = (const Elf32_Phdr*)(((uint32_t)buff) + header->e_phoff);
     Elf32_Addr entry_pioint = header->e_entry;
     Elf32_Addr entry_pioint_physical = entry_pioint;
-    for(Elf32_Half i=0; i<n_program_header; i++) {
+    for (Elf32_Half i = 0; i < n_program_header; i++) {
         Elf32_Phdr program_header = program_header_table[i];
-        if(program_header.p_type == PT_LOAD){
-            char* dest_ptr = (char*) program_header.p_paddr;
-            char* src_ptr = (char*) buff + program_header.p_offset;
+        if (program_header.p_type == PT_LOAD) {
+            char* dest_ptr = (char*)program_header.p_paddr;
+            char* src_ptr = (char*)buff + program_header.p_offset;
             // Detect offset of virtual (linear) address vs physical address
-            if(entry_pioint>=program_header.p_vaddr && entry_pioint<program_header.p_vaddr + program_header.p_memsz) {
+            if (entry_pioint >= program_header.p_vaddr && entry_pioint < program_header.p_vaddr + program_header.p_memsz) {
                 // use if-else to avoid negative number
-                if(program_header.p_paddr > program_header.p_vaddr) {
+                if (program_header.p_paddr > program_header.p_vaddr) {
                     entry_pioint_physical = entry_pioint + (program_header.p_paddr - program_header.p_vaddr);
                 } else {
                     entry_pioint_physical = entry_pioint - (program_header.p_vaddr - program_header.p_paddr);
                 }
             }
 
-            for(Elf32_Word j=0; j<program_header.p_memsz; j++) {
-                if(j<program_header.p_filesz) {
+            for (Elf32_Word j = 0; j < program_header.p_memsz; j++) {
+                if (j < program_header.p_filesz) {
                     dest_ptr[j] = src_ptr[j];
                 } else {
                     dest_ptr[j] = 0;
