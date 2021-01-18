@@ -16,16 +16,25 @@ void kernel_main(uint32_t mbt_physical_addr) {
 	printf("Welcome to Simple-OS!\n");
 
 	uint32_t a = (uint32_t) kmalloc(8);
-	printf("e: %d\n", a);
-	uint32_t e = (uint32_t) kmalloc(8);
-	printf("e: %d\n", e);
-	uint32_t f = (uint32_t) kmalloc(8);
-	printf("f: %d\n", f);
+	printf("Heap alloc a[8]: %d\n", a);
+	uint32_t b = (uint32_t) kmalloc(8);
+	printf("Heap alloc b[8]: %d\n", b);
+	uint32_t c = (uint32_t) kmalloc(8);
+	printf("Heap alloc c[8]: %d\n", c);
+	printf("free(a):\n", c);
 	kfree(a);
-	kfree(f);
+	printf("free(c):\n", c);
+	kfree(c);
+	printf("free(b):\n", c);
+	kfree(b);
+	uint32_t d = (uint32_t) kmalloc(4096*3);
+	printf("Heap alloc d[4096*3]: %d\n", d);
+	uint32_t e = (uint32_t) kmalloc(8);
+	printf("Heap alloc e[8]: %d\n", e);
+	printf("free(d)\n");
+	kfree(d);
+	printf("free(e)\n");
 	kfree(e);
-	uint32_t g = (uint32_t) kmalloc(8);
-	printf("g: %d\n", g);
 
 	// Manually triggering a page fault
 	// Use volatile to avoid it get optimized away

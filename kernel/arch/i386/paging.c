@@ -49,6 +49,7 @@ void free_frame(uint32_t page_index)
             page->present = 0;
             // flush
             flush_tlb(VADDR_FROM_PAGE_INDEX(page_index));
+            printf("Page frame freed: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, page->frame);
         }
     }
 }
@@ -111,6 +112,20 @@ uint32_t first_contiguous_page_index(size_t page_count) {
     printf("KERNEL PANIC: Find contiguous VA failed\n");
     while(1);
 
+}
+
+void dealloc_pages(uint32_t vaddr, size_t page_count)
+{
+    if(page_count == 0)
+    {
+        return;
+    }
+
+    uint32_t page_index = PAGE_INDEX_FROM_VADDR(vaddr);
+    for(uint32_t idx = page_index; idx < page_index + page_count; idx++)
+    {
+        free_frame(idx);
+    }
 }
 
 uint32_t alloc_pages(size_t page_count, bool is_kernel, bool is_writeable)

@@ -91,12 +91,9 @@ typedef struct page_directory_entry
 
 
 void initialize_paging();
-void install_page_fault_handler();
 
 uint32_t alloc_pages(size_t page_count, bool is_kernel, bool is_writeable);
-uint32_t alloc_frame(uint32_t page_index, bool is_kernel, bool is_writeable);
-void free_frame(uint32_t page_index);
-
+void dealloc_pages(uint32_t vaddr, size_t page_count);
 bool is_vaddr_accessible(uint32_t vaddr, bool is_from_kernel_code, bool is_writing);
 
 #endif

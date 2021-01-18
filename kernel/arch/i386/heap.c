@@ -5,14 +5,20 @@
 #include "paging.h"
 #include <string.h>
 
-#define HEAP_HEADER_MAGIC 0x11050522
-#define HEAP_FOOTER_MAGIC 0x19310918
+// Magic number for heap header on the left boundary of a (virtual address wise) contiguous space 
+#define HEAP_HEADER_MAGIC_LEFT 0xBEAFFAEB
+// Magic number for other heap header 
+#define HEAP_HEADER_MAGIC_MID 0x11050522
+// Magic number for heap footer on the right boundary of a (virtual address wise) contiguous space 
+#define HEAP_FOOTER_MAGIC_RIGHT 0xBADADBAD
+// Magic number for other heap footer
+#define HEAP_FOOTER_MAGIC_MID 0x19310918
 #define ASSERT(b) ((b) ? (void)0 : panic_assert(__FILE__, __LINE__, #b))
 #define KERNEL_HEAP_INIT_SIZE_IN_PAGES 2
 #define KERNEL_HEAP_MAX_SIZE_IN_PAGES 1024
 #define HEAP_FOOTER_FROM_HEADER(header_ptr) (heap_footer_t*) ((uint32_t) (header_ptr) + sizeof(heap_header_t) + (header_ptr)->size)
-#define ASSERT_VALID_HEAP_HEADER(header) ASSERT((header)->magic == HEAP_HEADER_MAGIC)
-#define ASSERT_VALID_HEAP_FOOTER(footer) ASSERT((footer)->magic == HEAP_FOOTER_MAGIC)
+#define ASSERT_VALID_HEAP_HEADER(header) ASSERT((header)->magic == HEAP_HEADER_MAGIC_LEFT || (header)->magic == HEAP_HEADER_MAGIC_MID)
+#define ASSERT_VALID_HEAP_FOOTER(footer) ASSERT((footer)->magic == HEAP_FOOTER_MAGIC_MID || (footer)->magic == HEAP_FOOTER_MAGIC_RIGHT)
 
 typedef struct heap_header {
     uint32_t magic;
@@ -51,7 +57,7 @@ heap_t* initialize_heap(uint32_t size_in_pages, uint32_t min_size_in_pages, uint
 
     uint32_t heap_addr = alloc_pages(size_in_pages, is_kernel, true);
     heap_header_t* header = (heap_header_t*) (heap_addr + sizeof(heap_t));
-    header->magic = HEAP_HEADER_MAGIC;
+    header->magic = HEAP_HEADER_MAGIC_MID; // MID because it is not started at page boundary 
     // header's size is usable size
     header->size = PAGE_SIZE*size_in_pages - sizeof(heap_t) - sizeof(heap_header_t) - sizeof(heap_footer_t);
     // Last block will have next pointing to itself
@@ -59,7 +65,7 @@ heap_t* initialize_heap(uint32_t size_in_pages, uint32_t min_size_in_pages, uint
     header->prev = NULL;
 
     heap_footer_t* footer = HEAP_FOOTER_FROM_HEADER(header);
-    footer->magic = HEAP_FOOTER_MAGIC;
+    footer->magic = HEAP_FOOTER_MAGIC_RIGHT;
     footer->header = header;
 
     heap_t* heap = (heap_t*) heap_addr;
@@ -159,7 +165,7 @@ heap_header_t* unify_free_space(heap_t* heap, heap_header_t* free_header) {
 
     heap_footer_t* left_footer = (heap_footer_t*) ((uint32_t) free_header - sizeof(heap_footer_t));
     if(is_vaddr_accessible((uint32_t) left_footer, heap->is_kernel, true)) {
-        if(left_footer->magic == HEAP_FOOTER_MAGIC){
+        if(left_footer->magic == HEAP_FOOTER_MAGIC_MID || left_footer->magic == HEAP_FOOTER_MAGIC_RIGHT){
             heap_header_t* left_header = left_footer->header;
             ASSERT_VALID_HEAP_HEADER(left_header);
             if(left_header->next != NULL) {
@@ -180,7 +186,7 @@ heap_header_t* unify_free_space(heap_t* heap, heap_header_t* free_header) {
     }
     heap_header_t* right_header = (heap_header_t*) ((uint32_t) free_footer + sizeof(heap_footer_t));
     if(is_vaddr_accessible((uint32_t) right_header, heap->is_kernel, true)) {
-        if(right_header->magic == HEAP_HEADER_MAGIC && right_header->next != NULL){
+        if((right_header->magic == HEAP_HEADER_MAGIC_MID || right_header->magic == HEAP_HEADER_MAGIC_LEFT) && right_header->next != NULL){
             printf("Heap unify right\n");
             // if on the right there is a free block, merge it into free_header
             // [free_header | free_header->size|free_footer|right_header|right_header->size|right_footer]
@@ -208,7 +214,49 @@ void heap_free(heap_t* heap, uint32_t vaddr)
     ASSERT_VALID_HEAP_HEADER(header); // assert it is a heap managed space
     ASSERT(header->next == NULL); // assert it is marked as used, not a free space
     insert_free_space(heap, header);
-    unify_free_space(heap, header);
+    heap_header_t* unified_free_header = unify_free_space(heap, header);
+    heap_footer_t* unified_free_footer = HEAP_FOOTER_FROM_HEADER(unified_free_header);
+    ASSERT_VALID_HEAP_HEADER(unified_free_header);
+    ASSERT_VALID_HEAP_FOOTER(unified_free_footer);
+    uint32_t total_size = sizeof(heap_header_t) + unified_free_header->size + sizeof(heap_footer_t); 
+    uint32_t page_count = total_size / PAGE_SIZE; // we need round down page count here, not PAGE_COUNT_FROM_BYTES, which is round up
+    // contract heap size
+    if(unified_free_header->magic == HEAP_HEADER_MAGIC_LEFT && unified_free_footer->magic == HEAP_FOOTER_MAGIC_RIGHT) {
+        // if the unified free block is the whole block allocated when doing expansion:
+        //   free it in whole to reverse the expansion
+        if(heap->size_in_pages - page_count >= heap->min_size_in_pages) {
+            printf("Contract heap: Reverse an expansion of %d pages\n", page_count);
+            claim_free_space(heap, unified_free_header);
+            memset(unified_free_header, 0, sizeof(heap_header_t));
+            memset(unified_free_footer, 0, sizeof(heap_footer_t));
+            dealloc_pages((uint32_t) unified_free_header, page_count);
+            heap->size_in_pages -= page_count;
+            return;
+        }
+    } 
+    if(unified_free_footer->magic == HEAP_FOOTER_MAGIC_RIGHT) {
+        // if the unifed block is at the end of a contiguous virtual space
+        uint32_t new_heap_size = heap->size_in_pages;
+        while(new_heap_size >= heap->min_size_in_pages && heap->size_in_pages - new_heap_size <= page_count)
+        {
+            new_heap_size = new_heap_size / 2;
+        }
+        new_heap_size = new_heap_size * 2;
+        uint32_t page_to_shrink = heap->size_in_pages - new_heap_size;
+        if(page_to_shrink > 0) {
+            printf("Shrink heap: shrink %d pages\n", page_to_shrink);
+            claim_free_space(heap, unified_free_header);
+            memset(unified_free_footer, 0, sizeof(heap_footer_t));
+            unified_free_header->size = unified_free_header->size - PAGE_SIZE*page_to_shrink;
+            heap_footer_t* new_footer = HEAP_FOOTER_FROM_HEADER(unified_free_header);
+            new_footer->magic = HEAP_FOOTER_MAGIC_RIGHT;
+            new_footer->header = unified_free_header;
+            insert_free_space(heap, unified_free_header);
+            dealloc_pages((uint32_t) new_footer + sizeof(heap_footer_t), page_to_shrink);
+            heap->size_in_pages -= page_to_shrink;
+        }
+
+    }
     
 }
 
@@ -220,7 +268,7 @@ void kfree(uint32_t vaddr)
 
 heap_header_t* expand_heap(heap_t* heap, heap_header_t* largest_free_header, size_t requested_size)
 {
-    printf("Expand_heap: %d, %d\n", largest_free_header->size, requested_size);
+    printf("Expand_heap: largetst block %d bytes, requested: %d bytes\n", largest_free_header->size, requested_size);
 
     ASSERT(requested_size>0);
     if(largest_free_header) {
@@ -249,12 +297,12 @@ heap_header_t* expand_heap(heap_t* heap, heap_header_t* largest_free_header, siz
     }
 
     heap_header_t* header = (heap_header_t*) new_block_addr;
-    header->magic = HEAP_HEADER_MAGIC;
+    header->magic = HEAP_HEADER_MAGIC_LEFT;
     header->size = PAGE_SIZE*request_pages - sizeof(heap_header_t) - sizeof(heap_footer_t);
     // this new block should be the largest in the free header list, otherwise expansion won't be triggered
     header->next = header;
     heap_footer_t* footer = HEAP_FOOTER_FROM_HEADER(header);
-    footer->magic = HEAP_FOOTER_MAGIC;
+    footer->magic = HEAP_FOOTER_MAGIC_RIGHT;
     footer->header = header;
     if(largest_free_header) {
         largest_free_header->next = header;
@@ -316,13 +364,13 @@ void* heap_alloc(heap_t* heap, size_t size)
     ASSERT_VALID_HEAP_FOOTER(footer);
 
     heap_header_t* new_header = (heap_header_t*) ((uint32_t) header + sizeof(heap_header_t) + size + sizeof(heap_footer_t));
-    new_header->magic = HEAP_HEADER_MAGIC;
+    new_header->magic = HEAP_HEADER_MAGIC_MID;
     new_header->size = (uint32_t) footer - (uint32_t) new_header - sizeof(heap_header_t);
 
     footer->header = new_header;
     
     heap_footer_t* new_footer = (heap_footer_t*) ((uint32_t) new_header - sizeof(heap_footer_t));
-    new_footer->magic = HEAP_FOOTER_MAGIC;
+    new_footer->magic = HEAP_FOOTER_MAGIC_MID;
     new_footer->header = header;
     
     header->size = size;
