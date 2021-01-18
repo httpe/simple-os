@@ -82,7 +82,7 @@ void isr_install() {
 
 /* To print the message which defines every exception */
 // See https://wiki.osdev.org/Exceptions
-char *exception_messages[] = {
+char* exception_messages[] = {
     "0. Division By Zero",
     "1. Debug",
     "2. Non Maskable Interrupt",
@@ -130,12 +130,12 @@ void register_interrupt_handler(uint8_t n, isr_t handler) {
     interrupt_handlers[n] = handler;
 }
 
-void irq_handler(registers_t *r) {
+void irq_handler(registers_t* r) {
     /* After every interrupt we need to send an EOI to the PICs
      * or they will not send another interrupt again */
-    bool is_spurious = PIC_sendEOI((uint8_t) r->err_code); // err_code is the IRQ number for IRQs, see isr.asm
-    
-    if(!is_spurious) {
+    bool is_spurious = PIC_sendEOI((uint8_t)r->err_code); // err_code is the IRQ number for IRQs, see isr.asm
+
+    if (!is_spurious) {
         /* Handle the interrupt in a more modular way */
         if (interrupt_handlers[r->int_no] != 0) {
             isr_t handler = interrupt_handlers[r->int_no];
@@ -145,6 +145,6 @@ void irq_handler(registers_t *r) {
         // Track of the number of spurious IRQs
         spurious_irq_counter[r->err_code]++;
     }
-    
+
 }
 

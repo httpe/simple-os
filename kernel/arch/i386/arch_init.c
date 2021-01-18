@@ -14,12 +14,12 @@ void initialize_architecture(uint32_t mbt_physical_addr) {
     // Initialize serial port I/O so we can print debug message out 
     init_serial();
 
-	// Initialize terminal cursor and global variables like default color
+    // Initialize terminal cursor and global variables like default color
     terminal_initialize();
 
     // Initialize memory bitmap for the physical memory manager (frame allocator)
     initialize_bitmap(mbt_physical_addr);
-    
+
     // Initialize page frame allocator and install page fault handler
     initialize_paging();
 

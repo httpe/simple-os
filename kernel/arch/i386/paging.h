@@ -60,36 +60,6 @@ typedef struct page_directory_entry
 
 #define PAGE_COUNT_FROM_BYTES(n_bytes) ((n_bytes)/PAGE_SIZE + ((n_bytes) % PAGE_SIZE) != 0) 
 
-// typedef struct page_table
-// {
-//    page_t pages[1024];
-// } page_table_t;
-
-// typedef struct page_directory
-// {
-//    page_directory_entry_t page_tables[1024];
-// } page_directory_t;
-
-// typedef struct page_directory
-// {
-//    /**
-//       Array of pointers to pagetables.
-//    **/
-//    page_table_t *tables[1024];
-//    /**
-//       Array of pointers to the pagetables above, but gives their *physical*
-//       location, for loading into the CR3 register.
-//    **/
-//    page_directory_entry_t tablesPhysical[1024];
-//    /**
-//       The physical address of tablesPhysical. This comes into play
-//       when we get our kernel heap allocated and the directory
-//       may be in a different location in virtual memory.
-//    **/
-//    uint32_t physicalAddr;
-// } page_directory_t;
-
-
 void initialize_paging();
 
 uint32_t alloc_pages(size_t page_count, bool is_kernel, bool is_writeable);

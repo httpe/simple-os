@@ -65,19 +65,20 @@ extern void irq15();
 #define IRQ_TO_INTERRUPT(IRQ) (IRQ + IRQ_BASE_REMAPPED)
 
 /* Struct which aggregates many registers.
- * It matches exactly the pushes on interrupt.asm. From the bottom:
- * - Pushed by the processor automatically
- * - `push byte`s on the isr-specific code: error code, then int number
- * - All the registers by pusha
- * - `push eax` whose lower 16-bits contain DS
- */
-// C struct memory layout: 
-// 13 Within a structure object, the non-bit-field members and the units in which bit-fields reside 
-//      have addresses that increase in the order in which they are declared. 
-//      A pointer to a structure object, suitably converted, points to its initial member 
-//      (or if that member is a bit-field, then to the unit in which it resides), and vice versa. 
-//      There may be unnamed padding within a structure object, but not at its beginning.
-// https://stackoverflow.com/questions/2748995/struct-memory-layout-in-c
+ It matches exactly the pushes on interrupt.asm. From the bottom:
+   - Pushed by the processor automatically
+   - `push byte`s on the isr-specific code: error code, then int number
+   - All the registers by pusha
+   - `push eax` whose lower 16-bits contain DS
+
+ C struct memory layout:
+    13 Within a structure object, the non-bit-field members and the units in which bit-fields reside
+    have addresses that increase in the order in which they are declared.
+    A pointer to a structure object, suitably converted, points to its initial member
+    (or if that member is a bit-field, then to the unit in which it resides), and vice versa.
+    There may be unnamed padding within a structure object, but not at its beginning.
+    https://stackoverflow.com/questions/2748995/struct-memory-layout-in-c
+*/
 typedef struct {
    uint32_t ds; /* Data segment selector */
    uint32_t edi, esi, ebp, useless_esp, ebx, edx, ecx, eax; /* Pushed by pusha. */
@@ -86,7 +87,7 @@ typedef struct {
 } registers_t;
 
 void isr_install();
-void isr_handler(registers_t *r);
+void isr_handler(registers_t* r);
 
 typedef void (*isr_t)(registers_t*);
 void register_interrupt_handler(uint8_t n, isr_t handler);

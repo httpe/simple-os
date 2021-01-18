@@ -15,7 +15,7 @@ void set_idt_gate(int n, uint32_t handler_address) {
 }
 
 void set_idt() {
-    idt_reg.base = (uint32_t) &idt;
+    idt_reg.base = (uint32_t)&idt;
     idt_reg.limit = IDT_ENTRIES * sizeof(idt_gate_t) - 1;
     /* Don't make the mistake of loading &idt -- always load &idt_reg */
     // https://gcc.gnu.org/onlinedocs/gcc/Simple-Constraints.html#Simple-Constraints
