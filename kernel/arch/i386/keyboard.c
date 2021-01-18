@@ -63,7 +63,7 @@ static void keyboard_callback(registers_t* regs) {
     }
 
     // Reset the whole screen to reflect the buffer 
-    terminal_initialize();
+    terminal_clear_screen();
     printf("%s", key_buffer);
 
 }
