@@ -36,8 +36,9 @@ boot:
     call print_nl
 
     ; ensure the disk is loaded successfully
-    ; mov dx, [0x7e00]
-    ; call print_hex
+    mov dx, [0x7e00]
+    call print_hex
+    ; jmp $ ; should print Ox0500
 
     ; Detect memory layout using BIOS interrupt 0x15, eax=0xE820 
     ; The entry count will be stored at 0x0500
@@ -61,9 +62,11 @@ MSG_LOAD_FROM_DISK db "Loaded remaining sectors", 0
 
 
 ; MBR shall be exactly 512 bytes (one sector)
-times 510-($-$$) db 0
+; $ current line;
+; $$: currect section;
+times 510-($-$$) db 0 ; padding 510 - (279 - 0) = 231's 0
 ; MBR magic number
-dw 0xaa55
+dw 0xaa55 ; write 0xaa55 in 511 and 512 bytes
 
 ; utility to detect memory layout
 %include "memory.asm"
@@ -82,6 +85,7 @@ BEGIN_PM: ; after the switch we will get here
     mov edi, 14*80 ; write to the start of the 14th row
     mov ah, WHITE_ON_BLACK
     call print_pm ; Note that this will be written at the top left corner
+    ; jmp $: should print highlighted Started in 32-bit protected mode
 
     ; test print_memory_hex
     mov esi, 0x7c00 + 0x1FE

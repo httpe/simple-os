@@ -71,6 +71,7 @@ kernel.tar: $(KERNEL_BOOT_IMG) $(KERNEL_ROOT)
 
 bootable_kernel.bin: bootloader_padded.bin kernel.tar
 	# concat the kernel tarball
+	# equivalent to cat bootloader_padded.bin kernel.tar > bootable_kernel.bin
 	cat $^ > $@
 
 clean:
