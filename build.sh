@@ -2,6 +2,12 @@
 set -e
 . ./headers.sh
 
-for PROJECT in $PROJECTS; do
+if [ -n "$*" ]; then
+  TO_BUILD="$*"
+else
+  TO_BUILD=$PROJECTS
+fi
+
+for PROJECT in $TO_BUILD; do
   (cd $PROJECT && DESTDIR="$SYSROOT" $MAKE install)
 done

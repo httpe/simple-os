@@ -16,7 +16,7 @@
             "remote": true,
             "cwd": "${workspaceFolder}",
             "gdbpath": "/usr/bin/gdb",
-            "preLaunchTask": "Emulate (Debug)",
+            "preLaunchTask": "Build and Debug",
             "autorun": [
                 "add-symbol-file bootloader/bootloader.elf 0x7c00",
                 "dir kernel",
