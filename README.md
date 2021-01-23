@@ -20,9 +20,11 @@ To compile this project, you need to install the following dependencies:
 
 1. [NASM Assembler](https://www.nasm.us/)
 
-1. GCC & Binutils for x86: It is recommended to compile a cross-compiler [for your own](https://wiki.osdev.org/GCC_Cross-Compiler). Your system shall also have GCC tool chain installed, since we will use utility like GNU Make
+1. GCC & Binutils for x86: It is recommended to [compile a cross-compiler for your own](https://wiki.osdev.org/GCC_Cross-Compiler). Your system shall also have GCC tool chain installed, since we will use utility like GNU Make
 
 1. [QEMU](https://www.qemu.org/) Emulator: We will use QEMU to emulate our system, avoiding restarting computer again and again just to test the system.
+
+1. [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace): We use FUSE to help us implementing the file system (see `Implementing File System` section). For linux, we use [libfuse](https://github.com/libfuse/libfuse). For macOS, the library is [macFUSE](https://osxfuse.github.io/).
 
 1. (Optional) [VSCode](https://code.visualstudio.com/): We provide some integration of the building/debugging process with VSCode, but it is optional. To debug using VSCode, you need to install the extension `Native Debug`.
 
@@ -270,7 +272,7 @@ Although the final goal is to make the system self-hosting, we planned for sever
 
 File system is a rather complicated component of the operating system, so we will split it into multiple smaller stages to make the effort more organized. The core idea is to use FUSE as a intermediary such that we can operate on our file system in our host operating system. Also FUSE provides us a fairly standardized disk driver interface so we know what are the components to be implemented.
 
-1. Build a very simple [FUSE](https://github.com/libfuse/libfuse) file system fulfilling the following requirements:
+1. Build a very simple [FUSE](https://wiki.osdev.org/FUSE) ([libfuse](https://github.com/libfuse/libfuse)) file system fulfilling the following requirements:
     - Implement basic FUSE interface such as open, close, read, write, dir listing, attribute retrieval, file/dir creation and file/dir deletion
     - The data are read from and written to a single binary file (i.e. disk image)
     - Ref: [Less-Simple-Yet-Stupid-Filesystem](https://maastaar.net/fuse/linux/filesystem/c/2019/09/28/writing-less-simple-yet-stupid-filesystem-using-FUSE-in-C/)
