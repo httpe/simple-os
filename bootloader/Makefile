@@ -4,7 +4,7 @@ HOSTARCH!=../target-triplet-to-arch.sh $(HOST)
 
 KERNEL_ROOT=$(SYSROOT)
 # This must be in sync of KERNEL_BOOT_IMG in main.c
-KERNEL_BOOT_IMG=$(SYSROOT)$(BOOTDIR)/myos.kernel
+KERNEL_BOOT_IMG=$(SYSROOT)$(BOOTDIR)/simple_os.kernel
 # Pad the final binary to 8192 bytes (16 512 byte sectors)
 # This variable must be in sync with: bootloader.asm and main.c, search "BOOTLOADER_MAX_SIZE" there
 BOOTLOADER_MAX_SIZE=8192

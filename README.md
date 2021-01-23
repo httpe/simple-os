@@ -76,7 +76,7 @@ Start QEMU in WSL by:
 And then attach GDB to the QEMU instance in WSL by:
 
 ```bash
-gdb -ex "target remote localhost:1234" -ex "symbol-file sysroot/boot/myos.kernel"
+gdb -ex "target remote localhost:1234" -ex "symbol-file sysroot/boot/simple_os.kernel"
 ```
 
 The above loads debug symbols for the kernel, to debug our own bootloader:
@@ -122,7 +122,7 @@ In this case, GRUB is used instead of our home made bootloader to boot the syste
 To emulate it, run in Powershell:
 
 ```ps
-qemu-system-i386.exe -cdrom .\myos.iso
+qemu-system-i386.exe -cdrom .\simple_os.iso
 ```
 
 ### (Optional) Install Header Only

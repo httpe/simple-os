@@ -6,5 +6,5 @@ sysroot
 *.bin
 *.elf
 *.d
-myos.kernel
+simple_os.kernel
 serial_port_output.txt

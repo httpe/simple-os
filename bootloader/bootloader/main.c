@@ -14,7 +14,7 @@
 // The whole bootloader binary is assumed to take the first 16 sectors
 // must be in sync of BOOTLOADER_MAX_SIZE in Makefile
 #define BOOTLOADER_SECTORS 16
-#define KERNEL_BOOT_IMG "/boot/myos.kernel"
+#define KERNEL_BOOT_IMG "/boot/simple_os.kernel"
 
 // Defined in memory.asm
 extern uint32_t ADDR_MMAP_ADDR; // address of the memory map structure

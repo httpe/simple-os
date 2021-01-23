@@ -11,7 +11,7 @@
             "name": "Debug All",
             "type": "gdb", // Provided by "Native Debug" extension
             "request": "attach",
-            "executable": "${workspaceFolder}/kernel/myos.kernel",
+            "executable": "${workspaceFolder}/kernel/simple_os.kernel",
             "target": "localhost:1234",
             "remote": true,
             "cwd": "${workspaceFolder}",
@@ -27,7 +27,7 @@
             "name": "Debug Kernel",
             "type": "gdb", // Provided by "Native Debug" extension
             "request": "attach",
-            "executable": "${workspaceFolder}/kernel/myos.kernel",
+            "executable": "${workspaceFolder}/kernel/simple_os.kernel",
             "target": "localhost:1234",
             "remote": true,
             "cwd": "${workspaceFolder}",
