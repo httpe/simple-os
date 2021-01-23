@@ -241,7 +241,7 @@ Although the final goal is to make the system self-hosting, we planned for sever
 
 1. **Milestone Three: Memory Management, Filesystem and Shell**
     - Implement [heap](https://en.wikipedia.org/wiki/Memory_management#HEAP)/[dynamic memory allocation](https://en.wikipedia.org/wiki/C_dynamic_memory_allocation)
-    - Provide a readable & writable file system (FAT/Ext) and corresponding system calls/functions
+    - Provide a readable & writable file system (FAT/Ext) and corresponding system calls/libc functions (See the `Implementing File System` section below)
     - Write a shell to allow navigating through the file system
     - Write a editor to show file content, edit and save it
     - **In progress**: Heap implemented
@@ -265,3 +265,26 @@ Although the final goal is to make the system self-hosting, we planned for sever
     - Port a sophisticate enough compiler to the system
     - Compile the source code of the system inside the system
     - The system is now self-hosting
+
+### Implementing File System
+
+File system is a rather complicated component of the operating system, so we will split it into multiple smaller stages to make the effort more organized. The core idea is to use FUSE as a intermediary such that we can operate on our file system in our host operating system. Also FUSE provides us a fairly standardized disk driver interface so we know what are the components to be implemented.
+
+1. Build a very simple [FUSE](https://github.com/libfuse/libfuse) file system fulfilling the following requirements:
+    - Implement basic FUSE interface such as open, close, read, write, dir listing, attribute retrieval, file/dir creation and file/dir deletion
+    - The data are read from and written to a single binary file (i.e. disk image)
+    - Ref: [Less-Simple-Yet-Stupid-Filesystem](https://maastaar.net/fuse/linux/filesystem/c/2019/09/28/writing-less-simple-yet-stupid-filesystem-using-FUSE-in-C/)
+
+1. Design a set of block I/O API to read/write sectors, query meta disk data (like disk size) etc. Delegate all read/write to the disk image in the last step by the block I/O API. For FUSE, we implement the API as host system system calls/standard C library calls.
+
+1. Implement the actual targeted file system, like FAT32 ([OsDev]((https://wiki.osdev.org/FAT32)), [Wiki](https://en.wikipedia.org/wiki/Design_of_the_FAT_file_system)) or [Ext2](https://wiki.osdev.org/Ext2) in FUSE, through the block I/O API.
+
+1. Implement the block I/O API in our system through [ATA (PIO)](https://wiki.osdev.org/ATA_PIO_Mode) operations.
+
+1. Design the system call for file I/O, basically reversing the [pass through example](https://github.com/libfuse/libfuse/blob/master/example/passthrough.c) of FUSE. The system call shall conform the FUSE interface in calling the underlying file system driver.
+
+1. Port the FUSE file system to our kernel (and bootloader). The final call stack shall looks like: libc function call (e.g. open()) -> kernel system call -> FUSE driver (e.g. .open in fuse_operations) -> ATA driver.
+
+1. Use FUSE to mount and fill the disk image with kernel files, append the filled image after the bootloader sectors, and record it as a partition in MBR partition table.
+
+1. The kernel now resides in the desired file system, the bootloader can load it from there, and the kernel understands the file system and have full control over it.
