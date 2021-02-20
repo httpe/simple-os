@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <kernel/heap.h>
 #include <kernel/multiboot.h>
+#include <kernel/ata.h>
 
 void kernel_main(uint32_t mbt_physical_addr) {
 
@@ -35,6 +36,13 @@ void kernel_main(uint32_t mbt_physical_addr) {
 	kfree(d);
 	printf("free(e)\n");
 	kfree(e);
+
+	char* mbr = kmalloc(512);
+	uint32_t max_lba = get_total_28bit_sectors();
+	printf("Disk max 28bit addressable LBA: %d\n", max_lba);
+    read_sectors_ATA_28bit_PIO((uint16_t*)mbr, 0, 1);
+
+	printf("Disk MBR last four bytes: 0x%x\n", *(uint32_t*) &mbr[508]);
 
 	// Manually triggering a page fault
 	// Use volatile to avoid it get optimized away
