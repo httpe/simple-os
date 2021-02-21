@@ -1,8 +1,13 @@
-#include "paging.h"
-#include "isr.h"
-#include "memory_bitmap.h"
 #include <stdio.h>
 #include <string.h>
+#include <kernel/panic.h>
+#include <kernel/common.h>
+
+#include "isr.h"
+#include "memory_bitmap.h"
+#include "paging.h"
+
+
 
 extern char KERNEL_VIRTUAL_END[];
 
@@ -20,6 +25,7 @@ static inline void switch_page_directory(uint32_t physical_addr) {
 }
 
 static void page_fault_callback(registers_t* regs) {
+    UNUSED(regs);
     uint32_t cr2;
     asm volatile("mov %%cr2, %0": "=r"(cr2));
     printf("KERNEL PANIC: PAGE FAULT! Address: 0x%x", cr2);
@@ -32,18 +38,20 @@ static void install_page_fault_handler() {
 
 // Unmapped a page, free its mapped frame
 static void free_frame(uint32_t page_index) {
+    uint32_t vaddr = VADDR_FROM_PAGE_INDEX(page_index);
     uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
     uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
-    if (PAGE_DIR_PTR[page_dir_idx].present) {
-        page_t* page = &PAGE_TABLE_PTR(page_dir_idx)[page_table_idx];
-        if (page->present) {
-            clear_frame(page->frame);
-            page->present = 0;
-            // flush
-            flush_tlb(VADDR_FROM_PAGE_INDEX(page_index));
-            printf("Page frame freed: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, page->frame);
-        }
-    }
+    PANIC_ASSERT(PAGE_DIR_PTR[page_dir_idx].present);
+    page_t* page = &PAGE_TABLE_PTR(page_dir_idx)[page_table_idx];
+    PANIC_ASSERT(page->present);
+    // Fill with garbage to crash dangling reference/pointer earlier
+    memset((char*)vaddr, 1, PAGE_SIZE);
+    clear_frame(page->frame);
+    page->present = 0;
+    // flush
+    flush_tlb(vaddr);
+    printf("Page frame freed: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, page->frame);
+    
 }
 
 // Allocate physical space for a page (if not already mapped)

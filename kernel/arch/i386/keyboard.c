@@ -1,10 +1,13 @@
-#include "keyboard.h"
-#include "port_io.h"
-#include "isr.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <kernel/tty.h>
+#include <kernel/common.h>
+
+#include "keyboard.h"
+#include "port_io.h"
+#include "isr.h"
+
 
 #define SCAN_CODE_BACKSPACE 0x0E
 #define SCAN_CODE_ENTER 0x1C
@@ -47,6 +50,8 @@ static void key_buffer_backspace() {
 }
 
 static void keyboard_callback(registers_t* regs) {
+    UNUSED(regs);
+
     /* The PIC leaves us the scancode in port 0x60 */
     uint8_t scancode = inb(0x60);
 

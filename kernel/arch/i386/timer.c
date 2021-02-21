@@ -1,8 +1,11 @@
+#include <stdio.h>
+#include <kernel/common.h>
+
 #include "timer.h"
 #include "isr.h"
 #include "port_io.h"
 
-#include <stdio.h>
+
 
 // Ref: http://www.jamesmolloy.co.uk/tutorial_html/5.-IRQs%20and%20the%20PIT.html
 // Ref: https://github.com/cfenollosa/os-tutorial/blob/master/23-fixes/cpu/timer.c
@@ -10,6 +13,7 @@
 uint32_t tick = 0;
 
 static void timer_callback(registers_t *regs) {
+    UNUSED(regs);
     tick++;
 }
 
