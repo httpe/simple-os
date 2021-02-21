@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+extern char KERNEL_VIRTUAL_END[];
 
 // Flush TLB (translation lookaside buffer) for a single page
 // Need flushing when a page table is changed
@@ -73,10 +74,17 @@ uint32_t alloc_frame(uint32_t page_index, bool is_kernel, bool is_writeable) {
 }
 
 // Find contiguous pages that have not been mapped
+// If is for kernel, search vaddr space after KERNEL_VIRTUAL_END
 // return: the first page index of the contiguous unmapped virtual memory space
-uint32_t first_contiguous_page_index(size_t page_count) {
+uint32_t first_contiguous_page_index(size_t page_count, bool is_kernel) {
+    uint32_t page_dir_idx_0;
+    if(is_kernel) {
+        page_dir_idx_0 = PAGE_INDEX_FROM_VADDR((uint32_t) KERNEL_VIRTUAL_END) / PAGE_TABLE_SIZE;
+    } else {
+        page_dir_idx_0 = 0;
+    }
     uint32_t contiguous_page_count = 0;
-    for (uint32_t page_dir_idx = 0; page_dir_idx < PAGE_DIR_SIZE; page_dir_idx++) {
+    for (uint32_t page_dir_idx = page_dir_idx_0; page_dir_idx < PAGE_DIR_SIZE; page_dir_idx++) {
         if (PAGE_DIR_PTR[page_dir_idx].present == 0) {
             if (contiguous_page_count + PAGE_TABLE_SIZE >= page_count) {
                 return page_dir_idx * PAGE_TABLE_SIZE - contiguous_page_count;
@@ -84,7 +92,13 @@ uint32_t first_contiguous_page_index(size_t page_count) {
             contiguous_page_count += PAGE_TABLE_SIZE;
             continue;
         }
-        for (uint32_t page_table_idx = 0; page_table_idx < PAGE_TABLE_SIZE; page_table_idx++) {
+        uint32_t page_table_idx;
+        if(is_kernel && page_dir_idx==page_dir_idx_0) {
+            page_table_idx = PAGE_INDEX_FROM_VADDR((uint32_t) KERNEL_VIRTUAL_END) % PAGE_TABLE_SIZE;
+        } else {
+            page_table_idx = 0;
+        }
+        for (; page_table_idx < PAGE_TABLE_SIZE; page_table_idx++) {
             if (PAGE_TABLE_PTR(page_dir_idx)[page_table_idx].present == 0) {
                 if (contiguous_page_count + 1 >= page_count) {
                     return page_dir_idx * PAGE_TABLE_SIZE + page_table_idx - contiguous_page_count;
@@ -117,7 +131,7 @@ uint32_t alloc_pages(size_t page_count, bool is_kernel, bool is_writeable) {
         return 0;
     }
 
-    uint32_t page_index = first_contiguous_page_index(page_count);
+    uint32_t page_index = first_contiguous_page_index(page_count, is_kernel);
     // printf("kmalloc:page_index=%d\n", page_index);
 
     for (uint32_t idx = page_index; idx < page_index + page_count; idx++) {
@@ -161,10 +175,6 @@ void initialize_paging() {
     printf("Boot page table physical addr: 0x%x\n", page_dir_entry_0.page_table_addr << 12);
     page_t page_table_entry_0 = PAGE_TABLE_PTR(0xC0000000 >> 22)[0];
     printf("Boot page table entry 0 point to physical addr: 0x%x\n", page_table_entry_0.frame << 12);
-
-    // allocate first page to avoid heap pointers pointing to 0x0, which is recognized as null pointer
-    alloc_pages(1, true, true);
-
 
     // uint32_t array_len = 0x9FC00;
     // uint32_t alloc_addr = kmalloc(PAGE_COUNT_FROM_BYTES(array_len), true, true);
