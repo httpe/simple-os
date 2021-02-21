@@ -73,14 +73,14 @@ void bootloader_main(void) {
 
     if (is_elf(kernel_buffer)) {
         // print_str("ELF Kernel Detected, now loading...", console_print_row++, 0);
-        Elf32_Addr entry_pioint_physical = load_elf(kernel_buffer);
+        Elf32_Addr entry_point_physical = load_elf(kernel_buffer);
         // print_str("ELF Kernel first 16 bytes:", console_print_row++, 0);
-        // print_memory_hex((char*) entry_pioint_physical, 16, console_print_row++);
+        // print_memory_hex((char*) entry_point_physical, 16, console_print_row++);
         print_str("Jumping to ELF Kernel physical entry point (Little Endian Hex):", console_print_row++, 0);
-        print_memory_hex((char*)&entry_pioint_physical, sizeof(entry_pioint_physical), console_print_row++);
+        print_memory_hex((char*)&entry_point_physical, sizeof(entry_point_physical), console_print_row++);
 
         // Jump to the physical entry point of the loaded ELF kernel image 
-        void* entry_point = (void*)entry_pioint_physical;
+        void* entry_point = (void*)entry_point_physical;
 
         // Multiboot convention: use ebx to store the pointer to the multiboot info structure
         print_str("Multiboot structure saved at (Little Endian Hex):", console_print_row++, 0);
