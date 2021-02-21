@@ -30,6 +30,7 @@ ASMFLAGS:=$(ASMFLAGS) -i $(ARCHDIR)
 
 KERNEL_OBJS=\
 $(KERNEL_ARCH_OBJS) \
+panic/panic.o \
 kernel/kernel.o \
 
 OBJS=\
