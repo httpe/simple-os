@@ -26,12 +26,12 @@ static void page_fault_callback(registers_t* regs) {
     while (1);
 }
 
-void install_page_fault_handler() {
+static void install_page_fault_handler() {
     register_interrupt_handler(PAGE_FAULT_INTERRUPT, page_fault_callback);
 }
 
 // Unmapped a page, free its mapped frame
-void free_frame(uint32_t page_index) {
+static void free_frame(uint32_t page_index) {
     uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
     uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
     if (PAGE_DIR_PTR[page_dir_idx].present) {
@@ -48,7 +48,7 @@ void free_frame(uint32_t page_index) {
 
 // Allocate physical space for a page (if not already mapped)
 // return: allocated physical frame index
-uint32_t alloc_frame(uint32_t page_index, bool is_kernel, bool is_writeable) {
+static uint32_t alloc_frame(uint32_t page_index, bool is_kernel, bool is_writeable) {
     uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
     uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
 
@@ -76,7 +76,7 @@ uint32_t alloc_frame(uint32_t page_index, bool is_kernel, bool is_writeable) {
 // Find contiguous pages that have not been mapped
 // If is for kernel, search vaddr space after KERNEL_VIRTUAL_END
 // return: the first page index of the contiguous unmapped virtual memory space
-uint32_t first_contiguous_page_index(size_t page_count, bool is_kernel) {
+static uint32_t first_contiguous_page_index(size_t page_count, bool is_kernel) {
     uint32_t page_dir_idx_0;
     if(is_kernel) {
         page_dir_idx_0 = PAGE_INDEX_FROM_VADDR((uint32_t) KERNEL_VIRTUAL_END) / PAGE_TABLE_SIZE;
