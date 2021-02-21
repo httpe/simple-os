@@ -17,11 +17,11 @@ void kernel_main(uint32_t mbt_physical_addr) {
 	printf("Welcome to Simple-OS!\n");
 
 	uint32_t a = (uint32_t)kmalloc(8);
-	printf("Heap alloc a[8]: %d\n", a);
+	printf("Heap alloc a[8]: %u\n", a);
 	uint32_t b = (uint32_t)kmalloc(8);
-	printf("Heap alloc b[8]: %d\n", b);
+	printf("Heap alloc b[8]: %u\n", b);
 	uint32_t c = (uint32_t)kmalloc(8);
-	printf("Heap alloc c[8]: %d\n", c);
+	printf("Heap alloc c[8]: %u\n", c);
 	printf("free(a):\n", c);
 	kfree(a);
 	printf("free(c):\n", c);
@@ -29,9 +29,9 @@ void kernel_main(uint32_t mbt_physical_addr) {
 	printf("free(b):\n", c);
 	kfree(b);
 	uint32_t d = (uint32_t)kmalloc(4096 * 3);
-	printf("Heap alloc d[4096*3]: %d\n", d);
+	printf("Heap alloc d[4096*3]: %u\n", d);
 	uint32_t e = (uint32_t)kmalloc(8);
-	printf("Heap alloc e[8]: %d\n", e);
+	printf("Heap alloc e[8]: %u\n", e);
 	printf("free(d)\n");
 	kfree(d);
 	printf("free(e)\n");

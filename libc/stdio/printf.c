@@ -93,12 +93,13 @@ int printf(const char* restrict format, ...) {
 			if (!print(str, len))
 				return -1;
 			written += len;
-		} else if (*format == 'd') {
+		} else if (*format == 'd' || *format == 'u') {
+			int sgn = *format == 'd';
 			format++;
 			int number = va_arg(parameters, int);
 			char str[16];
 
-			size_t len = int2str(number, 10, 1, str);
+			size_t len = int2str(number, 10, sgn, str);
 			if (maxrem < len) {
 				// TODO: Set errno to EOVERFLOW.
 				return -1;
