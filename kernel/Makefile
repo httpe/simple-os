@@ -12,6 +12,7 @@ PREFIX?=/usr/local
 EXEC_PREFIX?=$(PREFIX)
 BOOTDIR?=$(EXEC_PREFIX)/boot
 INCLUDEDIR?=$(PREFIX)/include
+BINDIR?=$(PREFIX)/bin
 
 CFLAGS:=$(CFLAGS) -ffreestanding -Wall -Wextra
 CPPFLAGS:=$(CPPFLAGS) -D__is_kernel -Iinclude
@@ -32,6 +33,24 @@ KERNEL_OBJS=\
 $(KERNEL_ARCH_OBJS) \
 panic/panic.o \
 kernel/kernel.o \
+tar/tar.o \
+
+USER_SPACE_OBJS=\
+user/user_start.o \
+user/user.o \
+
+# USER_SPACE_LINK_LIST=\
+# $(LDFLAGS) \
+# $(ARCHDIR)/crti.o \
+# $(ARCHDIR)/crtbegin.o \
+# $(USER_SPACE_OBJS) \
+# $(LIBS) \
+# $(ARCHDIR)/crtend.o \
+# $(ARCHDIR)/crtn.o \
+
+USER_SPACE_LINK_LIST=\
+$(LDFLAGS) \
+$(USER_SPACE_OBJS) \
 
 OBJS=\
 $(ARCHDIR)/crti.o \
@@ -52,7 +71,10 @@ $(ARCHDIR)/crtn.o \
 .PHONY: all clean install install-headers install-kernel
 .SUFFIXES: .o .c .S
 
-all: simple_os.kernel
+all: simple_os.kernel user_prog
+
+user_prog: $(USER_SPACE_OBJS) user/user.ld
+	$(CC) -T user/user.ld -o user_prog $(CFLAGS) -nostdlib $(USER_SPACE_OBJS)
 
 simple_os.kernel: $(OBJS) $(ARCHDIR)/linker.ld
 	$(CC) -T $(ARCHDIR)/linker.ld -o $@ $(CFLAGS) $(LINK_LIST)
@@ -72,6 +94,7 @@ $(ARCHDIR)/crtbegin.o $(ARCHDIR)/crtend.o:
 
 clean:
 	rm -f simple_os.kernel
+	rm -f user_prog
 	rm -f $(OBJS) *.o */*.o */*/*.o
 	rm -f $(OBJS:.o=.d) *.d */*.d */*/*.d
 
@@ -84,5 +107,7 @@ install-headers:
 install-kernel: simple_os.kernel
 	mkdir -p $(DESTDIR)$(BOOTDIR)
 	cp simple_os.kernel $(DESTDIR)$(BOOTDIR)
+	mkdir -p $(DESTDIR)$(BINDIR)
+	cp user_prog $(DESTDIR)$(BINDIR)
 
 -include $(OBJS:.o=.d)
