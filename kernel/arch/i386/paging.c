@@ -2,11 +2,10 @@
 #include <string.h>
 #include <kernel/panic.h>
 #include <kernel/common.h>
+#include <kernel/paging.h>
 
 #include "isr.h"
 #include "memory_bitmap.h"
-#include "paging.h"
-
 
 
 extern char KERNEL_VIRTUAL_END[];

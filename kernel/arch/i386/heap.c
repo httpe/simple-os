@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <kernel/panic.h>
-#include "paging.h"
+#include <kernel/paging.h>
 #include <kernel/heap.h>
 
 

@@ -2,11 +2,11 @@
 #include <kernel/arch_init.h>
 #include <kernel/heap.h>
 #include <kernel/serial.h>
+#include <kernel/paging.h>
 
 #include "isr.h"
 #include "timer.h"
 #include "keyboard.h"
-#include "paging.h"
 #include "memory_bitmap.h"
 
 
