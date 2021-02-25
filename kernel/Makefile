@@ -34,6 +34,7 @@ $(KERNEL_ARCH_OBJS) \
 panic/panic.o \
 kernel/kernel.o \
 tar/tar.o \
+elf/elf.o \
 
 USER_SPACE_OBJS=\
 user/user_start.o \
