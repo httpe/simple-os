@@ -10,7 +10,9 @@ void set_idt_gate(int n, uint32_t handler_address) {
     idt[n].low_offset = handler_address & 0x0000FFFF;
     idt[n].sel = KERNEL_CS;
     idt[n].always0 = 0;
-    idt[n].flags = 0x8E; // 32-bit Interrupt gate: 0x8E ( P=1, DPL=00b, S=0, type=1110b => type_attr=1000_1110b=0x8E)
+    // 32-bit Interrupt gate: 0xEE ( P=1, DPL=11b, S=0, type=1110b => type_attr=1110_1110b=0xEE)
+    // 32-bit Interrupt gate: 0x8E ( P=1, DPL=00b, S=0, type=1110b => type_attr=1000_1110b=0x8E)
+    idt[n].flags = 0x8E; 
     idt[n].high_offset = (handler_address >> 16) & 0x0000FFFF;
 }
 

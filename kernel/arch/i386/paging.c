@@ -36,51 +36,6 @@ static void install_page_fault_handler() {
     register_interrupt_handler(PAGE_FAULT_INTERRUPT, page_fault_callback);
 }
 
-// Unmapped a page, free its mapped frame
-static void free_frame(uint32_t page_index) {
-    uint32_t vaddr = VADDR_FROM_PAGE_INDEX(page_index);
-    uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
-    uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
-    PANIC_ASSERT(PAGE_DIR_PTR[page_dir_idx].present);
-    page_t* page = &PAGE_TABLE_PTR(page_dir_idx)[page_table_idx];
-    PANIC_ASSERT(page->present);
-    // Fill with garbage to crash dangling reference/pointer earlier
-    memset((char*)vaddr, 1, PAGE_SIZE);
-    clear_frame(page->frame);
-    page->present = 0;
-    // flush
-    flush_tlb(vaddr);
-    printf("Page frame freed: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, page->frame);
-    
-}
-
-// Allocate physical space for a page (if not already mapped)
-// return: allocated physical frame index
-static uint32_t alloc_frame(uint32_t page_index, bool is_kernel, bool is_writeable) {
-    uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
-    uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
-
-    if (!PAGE_DIR_PTR[page_dir_idx].present) {
-        // Page table not allocated, create it first
-        uint32_t idx = first_free_frame(); // idx is now the index of the first free frame.
-        set_frame(idx);                    // this frame is now ours!
-        page_directory_entry_t page_dir_entry = { .present = 1, .rw = 1, .user = 1, .page_table_addr = idx };
-        PAGE_DIR_PTR[page_dir_idx] = page_dir_entry;
-        switch_page_directory(PAGE_DIR_PHYSICAL_ADDR);// flush
-        memset(PAGE_TABLE_PTR(page_dir_idx), 0, sizeof(page_t) * PAGE_TABLE_SIZE);
-    }
-    if (!PAGE_TABLE_PTR(page_dir_idx)[page_table_idx].present) { // This should always be true
-        // Not present means it hasn't been mapped to physical space
-        uint32_t idx = first_free_frame(); // idx is now the index of the first free frame.
-        set_frame(idx);                    // this frame is now ours!
-        page_t page = { .present = 1, .user = !is_kernel, .rw = is_writeable, .frame = idx };
-        PAGE_TABLE_PTR(page_dir_idx)[page_table_idx] = page;
-        flush_tlb(VADDR_FROM_PAGE_INDEX(page_index));
-        printf("Page frame allocated: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, idx);
-    }
-    return PAGE_TABLE_PTR(page_dir_idx)[page_table_idx].frame;
-}
-
 // Find contiguous pages that have not been mapped
 // If is for kernel, search vaddr space after KERNEL_VIRTUAL_END
 // return: the first page index of the contiguous unmapped virtual memory space
@@ -123,6 +78,91 @@ static uint32_t first_contiguous_page_index(size_t page_count, bool is_kernel) {
 
 }
 
+
+// return: physical frame index unmapped
+// Note that the physical frame itself is not freed/cleared
+static uint32_t unmap_page(uint32_t page_index)
+{
+    uint32_t vaddr = VADDR_FROM_PAGE_INDEX(page_index);
+    uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
+    uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
+    PANIC_ASSERT(PAGE_DIR_PTR[page_dir_idx].present);
+
+    page_t* page_table = PAGE_TABLE_PTR(page_dir_idx);
+    page_t* page = &page_table[page_table_idx];
+    PANIC_ASSERT(page->present);
+
+    page->present = 0;
+    // flush
+    flush_tlb(vaddr);
+    printf("Page unmapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, page->frame);
+
+    return page->frame;
+}
+
+// return: mapped vaddr
+static uint32_t map_frame(uint32_t page_index, uint32_t frame_index, bool is_kernel, bool is_writeable)
+{
+    uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
+    uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
+    set_frame(frame_index);                    // ensure is frame is marked used
+    
+    if (!PAGE_DIR_PTR[page_dir_idx].present) {
+        // Page table not allocated, create it first
+        uint32_t idx = first_free_frame(); // idx is now the index of the first free frame.
+        set_frame(idx);                    // this frame is now ours!
+        page_directory_entry_t page_dir_entry = { .present = 1, .rw = 1, .user = 1, .page_table_frame = idx };
+        PAGE_DIR_PTR[page_dir_idx] = page_dir_entry;
+        switch_page_directory(PAGE_DIR_PHYSICAL_ADDR);// flush
+        memset(PAGE_TABLE_PTR(page_dir_idx), 0, sizeof(page_t) * PAGE_TABLE_SIZE);
+    }
+    page_t old_page = PAGE_TABLE_PTR(page_dir_idx)[page_table_idx];
+    PANIC_ASSERT(!old_page.present);
+    // Not present means it hasn't been mapped to physical space
+    page_t page = { .present = 1, .user = !is_kernel, .rw = is_writeable, .frame = frame_index };
+    PAGE_TABLE_PTR(page_dir_idx)[page_table_idx] = page;
+    flush_tlb(VADDR_FROM_PAGE_INDEX(page_index));
+    printf("Page frame mapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, frame_index);
+    
+    return VADDR_FROM_PAGE_INDEX(page_index);
+}
+
+uint32_t vaddr2paddr(page_directory_entry_t* page_dir, uint32_t vaddr)
+{
+    uint32_t page_index = PAGE_INDEX_FROM_VADDR(vaddr);
+    uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
+    uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
+    PANIC_ASSERT( page_dir[page_dir_idx].present);
+    uint32_t page_table_frame = page_dir[page_dir_idx].page_table_frame;
+    page_t* page_table = (page_t*) map_frame(first_contiguous_page_index(1, true), page_table_frame, true, false);
+    page_t* page = &page_table[page_table_idx];
+    PANIC_ASSERT(page->present);
+    uint32_t paddr = (page->frame << 12) + (vaddr & 0x1FFF);
+    unmap_page(PAGE_INDEX_FROM_VADDR((uint32_t) page_table));
+    return paddr;
+}
+
+// Unmapped a page, and then free its mapped frame
+static void free_frame(uint32_t page_index) {
+    uint32_t vaddr = VADDR_FROM_PAGE_INDEX(page_index);
+    // Fill with garbage to crash dangling reference/pointer earlier
+    memset((char*)vaddr, 1, PAGE_SIZE);
+    uint32_t frame_index = unmap_page(page_index);
+    clear_frame(frame_index);
+}
+
+
+
+
+// Allocate physical space for a page (if not already mapped)
+// return: allocated physical frame index
+static uint32_t alloc_frame(uint32_t page_index, bool is_kernel, bool is_writeable) {
+    uint32_t frame_index = first_free_frame(); // idx is now the index of the first free frame.
+    map_frame(page_index, frame_index, is_kernel, is_writeable);
+    return frame_index;
+}
+
+
 void dealloc_pages(uint32_t vaddr, size_t page_count) {
     if (page_count == 0) {
         return;
@@ -132,6 +172,17 @@ void dealloc_pages(uint32_t vaddr, size_t page_count) {
     for (uint32_t idx = page_index; idx < page_index + page_count; idx++) {
         free_frame(idx);
     }
+}
+
+uint32_t map_pages(uint32_t vaddr, size_t size, bool is_kernel, bool is_writeable)
+{
+    uint32_t page_index = PAGE_INDEX_FROM_VADDR(vaddr);
+    uint32_t page_count = (size + (PAGE_SIZE-1))/PAGE_SIZE;
+    for (uint32_t idx = page_index; idx < page_index + page_count; idx++) {
+        alloc_frame(idx, is_kernel, is_writeable);
+    }
+
+    return VADDR_FROM_PAGE_INDEX(page_index);
 }
 
 uint32_t alloc_pages(size_t page_count, bool is_kernel, bool is_writeable) {
@@ -180,9 +231,11 @@ void initialize_paging() {
 
     printf("Boot page dir physical addr: 0x%x\n", PAGE_DIR_PHYSICAL_ADDR);
     page_directory_entry_t page_dir_entry_0 = PAGE_DIR_PTR[0xC0000000 >> 22];
-    printf("Boot page table physical addr: 0x%x\n", page_dir_entry_0.page_table_addr << 12);
+    printf("Boot page table physical addr: 0x%x\n", page_dir_entry_0.page_table_frame << 12);
     page_t page_table_entry_0 = PAGE_TABLE_PTR(0xC0000000 >> 22)[0];
     printf("Boot page table entry 0 point to physical addr: 0x%x\n", page_table_entry_0.frame << 12);
+
+    printf("vaddr2paddr: 0xC0000000 is mapped to: %u", vaddr2paddr(PAGE_DIR_PTR, 0xC0000000));
 
     // uint32_t array_len = 0x9FC00;
     // uint32_t alloc_addr = kmalloc(PAGE_COUNT_FROM_BYTES(array_len), true, true);

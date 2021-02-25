@@ -45,7 +45,7 @@ typedef struct page_directory_entry
    uint32_t page_size       : 1;   // If the bit is set, then pages are 4 MiB in size. Otherwise, they are 4 KiB. Please note that 4-MiB pages require PSE to be enabled.
    uint32_t ignored         : 1;   // Ignored bit
    uint32_t avaible         : 3;   // Available to OS
-   uint32_t page_table_addr : 20;  // Physical address to the page table (shifted right 12 bits)
+   uint32_t page_table_frame : 20;  // Physical address to the page table (shifted right 12 bits)
 } page_directory_entry_t;
 
 
@@ -56,14 +56,16 @@ typedef struct page_directory_entry
 // To access page table entries, do similarly [10 bits of 1; 10bits of page dir index for the table; 0, 4, 8 etc. 12bits of page table index * 4]
 #define PAGE_TABLE_PTR(idx) ((page_t*) (0xFFC00000 + ((idx) << 12)))
 // We can also get page directory's physical address by acessing it's last entry, which point to itself, thus being recursive
-#define PAGE_DIR_PHYSICAL_ADDR (((page_directory_entry_t*) 0xFFFFF000)[1023].page_table_addr << 12)
+#define PAGE_DIR_PHYSICAL_ADDR (((page_directory_entry_t*) 0xFFFFF000)[1023].page_table_frame << 12)
 
-#define PAGE_COUNT_FROM_BYTES(n_bytes) ((n_bytes)/PAGE_SIZE + ((n_bytes) % PAGE_SIZE) != 0) 
+#define PAGE_COUNT_FROM_BYTES(n_bytes) (((n_bytes) + (PAGE_SIZE-1))/PAGE_SIZE) 
 
 void initialize_paging();
 
 uint32_t alloc_pages(size_t page_count, bool is_kernel, bool is_writeable);
+uint32_t map_pages(uint32_t vaddr, size_t size, bool is_kernel, bool is_writeable);
 void dealloc_pages(uint32_t vaddr, size_t page_count);
 bool is_vaddr_accessible(uint32_t vaddr, bool is_from_kernel_code, bool is_writing);
+uint32_t vaddr2paddr(page_directory_entry_t* page_dir, uint32_t vaddr);
 
 #endif

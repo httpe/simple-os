@@ -1,3 +1,4 @@
+#include <kernel/tty.h>
 #include <kernel/arch_init.h>
 #include <kernel/heap.h>
 #include <kernel/serial.h>
