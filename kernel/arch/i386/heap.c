@@ -16,7 +16,7 @@
 #define HEAP_FOOTER_MAGIC_MID 0x19310918
 
 #define KERNEL_HEAP_INIT_SIZE_IN_PAGES 2
-#define KERNEL_HEAP_MAX_SIZE_IN_PAGES 1024
+#define KERNEL_HEAP_MAX_SIZE_IN_PAGES 1024*10
 #define HEAP_FOOTER_FROM_HEADER(header_ptr) (heap_footer_t*) ((uint32_t) (header_ptr) + sizeof(heap_header_t) + (header_ptr)->size)
 #define ASSERT_VALID_HEAP_HEADER(header) PANIC_ASSERT((header)->magic == HEAP_HEADER_MAGIC_LEFT || (header)->magic == HEAP_HEADER_MAGIC_MID)
 #define ASSERT_VALID_HEAP_FOOTER(footer) PANIC_ASSERT((footer)->magic == HEAP_FOOTER_MAGIC_MID || (footer)->magic == HEAP_FOOTER_MAGIC_RIGHT)
