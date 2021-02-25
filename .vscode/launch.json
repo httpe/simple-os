@@ -18,7 +18,8 @@
             "gdbpath": "/usr/bin/gdb",
             "preLaunchTask": "Build and Debug",
             "autorun": [
-                "add-symbol-file bootloader/bootloader.elf 0x7c00",
+                "add-symbol-file-auto bootloader/bootloader.elf",
+                "add-symbol-file-auto kernel/user_prog",
                 "dir kernel",
                 "dir bootloader"
             ]
