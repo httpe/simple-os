@@ -3,7 +3,6 @@
 
 ; Defined in isr.c
 [extern int_handler]
-; [extern irq_handler]
 
 ; kernel data segment descriptor in flat mode
 KERNEL_CODE_SEG equ 0000000000001_0_00b
