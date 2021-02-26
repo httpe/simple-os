@@ -1,8 +1,8 @@
 ; global gdt_descriptor, CODE_SEG, DATA_SEG
 ; Based on https://github.com/cfenollosa/os-tutorial/tree/master/09-32bit-gdt
 
-push CODE_SEG
-push DATA_SEG
+push KERNEL_CODE_SEG
+push KERNEL_DATA_SEG
 
 ; Using Flat Setup in GDT, basically leaving the offsets used in addressing untranslated 
 gdt_start: ; don't remove the labels, they're needed to compute sizes and jumps
@@ -48,5 +48,5 @@ gdt_descriptor:
 ; and the remaining of the 16bits selector is the 0-based index into the GDT
 
 
-CODE_SEG equ 0000000000001_0_00b ; gdt_code - gdt_start is also correct
-DATA_SEG equ 0000000000010_0_00b ; gdt_data - gdt_start is also correct
+KERNEL_CODE_SEG equ 0000000000001_0_00b ; gdt_code - gdt_start is also correct
+KERNEL_DATA_SEG equ 0000000000010_0_00b ; gdt_data - gdt_start is also correct

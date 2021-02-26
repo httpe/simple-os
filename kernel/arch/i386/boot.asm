@@ -190,10 +190,10 @@ higher_half:
 	
 	; Start Loading GDT (Needed for GRUB, no need for our own bootloader)
     lgdt [gdt_descriptor]   ; 1. load the GDT descriptor
-    jmp CODE_SEG:init_higher_half_pm    ; 2. Far jump by using a different segment, basically setting CS to point to the correct protected mode segment (GDT entry)
+    jmp KERNEL_CODE_SEG:init_higher_half_pm    ; 2. Far jump by using a different segment, basically setting CS to point to the correct protected mode segment (GDT entry)
 
 init_higher_half_pm:
-    mov ax, DATA_SEG        ; 3. update the segment registers other than CS
+    mov ax, KERNEL_DATA_SEG        ; 3. update the segment registers other than CS
     mov ds, ax
     mov ss, ax
     mov es, ax

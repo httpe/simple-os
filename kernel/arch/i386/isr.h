@@ -60,9 +60,18 @@ extern void irq13();
 extern void irq14();
 extern void irq15();
 
+// Syscall int number
+#define INT_SYSCALL 88
+extern void int88();
+
+// First 32 interrupts are occupied by CPU exceptions
+#define N_CPU_EXCEPTION_INT 32
+
 // Map IRQ{i} to Interrupt{IRQ_BASE_REMAPPED+i}
 #define IRQ_BASE_REMAPPED 32
 #define IRQ_TO_INTERRUPT(IRQ) (IRQ + IRQ_BASE_REMAPPED)
+
+
 
 /* Struct which aggregates many registers.
  It matches exactly the pushes on interrupt.asm. From the bottom:
@@ -79,18 +88,46 @@ extern void irq15();
     There may be unnamed padding within a structure object, but not at its beginning.
     https://stackoverflow.com/questions/2748995/struct-memory-layout-in-c
 */
-typedef struct {
-   uint32_t ds; /* Data segment selector */
-   uint32_t edi, esi, ebp, useless_esp, ebx, edx, ecx, eax; /* Pushed by pusha. */
-   uint32_t int_no, err_code; /* Interrupt number and error code (if applicable, IRQ number for IRQs, otherwise 0) */
-   uint32_t eip, cs, eflags, esp, ss; /* Pushed by the processor automatically */
-} registers_t;
+typedef struct trapframe {
+  // registers as pushed by pusha
+  uint32_t edi;
+  uint32_t esi;
+  uint32_t ebp;
+  uint32_t oesp;      // useless & ignored
+  uint32_t ebx;
+  uint32_t edx;
+  uint32_t ecx;
+  uint32_t eax;
+
+  // rest of trap frame
+  uint16_t gs;
+  uint16_t padding1;
+  uint16_t fs;
+  uint16_t padding2;
+  uint16_t es;
+  uint16_t padding3;
+  uint16_t ds;
+  uint16_t padding4;
+  uint32_t trapno;
+
+  // below here defined by x86 hardware
+  uint32_t err;
+  uint32_t eip;
+  uint16_t cs;
+  uint16_t padding5;
+  uint32_t eflags;
+
+  // below here only when crossing rings, such as from user to kernel
+  uint32_t esp;
+  uint16_t ss;
+  uint16_t padding6;
+} trapframe;
+
 
 void isr_install();
-void isr_handler(registers_t* r);
 
-typedef void (*isr_t)(registers_t*);
-void register_interrupt_handler(uint8_t n, isr_t handler);
+typedef void (*interrupt_handler)(trapframe*);
+void register_interrupt_handler(uint8_t n, interrupt_handler handler);
 
 
 #endif

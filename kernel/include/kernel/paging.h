@@ -55,7 +55,7 @@ typedef struct segdesc {
   ((uint32_t)(base) >> 16) & 0xff, type, 0, dpl, 1,       \
   (uint32_t)(lim) >> 16, 0, 0, 1, 0, (uint32_t)(base) >> 24 }
 
-
+#define DPL_KERNEL  0x0     // Kernel DPL
 #define DPL_USER    0x3     // User DPL
 
 // Application segment type bits

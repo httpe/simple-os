@@ -55,7 +55,7 @@ static inline void switch_page_directory(uint32_t physical_addr) {
     asm volatile("mov %0, %%cr3": : "r"(physical_addr));
 }
 
-static void page_fault_callback(registers_t* regs) {
+static void page_fault_callback(trapframe* regs) {
     UNUSED(regs);
     uint32_t cr2;
     asm volatile("mov %%cr2, %0": "=r"(cr2));

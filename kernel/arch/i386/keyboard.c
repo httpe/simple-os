@@ -49,7 +49,7 @@ static void key_buffer_backspace() {
     }
 }
 
-static void keyboard_callback(registers_t* regs) {
+static void keyboard_callback(trapframe* regs) {
     UNUSED(regs);
 
     /* The PIC leaves us the scancode in port 0x60 */

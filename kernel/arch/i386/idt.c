@@ -5,14 +5,15 @@
 idt_gate_t idt[IDT_ENTRIES];
 idt_register_t idt_reg;
 
-void set_idt_gate(int n, uint32_t handler_address) {
+void set_idt_gate(int n, uint32_t handler_address, uint8_t type, uint8_t dpl) {
     // For more details, see https://wiki.osdev.org/IDT
     idt[n].low_offset = handler_address & 0x0000FFFF;
     idt[n].sel = KERNEL_CS;
     idt[n].always0 = 0;
-    // 32-bit Interrupt gate: 0xEE ( P=1, DPL=11b, S=0, type=1110b => type_attr=1110_1110b=0xEE)
-    // 32-bit Interrupt gate: 0x8E ( P=1, DPL=00b, S=0, type=1110b => type_attr=1000_1110b=0x8E)
-    idt[n].flags = 0x8E; 
+    idt[n].type = type;
+    idt[n].s = 0;
+    idt[n].dpl = dpl;
+    idt[n].p = 1;
     idt[n].high_offset = (handler_address >> 16) & 0x0000FFFF;
 }
 
