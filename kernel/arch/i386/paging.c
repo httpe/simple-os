@@ -10,6 +10,37 @@
 
 extern char KERNEL_VIRTUAL_END[];
 
+static segdesc gdt[NSEGS];
+
+// Load GDT
+static inline void lgdt(struct segdesc *p, uint16_t size)
+{
+  volatile uint16_t pd[3];
+
+  pd[0] = size-1;
+  pd[1] = (uint32_t)p;
+  pd[2] = (uint32_t)p >> 16;
+
+  asm volatile("lgdt (%0)" : : "r" (pd));
+}
+
+// Load TSS selector into TR register
+static inline void ltr(uint16_t sel)
+{
+  asm volatile("ltr %0" : : "r" (sel));
+}
+
+static void init_gdt()
+{
+    gdt[SEG_NULL] = (segdesc) {0};
+    gdt[SEG_KCODE] = SEG(STA_X|STA_R, 0, 0xffffffff, 0);
+    gdt[SEG_KDATA] = SEG(STA_W, 0, 0xffffffff, 0);
+    gdt[SEG_UCODE] = SEG(STA_X|STA_R, 0, 0xffffffff, DPL_USER);
+    gdt[SEG_UDATA] = SEG(STA_W, 0, 0xffffffff, DPL_USER);
+    // TSS will be setup later, but we tell CPU there will one through size argument of lgdt
+    lgdt(gdt, sizeof(gdt));
+}
+
 // Flush TLB (translation lookaside buffer) for a single page
 // Need flushing when a page table is changed
 // source: https://wiki.osdev.org/Paging
@@ -226,6 +257,7 @@ bool is_vaddr_accessible(uint32_t vaddr, bool is_from_kernel_code, bool is_writi
 }
 
 void initialize_paging() {
+    init_gdt();
     install_page_fault_handler();
 
     printf("Boot page dir physical addr: 0x%x\n", PAGE_DIR_PHYSICAL_ADDR);
