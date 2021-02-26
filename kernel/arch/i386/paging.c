@@ -30,6 +30,7 @@ static inline void ltr(uint16_t sel)
   asm volatile("ltr %0" : : "r" (sel));
 }
 
+// Initialize GDT with user space entries and a slot for TSS
 static void init_gdt()
 {
     gdt[SEG_NULL] = (segdesc) {0};

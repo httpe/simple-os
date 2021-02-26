@@ -31,25 +31,7 @@ gdt_data:
     db 1100_1111b
     db 0x0
 
-; TODO: Add TSS segment descriptor here
-gdt_user_code:
-    dw 0xffff
-    dw 0x0
-    db 0x0
-    db 1111_1010b
-    db 1100_1111b
-    db 0x0
-
-gdt_user_data:
-    dw 0xffff
-    dw 0x0
-    db 0x0
-    db 1111_0010b
-    db 1100_1111b
-    db 0x0
-
 gdt_end:
-
 
 
 ; GDT descriptor to be loaded by lgdt instruction
@@ -68,5 +50,3 @@ gdt_descriptor:
 
 CODE_SEG equ 0000000000001_0_00b ; gdt_code - gdt_start is also correct
 DATA_SEG equ 0000000000010_0_00b ; gdt_data - gdt_start is also correct
-USER_CODE_SEG equ 0000000000011_0_11b; 0x1b
-USER_DATA_SEG equ 0000000000100_0_11b; 0x23
