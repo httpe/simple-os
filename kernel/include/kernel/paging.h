@@ -10,7 +10,7 @@
 // Segmentation (GDT/TSS)
 ////////////////////////////////
 
-// Ref: xv6/mmu.h
+// From: xv6/mmu.h
 
 // various segment selectors.
 #define SEG_NULL 0   // null segment
@@ -21,7 +21,7 @@
 #define SEG_TSS   5  // this process's task state
 
 // segment selector for CS/DS/ES etc.
-// See https://wiki.osdev.org/Selector (RPL=Requested Privilege Leve)
+// See https://wiki.osdev.org/Selector (RPL=Requested Privilege Level)
 #define SEG_SELECTOR(seg,rpl) (((seg) << 3) + rpl)
 
 // global var gdt[NSEGS] holds the above segments.
@@ -156,7 +156,7 @@ typedef struct page_directory_entry
    uint32_t page_size       : 1;   // If the bit is set, then pages are 4 MiB in size. Otherwise, they are 4 KiB. Please note that 4-MiB pages require PSE to be enabled.
    uint32_t ignored         : 1;   // Ignored bit
    uint32_t avaible         : 3;   // Available to OS
-   uint32_t page_table_frame : 20;  // Physical address to the page table (shifted right 12 bits)
+   uint32_t page_table_frame : 20; // Physical address to the page table (shifted right 12 bits)
 } page_directory_entry_t;
 
 

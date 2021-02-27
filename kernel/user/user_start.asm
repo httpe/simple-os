@@ -8,8 +8,8 @@
 ; 	call user_main
 ; _start_end:
 
-USER_CODE_SEG equ 0000000000011_0_11b; 0x1b
-USER_DATA_SEG equ 0000000000100_0_11b; 0x23
+USER_CODE_SEG equ 0000000000011_0_11b; 0x1b, user code segment selector
+USER_DATA_SEG equ 0000000000100_0_11b; 0x23, user data segment selector
 
 section .bss align=4096
 align 16
@@ -24,6 +24,14 @@ global _start
 _start:
 
 ; Ref: https://littleosbook.github.io/#user-mode
+; Ref: https://wiki.osdev.org/Getting_to_Ring_3
+
+mov ax, USER_DATA_SEG
+mov ds, ax
+mov es, ax
+mov fs, ax
+mov gs, ax
+
 ; [esp + 16]  ss      ; the stack segment selector we want for user mode
 ; [esp + 12]  esp     ; the user mode stack pointer
 ; [esp +  8]  eflags  ; the control flags we want to use in user mode
@@ -60,7 +68,13 @@ add esp, 8
 pop ebp
 pop esp ; restore kernel stack esp
 
-int 1
+; try do a system call 
+; with eax being the return value from the user_main C function
+int 88
+
+; test running a priviledged instruction
+; shall generate a General Protection Fault
+cli
 
 ret
 

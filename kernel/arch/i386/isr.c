@@ -122,7 +122,7 @@ char* exception_messages[] = {
 
 void syscall_handler(trapframe* r)
 {
-    printf("Syscall: %u\n", r->eax);
+    printf("Syscall: %d\n", r->eax);
 }
 
 void isr_handler(trapframe* r) {

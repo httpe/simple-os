@@ -11,6 +11,7 @@
 extern char KERNEL_VIRTUAL_END[];
 
 static segdesc gdt[NSEGS];
+static task_state tss;
 
 // Load GDT
 static inline void lgdt(struct segdesc *p, uint16_t size)
@@ -38,7 +39,7 @@ static void init_gdt()
     gdt[SEG_KDATA] = SEG(STA_W, 0, 0xffffffff, 0);
     gdt[SEG_UCODE] = SEG(STA_X|STA_R, 0, 0xffffffff, DPL_USER);
     gdt[SEG_UDATA] = SEG(STA_W, 0, 0xffffffff, DPL_USER);
-    // TSS will be setup later, but we tell CPU there will one through size argument of lgdt
+    // TSS will be setup later, but we tell CPU there will one through size argument of lgdt (NSEGS)
     lgdt(gdt, sizeof(gdt));
 }
 
@@ -182,17 +183,13 @@ static void free_frame(uint32_t page_index) {
     clear_frame(frame_index);
 }
 
-
-
-
-// Allocate physical space for a page (if not already mapped)
+// Allocate physical space for a page (must not be already mapped)
 // return: allocated physical frame index
 static uint32_t alloc_frame(uint32_t page_index, bool is_kernel, bool is_writeable) {
     uint32_t frame_index = first_free_frame(); // idx is now the index of the first free frame.
     map_frame(page_index, frame_index, is_kernel, is_writeable);
     return frame_index;
 }
-
 
 void dealloc_pages(uint32_t vaddr, size_t page_count) {
     if (page_count == 0) {
@@ -257,8 +254,21 @@ bool is_vaddr_accessible(uint32_t vaddr, bool is_from_kernel_code, bool is_writi
     return true;
 }
 
+static void init_tss()
+{
+    gdt[SEG_TSS] = TSS_SEG(STS_T32A, &tss, sizeof(tss)-1, DPL_KERNEL);
+    uint32_t tss_kernel_stack = alloc_pages(1,true,true);
+    tss.ss0 = SEG_SELECTOR(SEG_KDATA, DPL_KERNEL);
+    tss.esp0 = tss_kernel_stack + PAGE_SIZE;
+    // setting IOPL=0 in eflags *and* iomb beyond the tss segment limit
+    // forbids I/O instructions (e.g., inb and outb) from user space
+    tss.iomb = (uint16_t) 0xFFFF;
+    ltr(SEG_SELECTOR(SEG_TSS, DPL_KERNEL));
+}
+
 void initialize_paging() {
     init_gdt();
+    init_tss();
     install_page_fault_handler();
 
     printf("Boot page dir physical addr: 0x%x\n", PAGE_DIR_PHYSICAL_ADDR);

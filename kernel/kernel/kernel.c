@@ -85,23 +85,25 @@ void kernel_main(uint32_t mbt_physical_addr) {
 
 	// Manually triggering a page fault
 	// Use volatile to avoid it get optimized away
-	printf("Manually triggering a page fault at 0xA0000000...\n");
-	uint32_t* ptr = (uint32_t*)0xA0000000;
-	uint32_t volatile do_page_fault = *ptr;
+	// printf("Manually triggering a page fault at 0xA0000000...\n");
+	// uint32_t* ptr = (uint32_t*)0xA0000000;
+	// uint32_t volatile do_page_fault = *ptr;
+
+	
 
     // Load kernel from tar file system to this address
-    // char* user_program_buffer = kmalloc(4*4096);
-    // int user_program_size = tar_loopup_lazy(BOOTLOADER_SECTORS, "/usr/bin/user_prog", (unsigned char*)user_program_buffer);
-	// printf("User program size: %u\n", user_program_size);
+    char* user_program_buffer = kmalloc(4*4096);
+    int user_program_size = tar_loopup_lazy(BOOTLOADER_SECTORS, "/usr/bin/user_prog", (unsigned char*)user_program_buffer);
+	printf("User program size: %u\n", user_program_size);
 
-    // if (is_elf(user_program_buffer)) {
-	// 	printf("User program found\n");
-    //     int (*entry_point)(void) = (int (*)(void)) load_elf(user_program_buffer, false);
-    //     int ret_code = entry_point();
-	// 	printf("User program return code: %d\n", ret_code);
-    // } else {
-	// 	printf("User program not found\n");
-	// }
+    if (is_elf(user_program_buffer)) {
+		printf("User program found\n");
+        int (*entry_point)(void) = (int (*)(void)) load_elf(user_program_buffer, false);
+        int ret_code = entry_point();
+		printf("User program return code: %d\n", ret_code);
+    } else {
+		printf("User program not found\n");
+	}
 
 	printf("\nPress any key to start typing on the screen!\n");
 	// Hang by infinite loop
