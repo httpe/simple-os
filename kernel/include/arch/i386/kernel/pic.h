@@ -1,5 +1,5 @@
-#ifndef PIC_H
-#define PIC_H
+#ifndef _ARCH_I386_KERNEL_PIC_H
+#define _ARCH_I386_KERNEL_PIC_H
 
 #include "port_io.h"
 

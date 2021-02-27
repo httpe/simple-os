@@ -1,5 +1,5 @@
-#ifndef ARCH_I386_IO_H
-#define ARCH_I386_IO_H
+#ifndef _ARCH_I386_KERNEL_IO_H
+#define _ARCH_I386_KERNEL_IO_H
 
 #include <stdbool.h>
 #include <stddef.h>

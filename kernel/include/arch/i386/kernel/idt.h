@@ -1,5 +1,5 @@
-#ifndef IDT_H
-#define IDT_H
+#ifndef _ARCH_I386_KERNEL_IDT_H
+#define _ARCH_I386_KERNEL_IDT_H
 
 #include <stdint.h>
 

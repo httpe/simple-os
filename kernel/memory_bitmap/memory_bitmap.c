@@ -1,6 +1,7 @@
-#include "memory_bitmap.h"
 #include <stdio.h>
 #include <kernel/multiboot.h>
+
+#include <kernel/memory_bitmap.h>
 
 // Memory bitmap
 #define uint32combine(high,low) ((((uint64_t) (high)) << 32) + (uint64_t) (low))
@@ -11,8 +12,6 @@ extern char KERNEL_PHYSICAL_START[], KERNEL_PHYSICAL_END[];
 
 // A bitset of frames - used or free.
 uint32_t frames[N_FRAMES];
-
-
 
 // Static function to set a bit in the frames bitset
 void set_frame(uint32_t frame_idx) {

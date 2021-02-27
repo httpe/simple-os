@@ -1,5 +1,5 @@
 #include <kernel/serial.h>
-#include "port_io.h"
+#include <arch/i386/kernel/port_io.h>
 
 // Serial port I/O utilities
 // Can be used to export screen content (history) that was scrolled up

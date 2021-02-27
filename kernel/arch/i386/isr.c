@@ -1,8 +1,10 @@
-#include "isr.h"
-#include "idt.h"
-#include "port_io.h"
-#include "pic.h"
+#include <arch/i386/kernel/isr.h>
+#include <arch/i386/kernel/idt.h>
+#include <arch/i386/kernel/port_io.h>
+#include <arch/i386/kernel/pic.h>
 #include <kernel/paging.h>
+#include <arch/i386/kernel/paging.h>
+#include <arch/i386/kernel/segmentation.h>
 #include <stdio.h>
 
 

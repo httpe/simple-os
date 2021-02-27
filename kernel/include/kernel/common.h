@@ -1,5 +1,5 @@
-#ifndef KERNEL_COMMON_H
-#define KERNEL_COMMON_H
+#ifndef _KERNEL_COMMON_H
+#define _KERNEL_COMMON_H
 
 #define UNUSED(x) ((void) (x))
 

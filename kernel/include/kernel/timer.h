@@ -1,5 +1,5 @@
-#ifndef TIMER_H
-#define TIMER_H
+#ifndef _KERNEL_TIMER_H
+#define _KERNEL_TIMER_H
 
 #include <stdint.h>
 

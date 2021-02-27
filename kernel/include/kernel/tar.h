@@ -1,5 +1,5 @@
-#ifndef TAR_H
-#define TAR_H
+#ifndef _KERNEL_TAR_H
+#define _KERNEL_TAR_H
 
 #include <stdbool.h>
 #include <stddef.h>

@@ -32,9 +32,12 @@ ASMFLAGS:=$(ASMFLAGS) -i $(ARCHDIR)
 KERNEL_OBJS=\
 $(KERNEL_ARCH_OBJS) \
 panic/panic.o \
-kernel/kernel.o \
+memory_bitmap/memory_bitmap.o \
+heap/heap.o \
 tar/tar.o \
 elf/elf.o \
+kernel/kernel.o \
+
 
 USER_SPACE_OBJS=\
 user/user_start.o \

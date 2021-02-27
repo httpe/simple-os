@@ -1,5 +1,5 @@
-#ifndef ISR_H
-#define ISR_H
+#ifndef _ARCH_I386_KERNEL_ISR_H
+#define _ARCH_I386_KERNEL_ISR_H
 
 #include <stdint.h>
 

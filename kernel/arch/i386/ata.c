@@ -1,5 +1,6 @@
 #include <kernel/ata.h>
-#include "port_io.h"
+#include <arch/i386/kernel/ata.h>
+#include <arch/i386/kernel/port_io.h>
 
 static void ATA_wait_BSY();
 static void ATA_wait_DRQ();

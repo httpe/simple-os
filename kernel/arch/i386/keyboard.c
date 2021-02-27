@@ -1,13 +1,14 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
 #include <kernel/tty.h>
 #include <kernel/common.h>
+#include <kernel/keyboard.h>
 
-#include "keyboard.h"
-#include "port_io.h"
-#include "isr.h"
-
+#include <arch/i386/kernel/vga.h>
+#include <arch/i386/kernel/port_io.h>
+#include <arch/i386/kernel/isr.h>
 
 #define SCAN_CODE_BACKSPACE 0x0E
 #define SCAN_CODE_ENTER 0x1C

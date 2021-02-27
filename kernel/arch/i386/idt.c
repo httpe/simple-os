@@ -1,4 +1,4 @@
-#include "idt.h"
+#include <arch/i386/kernel/idt.h>
 
 // Modified from https://github.com/cfenollosa/os-tutorial/tree/master/18-interrupts
 

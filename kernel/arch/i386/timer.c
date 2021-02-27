@@ -1,11 +1,9 @@
 #include <stdio.h>
 #include <kernel/common.h>
 
-#include "timer.h"
-#include "isr.h"
-#include "port_io.h"
-
-
+#include <kernel/timer.h>
+#include <arch/i386/kernel/isr.h>
+#include <arch/i386/kernel/port_io.h>
 
 // Ref: http://www.jamesmolloy.co.uk/tutorial_html/5.-IRQs%20and%20the%20PIT.html
 // Ref: https://github.com/cfenollosa/os-tutorial/blob/master/23-fixes/cpu/timer.c

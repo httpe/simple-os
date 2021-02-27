@@ -1,5 +1,5 @@
-#ifndef _MEMORY_BITMAP_H
-#define _MEMORY_BITMAP_H
+#ifndef _KERNEL_MEMORY_BITMAP_H
+#define _KERNEL_MEMORY_BITMAP_H
 
 #include <stdint.h>
 

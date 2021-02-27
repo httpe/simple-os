@@ -1,5 +1,5 @@
-#ifndef ELF_H
-#define ELF_H
+#ifndef _KERNEL_ELF_H
+#define _KERNEL_ELF_H
 
 #include <stdbool.h>
 #include <stddef.h>

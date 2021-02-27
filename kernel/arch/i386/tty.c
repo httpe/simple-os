@@ -5,9 +5,8 @@
 
 #include <kernel/tty.h>
 #include <kernel/serial.h>
-#include "vga.h"
-#include "port_io.h"
-
+#include <arch/i386/kernel/vga.h>
+#include <arch/i386/kernel/port_io.h>
 
 // It is assumed that the first 1MiB physical address space is mapped to virtual address starting at 0xC0000000
 static uint16_t* const VGA_MEMORY = (uint16_t*)(0xB8000 + 0xC0000000);

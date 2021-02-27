@@ -2,10 +2,12 @@
 #include <string.h>
 #include <kernel/panic.h>
 #include <kernel/common.h>
+#include <kernel/memory_bitmap.h>
 #include <kernel/paging.h>
 
-#include "isr.h"
-#include "memory_bitmap.h"
+#include <arch/i386/kernel/isr.h>
+#include <arch/i386/kernel/segmentation.h>
+#include <arch/i386/kernel/paging.h>
 
 
 extern char KERNEL_VIRTUAL_END[];

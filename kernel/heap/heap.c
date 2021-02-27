@@ -5,7 +5,6 @@
 #include <kernel/paging.h>
 #include <kernel/heap.h>
 
-
 // Magic number for heap header on the left boundary of a (virtual address wise) contiguous space 
 #define HEAP_HEADER_MAGIC_LEFT 0xBEAFFAEB
 // Magic number for other heap header 
