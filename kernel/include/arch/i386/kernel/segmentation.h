@@ -1,3 +1,6 @@
+#ifndef _ARCH_I386_KERNEL_SEGMENTATION_H
+#define _ARCH_I386_KERNEL_SEGMENTATION_H
+
 #include <stdint.h>
 
 ////////////////////////////////
@@ -104,3 +107,4 @@ typedef struct task_state {
   uint16_t iomb;        // I/O map base address
 } task_state;
 
+#endif
