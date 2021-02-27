@@ -76,9 +76,13 @@ extern void int88();
 /* Struct which aggregates many registers.
  It matches exactly the pushes on interrupt.asm. From the bottom:
    - Pushed by the processor automatically
-   - `push byte`s on the isr-specific code: error code, then int number
-   - All the registers by pusha
-   - `push eax` whose lower 16-bits contain DS
+    - If previledge level changed, "ss" and "esp"
+    - "eflags", "cs", "eip"
+   - For some CPU exceptions, "err" (error code) is pushed by CPU, otherwise pushed by our isr-specific handler
+   - "trapno" pushed by our isr-specific handler (e.g. isr30)
+   - common_stub
+    - pushes "ds", "es", "fs" and "gs"
+    - All the registers by pusha (from "eax" to "edi")
 
  C struct memory layout:
     13 Within a structure object, the non-bit-field members and the units in which bit-fields reside
