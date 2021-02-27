@@ -1,11 +1,12 @@
+#include <stdio.h>
+#include <kernel/paging.h>
+#include <arch/i386/kernel/paging.h>
+#include <arch/i386/kernel/segmentation.h>
 #include <arch/i386/kernel/isr.h>
 #include <arch/i386/kernel/idt.h>
 #include <arch/i386/kernel/port_io.h>
 #include <arch/i386/kernel/pic.h>
-#include <kernel/paging.h>
-#include <arch/i386/kernel/paging.h>
-#include <arch/i386/kernel/segmentation.h>
-#include <stdio.h>
+#include <arch/i386/kernel/syscall.h>
 
 
 
@@ -122,10 +123,6 @@ char* exception_messages[] = {
     "31. Reserved"
 };
 
-void syscall_handler(trapframe* r)
-{
-    printf("Syscall: %d\n", r->eax);
-}
 
 void isr_handler(trapframe* r) {
     printf("Received interrupt: %s\n", exception_messages[r->trapno]);

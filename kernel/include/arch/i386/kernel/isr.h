@@ -60,10 +60,6 @@ extern void irq13();
 extern void irq14();
 extern void irq15();
 
-// Syscall int number
-#define INT_SYSCALL 88
-extern void int88();
-
 // First 32 interrupts are occupied by CPU exceptions
 #define N_CPU_EXCEPTION_INT 32
 
