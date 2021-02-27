@@ -5,7 +5,7 @@
 [extern int_handler]
 
 ; kernel data segment descriptor in flat mode
-KERNEL_CODE_SEG equ 0000000000001_0_00b
+KERNEL_DATA_SEG equ 0000000000010_0_00b
 
 ; Common code
 common_stub:
@@ -19,7 +19,7 @@ common_stub:
     pusha ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
 
     ; switch to kernel code segment
-	mov ax, KERNEL_CODE_SEG 
+	mov ax, KERNEL_DATA_SEG 
 	mov ds, ax
 	mov es, ax
 	mov fs, ax
