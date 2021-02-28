@@ -7,6 +7,8 @@
 ; kernel data segment descriptor in flat mode
 KERNEL_DATA_SEG equ 0000000000010_0_00b
 
+global int_ret
+
 ; Common code
 common_stub:
     ; 1. Save CPU state
@@ -30,8 +32,9 @@ common_stub:
     cld ; C code following the sysV ABI requires DF to be clear on function entry
 	call int_handler
     add esp, 4 ; reverse 'push esp'
-	
-    ; 3. Restore state
+
+int_ret:
+    ; 3. Restore state (also be used independently to enter user space)
     popa
     pop gs
     pop fs

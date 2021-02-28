@@ -1,11 +1,11 @@
 #include <kernel/panic.h>
 #include <stdio.h>
 
-void panic_assert(const char* file, uint32_t line, const char* desc) {
-    // An assertion failed, and we have to panic.
+void panic(const char* file, uint32_t line, const char* panic_type, const char* desc) {
+    // Manually triggered kernel panic
     asm volatile("cli"); // Disable interrupts.
 
-    printf("ASSERTION-FAILED(%s) at %s:%d\n", desc, file, line);
+    printf("%s(%s) at %s:%d\n", panic_type, desc, file, line);
     // Halt by going into an infinite loop.
     for (;;);
 }

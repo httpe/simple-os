@@ -20,6 +20,8 @@ void initialize_paging();
 struct page_directory_entry;
 
 struct page_directory_entry* curr_page_dir();
+void switch_page_directory(uint32_t physical_addr);
+void set_tss(uint32_t kernel_stack_esp);
 uint32_t find_contiguous_free_pages(struct page_directory_entry* page_dir, size_t page_count, bool is_kernel);
 uint32_t map_frame_to_dir(struct page_directory_entry* page_dir, uint32_t page_index, uint32_t frame_index, bool is_kernel, bool is_writeable);
 uint32_t unmap_page_from_dir(struct page_directory_entry* page_dir, uint32_t page_index);
@@ -27,7 +29,9 @@ uint32_t alloc_pages(struct page_directory_entry* page_dir, size_t page_count, b
 uint32_t alloc_pages_at(struct page_directory_entry* page_dir, uint32_t vaddr, size_t size, bool is_kernel, bool is_writeable);
 void dealloc_pages(struct page_directory_entry* page_dir, uint32_t vaddr, size_t page_count);
 bool is_vaddr_accessible(struct page_directory_entry* page_dir, uint32_t vaddr, bool is_from_kernel_code, bool is_writing);
-int64_t vaddr2paddr(struct page_directory_entry* page_dir, uint32_t vaddr);
-extern struct page_directory_entry* kernel_page_dir;
+uint32_t vaddr2paddr(struct page_directory_entry* page_dir, uint32_t vaddr);
+void copy_kernel_space_mapping(struct page_directory_entry* page_dir);
+void free_user_space(struct page_directory_entry* page_dir);
+
 
 #endif

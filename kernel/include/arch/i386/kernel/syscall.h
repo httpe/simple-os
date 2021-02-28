@@ -3,6 +3,9 @@
 
 #include <arch/i386/kernel/isr.h>
 
+#define SYS_EXEC 1
+
+
 // Syscall int number
 #define INT_SYSCALL 88
 // defined in interrupt.asm

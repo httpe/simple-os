@@ -9,10 +9,8 @@
 #include <arch/i386/kernel/segmentation.h>
 #include <arch/i386/kernel/paging.h>
 
+extern char MAP_MEM_PA_ZERO_TO[], KERNEL_VIRTUAL_END[];
 
-extern char KERNEL_VIRTUAL_END[], boot_page_directory[];
-
-page_directory_entry_t* kernel_page_dir = (page_directory_entry_t*) boot_page_directory;
 static segdesc gdt[NSEGS];
 static task_state tss;
 
@@ -55,7 +53,7 @@ static inline void flush_tlb(uint32_t addr) {
 
 // Switch page directory
 // When page directory entries have been changed, can switch to oneself to flush the cache
-static inline void switch_page_directory(uint32_t physical_addr) {
+inline void switch_page_directory(uint32_t physical_addr) {
     asm volatile("mov %0, %%cr3": : "r"(physical_addr));
 }
 
@@ -76,6 +74,7 @@ inline page_directory_entry_t* curr_page_dir()
     return PAGE_DIR_PTR;
 }
 
+// map page table's physical frame to a page and return as pointer, need to unmap by return_page_table
 static page_t* get_page_table(page_directory_entry_t* page_dir, uint32_t page_dir_idx)
 {
     PANIC_ASSERT(page_dir[page_dir_idx].present);
@@ -91,14 +90,13 @@ static page_t* get_page_table(page_directory_entry_t* page_dir, uint32_t page_di
     return page_table;
 }
 
+// unmap the page table returned by get_page_table
 static void return_page_table(page_directory_entry_t* page_dir, page_t* page_table)
 {
     if(page_dir != curr_page_dir()) {
         unmap_page_from_dir(curr_page_dir(), PAGE_INDEX_FROM_VADDR((uint32_t) page_table));
     }
 }
-
-
 
 // Find contiguous pages that have not been mapped
 // If is for kernel, search vaddr space after KERNEL_VIRTUAL_END
@@ -144,7 +142,6 @@ uint32_t find_contiguous_free_pages(page_directory_entry_t* page_dir, size_t pag
     while (1);
 
 }
-
 
 // return: physical frame index unmapped
 uint32_t unmap_page_from_dir(page_directory_entry_t* page_dir, uint32_t page_index)
@@ -215,20 +212,16 @@ uint32_t map_frame_to_dir(page_directory_entry_t* page_dir, uint32_t page_index,
 
 }
 
-int64_t vaddr2paddr(page_directory_entry_t* page_dir, uint32_t vaddr)
+uint32_t vaddr2paddr(page_directory_entry_t* page_dir, uint32_t vaddr)
 {
     uint32_t page_index = PAGE_INDEX_FROM_VADDR(vaddr);
     uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
     uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
-    if(!page_dir[page_dir_idx].present) {
-        return -1;
-    }
+    PANIC_ASSERT(page_dir[page_dir_idx].present);
     page_t* page_table = get_page_table(page_dir, page_dir_idx);
     page_t* page = &page_table[page_table_idx];
-    if(!page->present) {
-        return -1;
-    }
-    uint32_t paddr = (page->frame << 12) + (vaddr & 0x1FFF);
+    PANIC_ASSERT(page->present);
+    uint32_t paddr = (page->frame << 12) + (vaddr & 0xFFF);
     return_page_table(page_dir, page_table);
     return paddr;
 }
@@ -261,6 +254,8 @@ void dealloc_pages(page_directory_entry_t* page_dir, uint32_t vaddr, size_t page
     }
 }
 
+// allocate frames for pages starting at vaddr, panic if already mapped
+// return: starting vaddr of the allocated pages 
 uint32_t alloc_pages_at(page_directory_entry_t* page_dir, uint32_t vaddr, size_t size, bool is_kernel, bool is_writeable)
 {
     uint32_t page_index = PAGE_INDEX_FROM_VADDR(vaddr);
@@ -272,6 +267,7 @@ uint32_t alloc_pages_at(page_directory_entry_t* page_dir, uint32_t vaddr, size_t
     return VADDR_FROM_PAGE_INDEX(page_index);
 }
 
+// return: starting vaddr of the allocated pages 
 uint32_t alloc_pages(page_directory_entry_t* page_dir, size_t page_count, bool is_kernel, bool is_writeable) {
     if (page_count == 0) {
         return 0;
@@ -326,21 +322,54 @@ bool is_vaddr_accessible(page_directory_entry_t* page_dir, uint32_t vaddr, bool 
     return accessible;
 }
 
-static void init_tss()
+// Set current TSS segment
+void set_tss(uint32_t kernel_stack_esp)
 {
     gdt[SEG_TSS] = TSS_SEG(STS_T32A, &tss, sizeof(tss)-1, DPL_KERNEL);
-    uint32_t tss_kernel_stack = alloc_pages(curr_page_dir(), 1,true,true);
     tss.ss0 = SEG_SELECTOR(SEG_KDATA, DPL_KERNEL);
-    tss.esp0 = tss_kernel_stack + PAGE_SIZE;
+    tss.esp0 = kernel_stack_esp;
     // setting IOPL=0 in eflags *and* iomb beyond the tss segment limit
     // forbids I/O instructions (e.g., inb and outb) from user space
     tss.iomb = (uint16_t) 0xFFFF;
     ltr(SEG_SELECTOR(SEG_TSS, DPL_KERNEL));
 }
 
+// copy all kernel space page dir entries from current dir to page_dir 
+void copy_kernel_space_mapping(page_directory_entry_t* page_dir)
+{
+    uint32_t kernel_page_dir_idx = PAGE_INDEX_FROM_VADDR((uint32_t) MAP_MEM_PA_ZERO_TO) / PAGE_TABLE_SIZE;
+    page_directory_entry_t* current_page_dir = curr_page_dir();
+    for(int i=kernel_page_dir_idx;i<PAGE_DIR_SIZE;i++) {
+        page_dir[i] = current_page_dir[i];
+    }
+}
+
+// unmap/free all user space pages, free all underlying frames
+void free_user_space(page_directory_entry_t* page_dir)
+{
+    uint32_t kernel_page_dir_idx = PAGE_INDEX_FROM_VADDR((uint32_t) MAP_MEM_PA_ZERO_TO) / PAGE_TABLE_SIZE;
+    for(uint32_t i=0;i<kernel_page_dir_idx;i++) {
+        if(page_dir[i].present) {
+            page_t* page_table = get_page_table(page_dir, i);
+            for(int j=0;j<PAGE_TABLE_SIZE;j++) {
+                if(page_table[j].present) {
+                    page_table[j].present = 0;
+                    clear_frame(page_table[j].frame);
+                }
+            }
+            page_dir[i].present = 0;
+            clear_frame(page_dir[i].page_table_frame);
+            return_page_table(page_dir, page_table);
+        }
+    }
+    if(page_dir == curr_page_dir()) {
+        switch_page_directory(PAGE_DIR_PHYSICAL_ADDR);
+    }
+    // dealloc_pages(curr_page_dir(), (uint32_t) page_dir, 1);
+}
+
 void initialize_paging() {
     init_gdt();
-    init_tss();
     install_page_fault_handler();
 
     printf("Boot page dir physical addr: 0x%x\n", PAGE_DIR_PHYSICAL_ADDR);
@@ -349,7 +378,9 @@ void initialize_paging() {
     page_t page_table_entry_0 = PAGE_TABLE_PTR(0xC0000000 >> 22)[0];
     printf("Boot page table entry 0 point to physical addr: 0x%x\n", page_table_entry_0.frame << 12);
 
-    printf("vaddr2paddr: 0xC0000000 is mapped to: %u", vaddr2paddr(curr_page_dir(), 0xC0000000));
+    page_directory_entry_t* curr_dir = curr_page_dir();
+    printf("vaddr2paddr: page_dir is mapped to: %u, PHY=%u\n", vaddr2paddr(curr_dir, (uint32_t) curr_dir), PAGE_DIR_PHYSICAL_ADDR);
+    PANIC_ASSERT((uint32_t) PAGE_DIR_PHYSICAL_ADDR == vaddr2paddr(curr_page_dir(), (uint32_t) curr_page_dir()));
 
     // uint32_t array_len = 0x9FC00;
     // uint32_t alloc_addr = kmalloc(PAGE_COUNT_FROM_BYTES(array_len), true, true);
