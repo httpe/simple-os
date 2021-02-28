@@ -23,7 +23,7 @@ Elf32_Addr load_elf(const char* buff, bool is_kernel) {
         Elf32_Phdr program_header = program_header_table[i];
         if (program_header.p_type == PT_LOAD) {
             char* dest_ptr = (char*)program_header.p_vaddr;
-            map_pages(program_header.p_vaddr, program_header.p_memsz, is_kernel, (program_header.p_flags & PF_W)==PF_W);
+            alloc_pages_at(curr_page_dir(), program_header.p_vaddr, program_header.p_memsz, is_kernel, (program_header.p_flags & PF_W)==PF_W);
             char* src_ptr = (char*)buff + program_header.p_offset;
 
             for (Elf32_Word j = 0; j < program_header.p_memsz; j++) {

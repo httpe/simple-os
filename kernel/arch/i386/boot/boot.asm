@@ -37,6 +37,7 @@ stack_top:
 ; Preallocate pages used for paging. Don't hard-code addresses and assume they
 ; are available, as the bootloader might have loaded its multiboot structures or
 ; modules there. This lets the bootloader know it must avoid the addresses.
+global boot_page_directory
 alignb 4096
 boot_page_directory:
 resb 4096

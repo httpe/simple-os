@@ -45,7 +45,7 @@ static heap_t* kernel_heap;
 heap_t* initialize_heap(uint32_t size_in_pages, uint32_t min_size_in_pages, uint32_t max_size_in_pages, bool is_kernel) {
     PANIC_ASSERT(size_in_pages > 0 && size_in_pages <= max_size_in_pages && size_in_pages >= min_size_in_pages);
 
-    uint32_t heap_addr = alloc_pages(size_in_pages, is_kernel, true);
+    uint32_t heap_addr = alloc_pages(curr_page_dir(), size_in_pages, is_kernel, true);
     heap_header_t* header = (heap_header_t*)(heap_addr + sizeof(heap_t));
     header->magic = HEAP_HEADER_MAGIC_MID; // MID because it is not started at page boundary 
     // header's size is usable size
@@ -150,7 +150,7 @@ heap_header_t* unify_free_space(heap_t* heap, heap_header_t* free_header) {
     heap_footer_t* free_footer = HEAP_FOOTER_FROM_HEADER(free_header);
 
     heap_footer_t* left_footer = (heap_footer_t*)((uint32_t)free_header - sizeof(heap_footer_t));
-    if (is_vaddr_accessible((uint32_t)left_footer, heap->is_kernel, true)) {
+    if (is_vaddr_accessible(curr_page_dir(), (uint32_t)left_footer, heap->is_kernel, true)) {
         if (left_footer->magic == HEAP_FOOTER_MAGIC_MID || left_footer->magic == HEAP_FOOTER_MAGIC_RIGHT) {
             heap_header_t* left_header = left_footer->header;
             ASSERT_VALID_HEAP_HEADER(left_header);
@@ -171,7 +171,7 @@ heap_header_t* unify_free_space(heap_t* heap, heap_header_t* free_header) {
         }
     }
     heap_header_t* right_header = (heap_header_t*)((uint32_t)free_footer + sizeof(heap_footer_t));
-    if (is_vaddr_accessible((uint32_t)right_header, heap->is_kernel, true)) {
+    if (is_vaddr_accessible(curr_page_dir(), (uint32_t)right_header, heap->is_kernel, true)) {
         if ((right_header->magic == HEAP_HEADER_MAGIC_MID || right_header->magic == HEAP_HEADER_MAGIC_LEFT) && right_header->next != NULL) {
             printf("Heap unify right\n");
             // if on the right there is a free block, merge it into free_header
@@ -214,7 +214,7 @@ void heap_free(heap_t* heap, uint32_t vaddr) {
             claim_free_space(heap, unified_free_header);
             memset(unified_free_header, 0, sizeof(heap_header_t));
             memset(unified_free_footer, 0, sizeof(heap_footer_t));
-            dealloc_pages((uint32_t)unified_free_header, page_count);
+            dealloc_pages(curr_page_dir(), (uint32_t)unified_free_header, page_count);
             heap->size_in_pages -= page_count;
             return;
         }
@@ -236,7 +236,7 @@ void heap_free(heap_t* heap, uint32_t vaddr) {
             new_footer->magic = HEAP_FOOTER_MAGIC_RIGHT;
             new_footer->header = unified_free_header;
             insert_free_space(heap, unified_free_header);
-            dealloc_pages((uint32_t)new_footer + sizeof(heap_footer_t), page_to_shrink);
+            dealloc_pages(curr_page_dir(), (uint32_t)new_footer + sizeof(heap_footer_t), page_to_shrink);
             heap->size_in_pages -= page_to_shrink;
         }
 
@@ -272,7 +272,7 @@ heap_header_t* expand_heap(heap_t* heap, heap_header_t* largest_free_header, siz
         return NULL;
     }
     request_pages = new_pages - current_pages;
-    uint32_t new_block_addr = alloc_pages(request_pages, heap->is_kernel, true);
+    uint32_t new_block_addr = alloc_pages(curr_page_dir(), request_pages, heap->is_kernel, true);
     if (new_block_addr == 0) {
         // allocation failed
         return NULL;

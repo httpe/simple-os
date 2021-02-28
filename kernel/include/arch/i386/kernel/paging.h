@@ -44,7 +44,7 @@ typedef struct page_directory_entry
    uint32_t page_table_frame : 20; // Physical address to the page table (shifted right 12 bits)
 } page_directory_entry_t;
 
-
+// Accessing current page directory and page tables
 // By using the recursive page directory trick, we can access page dir entry via
 // virtual address [10 bits of 1;10bits of 1;0, 4, 8 etc. 12bits of page dir index * 4]
 // where [10 bits of 1;10bits of 1;12bits of 0] = 0xFFFFF000
@@ -54,6 +54,6 @@ typedef struct page_directory_entry
 // We can also get page directory's physical address by acessing it's last entry, which point to itself, thus being recursive
 #define PAGE_DIR_PHYSICAL_ADDR (((page_directory_entry_t*) 0xFFFFF000)[1023].page_table_frame << 12)
 
-uint32_t vaddr2paddr(page_directory_entry_t* page_dir, uint32_t vaddr);
+
 
 #endif
