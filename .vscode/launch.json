@@ -33,9 +33,10 @@
             "remote": true,
             "cwd": "${workspaceFolder}",
             "gdbpath": "/usr/bin/gdb",
-            "preLaunchTask": "Emulate (Debug)",
+            "preLaunchTask": "Build and Debug",
             "autorun": [
-                "dir kernel"
+                "add-symbol-file-auto kernel/user_prog",
+                "dir kernel",
             ]
         },
         {
