@@ -208,7 +208,7 @@ void heap_free(heap_t* heap, uint32_t vaddr) {
     // contract heap size
     if (unified_free_header->magic == HEAP_HEADER_MAGIC_LEFT && unified_free_footer->magic == HEAP_FOOTER_MAGIC_RIGHT) {
         // if the unified free block is the whole block allocated when doing expansion:
-        //   free it in whole to reverse the expansion
+        //   free it in whole to revert the expansion
         if (heap->size_in_pages - page_count >= heap->min_size_in_pages) {
             printf("Contract heap: Reverse an expansion of %d pages\n", page_count);
             claim_free_space(heap, unified_free_header);
@@ -244,8 +244,8 @@ void heap_free(heap_t* heap, uint32_t vaddr) {
 
 }
 
-void kfree(uint32_t vaddr) {
-    heap_free(kernel_heap, vaddr);
+void kfree(void* vaddr) {
+    heap_free(kernel_heap, (uint32_t) vaddr);
 }
 
 

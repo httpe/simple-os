@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 void initialize_kernel_heap();
-void kfree(uint32_t vaddr);
+void kfree(void* vaddr);
 void* kmalloc(size_t size);
 
 #endif
