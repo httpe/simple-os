@@ -1,6 +1,4 @@
-    /* OUTPUT_FORMAT("binary") */    /* output flat binary */
-
-    ENTRY(_start)
+    ENTRY(call_user_main)
     SECTIONS
     {
         . = 0x1000;                 /* relocate to address 0x1000, so 0x0 is not page mapped, dangling pointer will fail the program earlier */

@@ -35,7 +35,7 @@ enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 typedef struct proc {
   int32_t pid;                        // Process ID
   enum procstate state;               // Process state
-  page_directory_entry_t* page_dir;   // Page directory (only user space part matter)
+  pde* page_dir;   // Page directory (only user space part matter)
   char *kernel_stack;                 // Bottom of kernel stack for this process
   struct proc *parent;                // Parent process
   struct trapframe *tf;               // Trap frame for current syscall
@@ -45,5 +45,7 @@ typedef struct proc {
 proc* create_process();
 void init_first_process();
 void scheduler();
+proc* curr_proc();
+void switch_process_memory_mapping(proc* p);
 
 #endif

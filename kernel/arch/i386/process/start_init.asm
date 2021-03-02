@@ -8,7 +8,7 @@ section .start_init         ; special linkage treatment, see linker.ld
 start_init_begin:
 push argv
 push init_prog_path
-push 0
+push 0                      ; fake return PC
 mov eax, SYS_EXEC
 int INT_SYSCALL             
 
@@ -17,7 +17,7 @@ jmp $                       ; enter infinite loop, hang
 
 
 align 4
-init_prog_path: db "/init", 0
+init_prog_path: db "/usr/bin/user_prog", 0
 
 argv:
 dd init_prog_path

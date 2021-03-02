@@ -140,7 +140,7 @@ void irq_handler(trapframe* r) {
     uint8_t irq_no = (uint8_t)r->err; // err_code is the IRQ number for IRQs, see interrupt.asm
     /* After every interrupt we need to send an EOI to the PICs
      * or they will not send another interrupt again */
-    bool is_spurious = PIC_sendEOI(irq_no); 
+    bool is_spurious = PIC_sendEOI(irq_no);
 
     if (!is_spurious) {
         /* Handle the interrupt in a more modular way */

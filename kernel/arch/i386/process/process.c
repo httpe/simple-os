@@ -72,25 +72,20 @@ void init_first_process()
 {
     proc* p = create_process();
     // allocate page dir
-    p->page_dir = (page_directory_entry_t*) alloc_pages(curr_page_dir(), 1, true, true);
-    memset(p->page_dir, 0, sizeof(page_directory_entry_t)*PAGE_DIR_SIZE);
+    p->page_dir = (pde*) alloc_pages(curr_page_dir(), 1, true, true);
+    memset(p->page_dir, 0, sizeof(pde)*PAGE_DIR_SIZE);
 
     // allocate/map user space page for the start_init routine
     PANIC_ASSERT((uint32_t)START_INIT_RELOC_BEGIN % 0x1000 == 0);
     PANIC_ASSERT((uint32_t)START_INIT_SIZE < PAGE_SIZE/2); // make sure we can use ending part of the page as stack
     PANIC_ASSERT((uint32_t)START_INIT_SIZE > 0);
     PANIC_ASSERT(0!=*(char*)START_INIT_VIRTUAL_BEGIN);
-    // the START_INIT_VIRTUAL_BEGIN is not aligned with page boundary, so we copied it to the a new frame
-    uint32_t vaddr = alloc_pages(curr_page_dir(), 1, true, true);
-    memset((char*) vaddr, 0, PAGE_SIZE);
-    memmove((char*) vaddr, START_INIT_VIRTUAL_BEGIN, (uint32_t)START_INIT_SIZE);
-    // map the frame int process's page dir to START_INIT_RELOC_BEGIN
-    uint32_t paddr = vaddr2paddr(curr_page_dir(), vaddr);
-    uint32_t page_idx = PAGE_INDEX_FROM_VADDR((uint32_t) START_INIT_RELOC_BEGIN);
-    uint32_t entry = page_idx*PAGE_SIZE;
-    map_frame_to_dir(p->page_dir, page_idx, FRAME_INDEX_FROM_ADDR(paddr), false, true);
-    unmap_page_from_dir(curr_page_dir(), PAGE_INDEX_FROM_VADDR(vaddr));
-    PANIC_ASSERT(vaddr2paddr(p->page_dir, (uint32_t) START_INIT_RELOC_BEGIN) == paddr);
+
+    uint32_t dst = link_pages(p->page_dir, (uint32_t) START_INIT_RELOC_BEGIN, (uint32_t)START_INIT_SIZE, curr_page_dir(), true);
+    memmove((char*) dst, START_INIT_VIRTUAL_BEGIN, (uint32_t)START_INIT_SIZE);
+    unmap_pages(curr_page_dir(), dst, (uint32_t)START_INIT_SIZE);
+
+    uint32_t entry = (uint32_t) START_INIT_RELOC_BEGIN;
 
     // Setup trap frame for iret into user space
     p->tf->cs = SEG_SELECTOR(SEG_UCODE, DPL_USER);
@@ -99,12 +94,12 @@ void init_first_process()
     p->tf->ss = p->tf->ds;
     p->tf->eflags = FL_IF;
     p->tf->esp = entry + PAGE_SIZE; // use the ending part of the page as stack 
-    p->tf->eip = (uint32_t) entry;
+    p->tf->eip = entry;
 
     p->state = RUNNABLE;
 }
 
-static void switch_process_memory_mapping(proc* p)
+void switch_process_memory_mapping(proc* p)
 {
     set_tss((uint32_t) p->kernel_stack + PAGE_SIZE*N_KERNEL_STACK_PAGE_SIZE);
     // kernel space shall have identical mapping
@@ -130,4 +125,9 @@ void scheduler()
     }
 
     
+}
+
+proc* curr_proc()
+{
+    return current_process;
 }

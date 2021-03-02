@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <kernel/paging.h>
+
 // The following are copied from /usr/include/elf.h (Ubuntu)
 
 /* Type for a 16-bit quantity.  */
@@ -102,6 +104,6 @@ typedef struct
 
 bool is_elf(const char* buff);
 
-Elf32_Addr load_elf(const char* buff, bool is_kernel);
+Elf32_Addr load_elf(pde* page_dir, const char* buff, uint32_t* vaddr_ub);
 
 #endif
