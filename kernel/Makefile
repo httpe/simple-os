@@ -102,16 +102,18 @@ clean:
 	rm -f $(OBJS) *.o */*.o */*/*.o
 	rm -f $(OBJS:.o=.d) *.d */*.d */*/*.d
 
-install: install-headers install-kernel
+install: install-headers install-kernel install-user-space
 
 install-headers:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
-	cp -R include/. $(DESTDIR)$(INCLUDEDIR)/.
+	cp -Rp include/. $(DESTDIR)$(INCLUDEDIR)/.
 	
-install-kernel: simple_os.kernel
+install-kernel: simple_os.kernel 
 	mkdir -p $(DESTDIR)$(BOOTDIR)
-	cp simple_os.kernel $(DESTDIR)$(BOOTDIR)
+	cp -p simple_os.kernel $(DESTDIR)$(BOOTDIR)
+
+install-user-space: user_prog
 	mkdir -p $(DESTDIR)$(BINDIR)
-	cp user_prog $(DESTDIR)$(BINDIR)
+	cp -p user_prog $(DESTDIR)$(BINDIR)
 
 -include $(OBJS:.o=.d)
