@@ -19,9 +19,10 @@
             "preLaunchTask": "Build and Debug",
             "autorun": [
                 "add-symbol-file-auto bootloader/bootloader.elf",
-                "add-symbol-file-auto kernel/user_prog",
+                "add-symbol-file-auto kernel/init/init",
+                "dir bootloader",
                 "dir kernel",
-                "dir bootloader"
+                
             ]
         },
         {
@@ -35,7 +36,7 @@
             "gdbpath": "/usr/bin/gdb",
             "preLaunchTask": "Build and Debug",
             "autorun": [
-                "add-symbol-file-auto kernel/user_prog",
+                "add-symbol-file-auto kernel/init/init",
                 "dir kernel",
             ]
         },

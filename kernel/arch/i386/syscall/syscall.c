@@ -67,7 +67,7 @@ int sys_exec(trapframe* r)
     uint32_t num = *(uint32_t*) r->esp;
     char* path = (char*) *(uint32_t*) (r->esp + 4);
     char** argv = (char**) *(uint32_t*) (r->esp + 8);
-    printf("SYS_EXEC: eip: %u, path: %u\n", num, path);
+    printf("SYS_EXEC: eip: %u, path: %s\n", num, path);
 
     // Load executable from tar file system
     // TODO: replace by real file system

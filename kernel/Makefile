@@ -12,7 +12,7 @@ PREFIX?=/usr/local
 EXEC_PREFIX?=$(PREFIX)
 BOOTDIR?=$(EXEC_PREFIX)/boot
 INCLUDEDIR?=$(PREFIX)/include
-BINDIR?=$(PREFIX)/bin
+USER_SPACE_BINDIR?=$(PREFIX)/bin
 
 CFLAGS:=$(CFLAGS) -ffreestanding -Wall -Wextra
 CPPFLAGS:=$(CPPFLAGS) -D__is_kernel -Iinclude
@@ -38,10 +38,12 @@ tar/tar.o \
 elf/elf.o \
 kernel/kernel.o \
 
+USER_SPACE_BINARIES=\
+init/init \
 
-USER_SPACE_OBJS=\
-user/user_start.o \
-user/user.o \
+INIT_OBJS=\
+init/init_wrapper.o \
+init/init.o \
 
 # USER_SPACE_LINK_LIST=\
 # $(LDFLAGS) \
@@ -52,9 +54,6 @@ user/user.o \
 # $(ARCHDIR)/crtend.o \
 # $(ARCHDIR)/crtn.o \
 
-USER_SPACE_LINK_LIST=\
-$(LDFLAGS) \
-$(USER_SPACE_OBJS) \
 
 OBJS=\
 $(ARCHDIR)/crt/crti.o \
@@ -75,14 +74,16 @@ $(ARCHDIR)/crt/crtn.o \
 .PHONY: all clean install install-headers install-kernel
 .SUFFIXES: .o .c .S
 
-all: simple_os.kernel user_prog
-
-user_prog: $(USER_SPACE_OBJS) user/user.ld
-	$(CC) -T user/user.ld -o user_prog $(CFLAGS) -nostdlib $(USER_SPACE_OBJS)
+all: simple_os.kernel user_space_programs
 
 simple_os.kernel: $(OBJS) $(ARCHDIR)/linker.ld
 	$(CC) -T $(ARCHDIR)/linker.ld -o $@ $(CFLAGS) $(LINK_LIST)
 	# grub-file --is-x86-multiboot simple_os.kernel
+
+user_space_programs: $(USER_SPACE_BINARIES)
+
+init/init: $(INIT_OBJS) init/init.ld
+	$(CC) -T init/init.ld -o $@ $(CFLAGS) -nostdlib $(INIT_OBJS)
 
 $(ARCHDIR)/crt/crtbegin.o $(ARCHDIR)/crt/crtend.o:
 	OBJ=`$(CC) $(CFLAGS) $(LDFLAGS) -print-file-name=$(@F)` && cp "$$OBJ" $@
@@ -98,7 +99,7 @@ $(ARCHDIR)/crt/crtbegin.o $(ARCHDIR)/crt/crtend.o:
 
 clean:
 	rm -f simple_os.kernel
-	rm -f user_prog
+	rm -f init
 	rm -f $(OBJS) *.o */*.o */*/*.o
 	rm -f $(OBJS:.o=.d) *.d */*.d */*/*.d
 
@@ -112,8 +113,8 @@ install-kernel: simple_os.kernel
 	mkdir -p $(DESTDIR)$(BOOTDIR)
 	cp -p simple_os.kernel $(DESTDIR)$(BOOTDIR)
 
-install-user-space: user_prog
-	mkdir -p $(DESTDIR)$(BINDIR)
-	cp -p user_prog $(DESTDIR)$(BINDIR)
+install-user-space: $(USER_SPACE_BINARIES)
+	mkdir -p $(DESTDIR)$(USER_SPACE_BINDIR)
+	cp -p $(USER_SPACE_BINARIES) $(DESTDIR)$(USER_SPACE_BINDIR)
 
 -include $(OBJS:.o=.d)
