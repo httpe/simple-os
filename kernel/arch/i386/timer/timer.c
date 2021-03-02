@@ -11,7 +11,7 @@
 uint32_t tick = 0;
 
 static void timer_callback(trapframe *regs) {
-    UNUSED(regs);
+    UNUSED_ARG(regs);
     tick++;
 }
 
