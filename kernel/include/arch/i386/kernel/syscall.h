@@ -4,7 +4,7 @@
 #include <arch/i386/kernel/isr.h>
 
 #define SYS_EXEC 1
-
+#define SYS_PRINT 2
 
 // Syscall int number
 #define INT_SYSCALL 88

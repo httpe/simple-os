@@ -83,7 +83,7 @@ simple_os.kernel: $(OBJS) $(ARCHDIR)/linker.ld
 user_space_programs: $(USER_SPACE_BINARIES)
 
 init/init: $(INIT_OBJS) init/init.ld
-	$(CC) -T init/init.ld -o $@ $(CFLAGS) -nostdlib $(INIT_OBJS)
+	$(CC) -MD -T init/init.ld -o $@ $(CFLAGS) -nostdlib $(INIT_OBJS)
 
 $(ARCHDIR)/crt/crtbegin.o $(ARCHDIR)/crt/crtend.o:
 	OBJ=`$(CC) $(CFLAGS) $(LDFLAGS) -print-file-name=$(@F)` && cp "$$OBJ" $@
@@ -99,7 +99,7 @@ $(ARCHDIR)/crt/crtbegin.o $(ARCHDIR)/crt/crtend.o:
 
 clean:
 	rm -f simple_os.kernel
-	rm -f init
+	rm -f init/init
 	rm -f $(OBJS) *.o */*.o */*/*.o
 	rm -f $(OBJS:.o=.d) *.d */*.d */*/*.d
 

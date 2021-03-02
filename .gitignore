@@ -7,5 +7,6 @@ sysroot
 *.elf
 *.d
 simple_os.kernel
-user_prog
+init
+!init/
 serial_port_output.txt

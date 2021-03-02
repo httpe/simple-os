@@ -146,16 +146,30 @@ int sys_exec(trapframe* r)
     return 0;
 }
 
+int sys_print(trapframe* r)
+{
+    char* str = (char*) *(uint32_t*) (r->esp + 4);
+    printf("SYS_PRINT: %s\n", str);
+    return 0;
+}
+
 void syscall_handler(trapframe* r)
 {
-    if(r->eax == SYS_EXEC) {
-        // trapframe r will be pop when returning to user space
-        // so it will be the return value of the syscall  
+    // trapframe r will be pop when returning to user space
+    // so r->eax will be the return value of the syscall  
+    switch (r->eax)
+    {
+    case SYS_EXEC:
         r->eax = sys_exec(r);
-    } else {
+        break;
+    case SYS_PRINT:
+        r->eax = sys_print(r);
+        break;
+    default:
         printf("Unrecognized Syscall: %d\n", r->eax);
         PANIC("Unrecognized Syscall");
         r->eax = -1;
+        break;
     }
 }
 
