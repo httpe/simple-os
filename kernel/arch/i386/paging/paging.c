@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <kernel/panic.h>
-#include <kernel/common.h>
+#include <common.h>
 #include <kernel/memory_bitmap.h>
 #include <kernel/paging.h>
 

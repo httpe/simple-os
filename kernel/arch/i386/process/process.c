@@ -115,16 +115,18 @@ void scheduler()
         for(p = process_table.proc; p < &process_table.proc[N_PROCESS]; p++){
             if(p->state != RUNNABLE)
                 continue;
+
+            printf("Scheduling to process %u\n", p->pid);
+
             current_process = p;
             switch_process_memory_mapping(p);
             p->state = RUNNING;
             switch_kernel_context(&kernel_boot_context, p->context);
-            // TODO
-            PANIC("Returned to scheduler");
+
+            printf("Switched back from process %u\n", p->pid);
+            current_process = NULL;
         }
     }
-
-    
 }
 
 proc* curr_proc()

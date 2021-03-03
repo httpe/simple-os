@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include <kernel/tty.h>
-#include <kernel/common.h>
+#include <common.h>
 #include <kernel/keyboard.h>
 
 #include <arch/i386/kernel/vga.h>

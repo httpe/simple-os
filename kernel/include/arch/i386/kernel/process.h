@@ -47,5 +47,6 @@ void init_first_process();
 void scheduler();
 proc* curr_proc();
 void switch_process_memory_mapping(proc* p);
+extern context* kernel_boot_context;
 
 #endif

@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <kernel/common.h>
+#include <common.h>
 
 #include <kernel/timer.h>
 #include <arch/i386/kernel/isr.h>

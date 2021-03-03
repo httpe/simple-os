@@ -1,4 +1,5 @@
-#define SYS_PRINT 2
+#include <stddef.h>
+#include <syscall.h>
 
 int do_sys_call(int sys_call_num, void* arg)
 {
@@ -11,7 +12,14 @@ int do_sys_call(int sys_call_num, void* arg)
 };
 
 int user_main(int argc, char* argv[]) {
-    int ret = do_sys_call(SYS_PRINT, "Hello World!");
+    (void) argc;
+    (void) argv;
+
+    int ret = do_sys_call(SYS_PRINT, "Hello User World!");
+    ret = do_sys_call(SYS_YIELD, NULL);
+    ret = do_sys_call(SYS_PRINT, "Welcome Back User World!");
+
+    (void) ret;
 
     while(1);
 }

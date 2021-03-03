@@ -1,17 +1,22 @@
 #include <stdio.h>
 #include <string.h>
+#include <syscall.h>
 #include <kernel/heap.h>
 #include <kernel/panic.h>
 #include <kernel/multiboot.h>
 #include <kernel/ata.h>
 #include <kernel/elf.h>
 #include <kernel/tar.h>
+#include <common.h>
 
 #include <arch/i386/kernel/syscall.h>
 #include <arch/i386/kernel/process.h>
 
 
 extern char MAP_MEM_PA_ZERO_TO[];
+
+// defined in switch_kernel_context.asm
+extern void switch_kernel_context(struct context **old, struct context *new);
 
 // max number of command line arguments
 #define MAX_ARGC 10
@@ -153,6 +158,20 @@ int sys_print(trapframe* r)
     return 0;
 }
 
+int sys_yield(trapframe* r)
+{
+    UNUSED_ARG(r);
+
+    proc* p = curr_proc();
+    printf("SYS_YIELD: Yield process %u\n", p->pid);
+
+    p->state = RUNNABLE;
+    switch_kernel_context(&p->context, kernel_boot_context);
+
+    printf("SYS_YIELD: Returned to proces %u\n", p->pid);
+    return 0;
+}
+
 void syscall_handler(trapframe* r)
 {
     // trapframe r will be pop when returning to user space
@@ -164,6 +183,9 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_PRINT:
         r->eax = sys_print(r);
+        break;
+    case SYS_YIELD:
+        r->eax = sys_yield(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);

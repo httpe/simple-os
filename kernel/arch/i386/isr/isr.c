@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <syscall.h>
 #include <kernel/paging.h>
 #include <arch/i386/kernel/paging.h>
 #include <arch/i386/kernel/segmentation.h>
