@@ -41,6 +41,7 @@ void switch_page_directory(uint32_t physical_addr);
 void set_tss(uint32_t kernel_stack_esp);
 
 void copy_kernel_space_mapping(pde* page_dir);
+pde* copy_user_space(pde* page_dir);
 void free_user_space(pde* page_dir);
 
 

@@ -278,7 +278,7 @@ uint32_t alloc_pages(pde* page_dir, size_t page_count, bool is_kernel, bool is_w
         return 0;
     }
 
-    uint32_t page_index = find_contiguous_free_pages(curr_page_dir(), page_count, is_kernel);
+    uint32_t page_index = find_contiguous_free_pages(page_dir, page_count, is_kernel);
     for (uint32_t idx = page_index; idx < page_index + page_count; idx++) {
         alloc_frame(page_dir, idx, is_kernel, is_writeable);
     }
@@ -411,6 +411,49 @@ void free_user_space(pde* page_dir)
         switch_page_directory(PAGE_DIR_PHYSICAL_ADDR);
     }
     // dealloc_pages(curr_page_dir(), (uint32_t) page_dir, 1);
+}
+
+pde* copy_user_space(pde* page_dir)
+{
+    pde* new_page_dir = (pde*) alloc_pages(curr_page_dir(), 1, true, true);
+    uint32_t kernel_page_dir_idx = PAGE_INDEX_FROM_VADDR((uint32_t) MAP_MEM_PA_ZERO_TO) / PAGE_TABLE_SIZE;
+    for(uint32_t i=0;i<kernel_page_dir_idx;i++) {
+        if(page_dir[i].present) {
+            // copy page dir entry
+            new_page_dir[i] = page_dir[i];
+            // allocate one new page table
+            uint32_t page_table_vaddr = alloc_pages(new_page_dir, 1, true, true);
+            uint32_t page_table_paddr = vaddr2paddr(new_page_dir, page_table_vaddr);
+            new_page_dir[i].page_table_frame = FRAME_INDEX_FROM_ADDR(page_table_paddr);
+            page_t* new_page_table =  get_page_table(new_page_dir, i);
+
+            page_t* page_table = get_page_table(page_dir, i);
+            for(int j=0;j<PAGE_TABLE_SIZE;j++) {
+                if(page_table[j].present) {
+                    // copy frame content
+                    uint32_t page_idx = i*PAGE_TABLE_SIZE + j;
+                    uint32_t src;
+                    if(is_curr_page_dir(page_dir)) {
+                        src = VADDR_FROM_PAGE_INDEX(page_idx);
+                    } else {
+                        src = link_pages(page_dir, VADDR_FROM_PAGE_INDEX(page_idx), PAGE_SIZE, curr_page_dir(), false);
+                    }
+                    uint32_t dst = link_pages(new_page_dir, VADDR_FROM_PAGE_INDEX(page_idx), PAGE_SIZE, curr_page_dir(), page_table[j].rw);
+                    memmove((char*) dst, (char*) src, PAGE_SIZE);
+                    if(!is_curr_page_dir(page_dir)) {
+                        unmap_page(curr_page_dir(), page_idx);
+                    }
+                    // copy page table entry
+                    uint32_t new_frame = new_page_table[j].frame;
+                    new_page_table[j] = page_table[j];
+                    new_page_table[j].frame = new_frame;
+                }
+            }
+            return_page_table(page_dir, page_table);
+            return_page_table(new_page_dir, new_page_table);
+        }
+    }
+    return new_page_dir;
 }
 
 void initialize_paging() {

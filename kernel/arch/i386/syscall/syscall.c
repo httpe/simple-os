@@ -172,6 +172,20 @@ int sys_yield(trapframe* r)
     return 0;
 }
 
+int sys_fork(trapframe* r)
+{
+    proc* p_new = create_process();
+    proc* p_curr = curr_proc();
+    p_new->page_dir = copy_user_space(p_curr->page_dir);
+    p_new->parent = p_curr;
+    *p_new->tf = *p_curr->tf;
+    // child process will have return value zero from fork
+    p_new->tf->eax = 0;
+    p_new->state = RUNNABLE;
+    // return to parent process with child's pid
+    return p_new->pid;
+}
+
 void syscall_handler(trapframe* r)
 {
     // trapframe r will be pop when returning to user space
@@ -186,6 +200,9 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_YIELD:
         r->eax = sys_yield(r);
+        break;
+    case SYS_FORK:
+        r->eax = sys_fork(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);

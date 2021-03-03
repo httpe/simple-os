@@ -18,8 +18,20 @@ int user_main(int argc, char* argv[]) {
     int ret = do_sys_call(SYS_PRINT, "Hello User World!");
     ret = do_sys_call(SYS_YIELD, NULL);
     ret = do_sys_call(SYS_PRINT, "Welcome Back User World!");
-
     (void) ret;
 
+    int fork_ret = do_sys_call(SYS_FORK, NULL);
+    for(int i=0; i<3; i++) {
+        if(fork_ret) {
+            // parent
+            do_sys_call(SYS_PRINT, "This is parent!");
+            do_sys_call(SYS_YIELD, NULL);
+        } else {
+            // child
+            do_sys_call(SYS_PRINT, "This is child!");
+            do_sys_call(SYS_YIELD, NULL);
+        }
+    }
+    
     while(1);
 }
