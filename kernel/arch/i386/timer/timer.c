@@ -22,10 +22,7 @@ static void timer_callback(trapframe *regs) {
         // printf("Timer: 1 second elapsed\n", tick_between_call_to_scheduler / timer_freq);
     }
     if(tick_between_call_to_scheduler > 0 && tick % tick_between_call_to_scheduler == 0) {
-        
-        proc* p = curr_proc();
-        p->state = PROC_STATE_RUNNABLE;
-        switch_kernel_context(&p->context, kernel_boot_context);
+        yield();
     }
 }
 
