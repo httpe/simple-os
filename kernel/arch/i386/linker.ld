@@ -21,6 +21,22 @@ SECTIONS
 		*(.multiboot)
 	}
 
+	/* .start_init will be executed right after entring the user space*/
+	/* Load .start_init in the user space address area */
+	/* PHY: physical frame address, requesting bootloader to place the code here by the "AT" instruction */
+	START_INIT_PHY_BEGIN = .;
+	/* VIRTUAL: virtual address where the code is accessible from kernel based on the higher half kernel memory mapping */
+	START_INIT_VIRTUAL_BEGIN = START_INIT_PHY_BEGIN + MAP_MEM_PA_ZERO_TO;
+	/* RELOC: address where the code shall be copied to before executing */
+	START_INIT_RELOC_BEGIN = MAP_MEM_PA_ZERO_TO - 0x1000;
+	. = START_INIT_RELOC_BEGIN;
+	.start_init ALIGN (4K) : AT (START_INIT_PHY_BEGIN) {
+		*(.start_init)
+	}
+	STRAT_INIT_RELOC_END = .;
+	START_INIT_SIZE = STRAT_INIT_RELOC_END - START_INIT_RELOC_BEGIN;
+	. = START_INIT_PHY_BEGIN + START_INIT_SIZE;
+
 	/* The kernel will live at 3GB + 1MB in the virtual address space, */
 	/* which will be mapped to 1MB in the physical address space. */
 	/* "." is used to determine the absolute addresses in the generated binary file 

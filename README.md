@@ -105,7 +105,7 @@ With all of the setup, the debugging process is streamlined to:
 1. A QEMU session will be fired up and the system will run until a break point
 1. After finishing debugging, click detach debugger and close the QEMU window
 
-**Note:** Some code in `bootloader/arch/i386/bootloader.asm` and `kernel/arch/i386/boot.asm` are not breakable in this way, please see the comments there.  
+**Note:** Some code in `bootloader/arch/i386/bootloader.asm` and `kernel/arch/i386/boot/boot.asm` can not be debug in this way, please see the comments there.  
 
 ### (Optional) Generate GRUB Bootable ISO
 
@@ -170,23 +170,45 @@ Once we finish switching to protected mode, we start to write the remaining part
 
 The `kernel/` and `libc/` folders are build upon a clone from the [Meaty Skeleton](https://wiki.osdev.org/Meaty_Skeleton) tutorial.
 
-The kernel entry point is `kernel/kernel/kernel.c`.
-
-- `kernel/arch/i386/`
-  - `boot.asm`: Intel/NASM syntax version of Meaty skeleton's boot.S
-  - `gdt.asm`: Same as bootloader's flat mode GDT
-  - Interrupt related
-    - `idt.*`: [IDT](https://wiki.osdev.org/IDT) initialization and interrupt gate installation
-    - `isr.*` and `interrupt.asm`: [CPU exceptions](https://wiki.osdev.org/Exceptions) and IRQs handlers ([ISRs](https://wiki.osdev.org/Interrupt_Service_Routines))
-    - `pic.*`: [PIC](https://wiki.osdev.org/PIC) utility for IRQs
-  - `port_io.h`: Inline assembly for port I/O, e.g. inb/outb ([Examples](https://wiki.osdev.org/Inline_Assembly/Examples))
-  - `keyboard.*`: Keyboard driver
-  - `timer.*`: [PIT](https://wiki.osdev.org/PIT) timer
-  - `tty.*` and `vga.h`: VGA Text Mode driver
-  - `arch_init.c`: Collection of architecture specific initializations
-  - `paging.*` and `memory_bitmap.*`: Paging code, with a physical memory manager / page frame allocator implemented as [bitmap](http://www.jamesmolloy.co.uk/tutorial_html/6.-Paging.html)
-  - `serial.c`: [Serial port I/O](https://wiki.osdev.org/Serial_ports) utilities. We output all printing though serial port so QEMU can export the printed content to a file `serial_port_output.txt`.
-  - `heap.c`: [Heap]((http://www.jamesmolloy.co.uk/tutorial_html/7.-The%20Heap.html)), dynamic memory allocation and [virtual memory manager](https://wiki.osdev.org/Writing_a_memory_manager), implemented as a sorted linked list of free memory blocks with memory header and footer inspired by [INWOX](https://github.com/qvjp/INWOX/wiki/010-malloc()-&-free())
+- `kernel/`
+  - `includes/`
+    - Headers will be copied by `kernel`'s `make install` to `sysroot/` under project root folder, which will ultimately be packed into the disk image `bootable_kernel.bin` by `bootloader`'s Makefile, i.e. the headers will be shipped along with the kernel binary executable.
+    - `arch/i386/`: Architecture specific headers
+  - `kernel/`
+    - `kernel.c`: Kernel main function
+  - `init/`
+    - The first user space program to be ran, under development
+  - `heap/`
+    - [Heap]((http://www.jamesmolloy.co.uk/tutorial_html/7.-The%20Heap.html)) manager, allowing dynamic memory allocation and [virtual memory manager](https://wiki.osdev.org/Writing_a_memory_manager), implemented as a sorted linked list of free memory blocks with memory header and footer inspired by [INWOX](https://github.com/qvjp/INWOX/wiki/010-malloc()-&-free())
+  - `memory_bitmap/`
+    - A physical memory manager / page frame allocator implemented as a [bitmap](http://www.jamesmolloy.co.uk/tutorial_html/6.-Paging.html).
+  - `elf/`
+    - ELF binary parsing and loading
+  - `tar/`
+    - Tar ball parsing, used to implement a simple US-TAR read-only filesystem
+  - `panic/`
+    - Utility function to raise kernel panic
+  - `arch/i386/`: Architecture specific implementations
+    - `boot`:
+      - `boot.asm`:
+        - Intel/NASM syntax version of Meaty skeleton's boot.S
+        - Plus initializing paging and [higher half kernel](https://wiki.osdev.org/Higher_Half_x86_Bare_Bones)
+      - `gdt.asm`: Same as bootloader's flat mode GDT
+    - Interrupt related
+      - `idt/`: [IDT](https://wiki.osdev.org/IDT) initialization and interrupt gate installation
+      - `isr/`: [CPU exceptions](https://wiki.osdev.org/Exceptions) and IRQs handlers ([ISRs](https://wiki.osdev.org/Interrupt_Service_Routines))
+      - `pic/`: [PIC](https://wiki.osdev.org/PIC) utility for IRQs
+    - `port_io/`: Inline assembly for port I/O, e.g. inb/outb ([Examples](https://wiki.osdev.org/Inline_Assembly/Examples))
+    - `keyboard/`: Keyboard driver
+    - `timer/`: [PIT](https://wiki.osdev.org/PIT) timer (used for process switching)
+    - `tty/` and `vga.h`: VGA Text Mode driver
+    - `arch_init/`: Collection of architecture specific initializations
+    - `paging/` and `memory_bitmap.*`: Paging code
+    - `serial/`: [Serial port I/O](https://wiki.osdev.org/Serial_ports) utilities. We output all printing though serial port so QEMU can export the printed content to a file `serial_port_output.txt`.
+    - `process/`:
+      - `process.c`: Process management (Ref: [xv6/proc](https://github.com/mit-pdos/xv6-public/blob/master/proc.c))
+      - `start_init.asm`: First usage mode program to run, will call SYS_EXEC to replace itself with `init`
+      - `switch_kernel_context.asm`: Used to switch between CPU context between scheduler (context which we initially boot into) and individual process's kernel code (e.g. system call handler)
 
 - `libc/`: Progressive implementation of the standard C library
   - Mostly from Meaty Skeleton, and some are from Xv6.
@@ -239,23 +261,25 @@ Although the final goal is to make the system self-hosting, we planned for sever
     - After initialization, run a program that user can enter some text to the screen and edit/delete it
     - **Finished**: Implemented under the folder `kernel`
 
-1. **Milestone Three: Memory Management, Filesystem and Shell**
-    - Implement [heap](https://en.wikipedia.org/wiki/Memory_management#HEAP)/[dynamic memory allocation](https://en.wikipedia.org/wiki/C_dynamic_memory_allocation)
-    - Provide a readable & writable file system (FAT/Ext) and corresponding system calls/libc functions (See our sub-project [Simple-FS](https://github.com/httpe/simple-fs))
-    - Write a shell to allow navigating through the file system
-    - Write a editor to show file content, edit and save it
-    - **In progress**: Heap implemented
+1. **Milestone Three: Memory Management, User Space and Multiprocessing**
+    - Implement a [heap](https://en.wikipedia.org/wiki/Memory_management#HEAP) to do [dynamic memory allocation](https://en.wikipedia.org/wiki/C_dynamic_memory_allocation)
+    - Allow switch to user space and run ELF program under user/ring3 privilege
+    - Enable multi-processing with independent kernel stack and page directory, starting with [Cooperative Scheduling](https://littleosbook.github.io/#cooperative-scheduling-with-yielding) and then [Preemptive Scheduling](https://littleosbook.github.io/#preemptive-scheduling-with-interrupts)
+    - Implement `fork`, `exec` and `yield` system calls on a simple read-only file system (potentially reuse the USTAR code from the bootloader)
+    - **Finished**: Implemented Kernel heap, ELF loader, cooperative and preemptive multi-tasking and exec system call based on the USTAR read-only file system
 
-1. **Milestone Four: User Space and Multiprocessing**
-    - Enrich the system standard C library
-    - Build our OS specific compiling tool chain
-    - Allow running ELF program under user/ring3 privilege
-    - Enable multi-processing
-    - Write a game in user mode (e.g Tetris)
+1. **Milestone Four: System calls, Filesystem and Shell**
+    - Provide a readable & writable file system (FAT/Ext) and corresponding system calls/libc functions
+    - Provide locking mechanism in multi-tasking environment
+    - Build user space standard C library with system calls
+    - Write a shell to allow navigating through the file system
+    - Write a editor to show file content, allowing editing and saving to disk
+    - **In progress**: See our sub-project [Simple-FS](https://github.com/httpe/simple-fs)
 
 1. **Milestone Five: User Space Compiler**
+    - Build our OS specific compiling tool chain
     - Port a simplified C compiler to the system
-    - Compile and run the game inside the system
+    - Compile and run the text editor inside the system
 
 1. **Milestone Six: Networking**
     - Allow connecting to the Internet

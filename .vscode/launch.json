@@ -18,9 +18,11 @@
             "gdbpath": "/usr/bin/gdb",
             "preLaunchTask": "Build and Debug",
             "autorun": [
-                "add-symbol-file bootloader/bootloader.elf 0x7c00",
+                "add-symbol-file-auto bootloader/bootloader.elf",
+                "add-symbol-file-auto kernel/init/init",
+                "dir bootloader",
                 "dir kernel",
-                "dir bootloader"
+                
             ]
         },
         {
@@ -32,9 +34,10 @@
             "remote": true,
             "cwd": "${workspaceFolder}",
             "gdbpath": "/usr/bin/gdb",
-            "preLaunchTask": "Emulate (Debug)",
+            "preLaunchTask": "Build and Debug",
             "autorun": [
-                "dir kernel"
+                "add-symbol-file-auto kernel/init/init",
+                "dir kernel",
             ]
         },
         {

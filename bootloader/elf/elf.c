@@ -16,20 +16,20 @@ Elf32_Addr load_elf(const char* buff) {
     const Elf32_Ehdr* header = (const Elf32_Ehdr*)buff;
     Elf32_Half n_program_header = header->e_phnum;
     const Elf32_Phdr* program_header_table = (const Elf32_Phdr*)(((uint32_t)buff) + header->e_phoff);
-    Elf32_Addr entry_pioint = header->e_entry;
-    Elf32_Addr entry_pioint_physical = entry_pioint;
+    Elf32_Addr entry_point = header->e_entry;
+    Elf32_Addr entry_point_physical = entry_point;
     for (Elf32_Half i = 0; i < n_program_header; i++) {
         Elf32_Phdr program_header = program_header_table[i];
         if (program_header.p_type == PT_LOAD) {
             char* dest_ptr = (char*)program_header.p_paddr;
             char* src_ptr = (char*)buff + program_header.p_offset;
             // Detect offset of virtual (linear) address vs physical address
-            if (entry_pioint >= program_header.p_vaddr && entry_pioint < program_header.p_vaddr + program_header.p_memsz) {
+            if (entry_point >= program_header.p_vaddr && entry_point < program_header.p_vaddr + program_header.p_memsz) {
                 // use if-else to avoid negative number
                 if (program_header.p_paddr > program_header.p_vaddr) {
-                    entry_pioint_physical = entry_pioint + (program_header.p_paddr - program_header.p_vaddr);
+                    entry_point_physical = entry_point + (program_header.p_paddr - program_header.p_vaddr);
                 } else {
-                    entry_pioint_physical = entry_pioint - (program_header.p_vaddr - program_header.p_paddr);
+                    entry_point_physical = entry_point - (program_header.p_vaddr - program_header.p_paddr);
                 }
             }
 
@@ -42,5 +42,5 @@ Elf32_Addr load_elf(const char* buff) {
             }
         }
     }
-    return entry_pioint_physical;
+    return entry_point_physical;
 }
