@@ -271,7 +271,7 @@ Although the final goal is to make the system self-hosting, we planned for sever
 1. **Milestone Four: System calls, Filesystem and Shell**
     - Provide a readable & writable file system (FAT/Ext) and corresponding system calls/libc functions
     - Provide locking mechanism in multi-tasking environment
-    - Build user space standard C library with system calls
+    - Build user space standard C library with system calls, e.g. printf, malloc and open/read/write
     - Write a shell to allow navigating through the file system
     - Write a editor to show file content, allowing editing and saving to disk
     - **In progress**: See our sub-project [Simple-FS](https://github.com/httpe/simple-fs)
