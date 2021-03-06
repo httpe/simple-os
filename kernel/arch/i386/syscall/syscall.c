@@ -176,12 +176,11 @@ int sys_fork(trapframe* r)
     return p_new->pid;
 }
 
-int sys_exit(trapframe* r)
+void sys_exit(trapframe* r)
 {
     int32_t exit_code = *(int32_t*) (r->esp + 4);
     printf("PID %u exiting with code %d\n", curr_proc()->pid, exit_code);
     exit(exit_code);
-    PANIC("Returned to exited process\n");
 }
 
 int sys_wait(trapframe* r)
@@ -209,7 +208,8 @@ void syscall_handler(trapframe* r)
         r->eax = sys_fork(r);
         break;
     case SYS_EXIT:
-        r->eax = sys_exit(r);
+        sys_exit(r); // SYS_EXIT shall not return
+        PANIC("Returned to exited process\n");
         break;
     case SYS_WAIT:
         r->eax = sys_wait(r);
