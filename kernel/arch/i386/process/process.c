@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
+#include <common.h>
 #include <arch/i386/kernel/process.h>
 #include <kernel/paging.h>
 #include <kernel/panic.h>
@@ -20,9 +21,10 @@ struct {
 
 static uint32_t next_pid = 1;
 proc* current_process = NULL;
+proc* init_process = NULL;
 context* kernel_boot_context = NULL;
 
-void init_process() 
+void initialize_process() 
 {
     //TODO: Add process specific initialization
     // This function is called after stack changed to process's kernel stack
@@ -54,15 +56,15 @@ proc* create_process()
     // setup trap frame for switching back to user space
     sp -= sizeof(*p->tf);
     p->tf = (trapframe*) sp;
-    // setup eip for returning from init_process to be int_ret
+    // setup eip for returning from initialize_process to be int_ret
     sp -= sizeof(sp);
     (*(uint32_t*)sp) = (uint32_t) int_ret;
-    // setup context for kernel space switching to init_process
+    // setup context for kernel space switching to initialize_process
     sp -= sizeof(*p->context);
     p->context = (context*) sp;
-    p->context->eip = (uint32_t) init_process;
+    p->context->eip = (uint32_t) initialize_process;
     // p->eip shall be setup later
-    // then the call chain will be scheduler -> init_process -> int_ret -> (p->eip)
+    // then the call chain will be scheduler -> initialize_process -> int_ret -> (p->eip)
     
     return p;
 }
@@ -71,6 +73,8 @@ proc* create_process()
 void init_first_process()
 {
     proc* p = create_process();
+    init_process = p;
+
     // allocate page dir
     p->page_dir = (pde*) alloc_pages(curr_page_dir(), 1, true, true);
     memset(p->page_dir, 0, sizeof(pde)*PAGE_DIR_SIZE);
@@ -132,4 +136,61 @@ void scheduler()
 proc* curr_proc()
 {
     return current_process;
+}
+
+void exit(int exit_code)
+{
+    UNUSED_ARG(exit_code);
+
+    proc* p = curr_proc();
+
+    // pass children to init
+    for(int i=0; i<N_PROCESS; i++) {
+        if(process_table.proc[i].parent == p) {
+            process_table.proc[i].parent = init_process;
+        }
+    }
+
+    p->state = ZOMBIE;
+    switch_kernel_context(&p->context, kernel_boot_context);
+}
+
+void yield()
+{
+    proc* p = curr_proc();
+    printf("PID %u yield\n", p->pid);
+
+    p->state = RUNNABLE;
+    switch_kernel_context(&p->context, kernel_boot_context);
+
+    printf("PID %u back from yield\n", p->pid);
+}
+
+int wait()
+{
+    proc* p = curr_proc();
+    printf("PID %u waiting\n", curr_proc()->pid);
+    bool no_child = true;
+    while(1) {
+        for(int i=0; i<N_PROCESS; i++) {
+            proc* child = &process_table.proc[i];
+            if(child->parent == p) {
+                no_child = false;
+                if(child->state == ZOMBIE) {
+                    uint32_t child_pid = child->pid;
+                    dealloc_pages(curr_page_dir(), (uint32_t) child->kernel_stack, 1);
+                    free_user_space(child->page_dir);
+                    *child = (proc) {0};
+                    child->state = UNUSED;
+                    printf("PID %u wait found child %u\n", curr_proc()->pid, child_pid);
+                    return child_pid;
+                }
+            }
+        }
+        if(no_child) {
+            printf("PID %u wait no child\n", curr_proc()->pid);
+            return -1;
+        }
+        yield();
+    }
 }

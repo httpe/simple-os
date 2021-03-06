@@ -26,11 +26,16 @@ int user_main(int argc, char* argv[]) {
             // parent
             do_sys_call(SYS_PRINT, "This is parent!");
             // do_sys_call(SYS_YIELD, NULL);
+            do_sys_call(SYS_WAIT, NULL);
         } else {
             // child
             do_sys_call(SYS_PRINT, "This is child!");
             // do_sys_call(SYS_YIELD, NULL);
         }
+    }
+
+    if(!fork_ret) {
+        do_sys_call(SYS_EXIT, 0);
     }
     
     while(1);

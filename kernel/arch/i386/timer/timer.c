@@ -19,7 +19,7 @@ static void timer_callback(trapframe *regs) {
     UNUSED_ARG(regs);
     tick++;
     if(tick % timer_freq == 0) {
-        printf("Timer: 1 second elapsed\n", tick_between_call_to_scheduler / timer_freq);
+        // printf("Timer: 1 second elapsed\n", tick_between_call_to_scheduler / timer_freq);
     }
     if(tick_between_call_to_scheduler > 0 && tick % tick_between_call_to_scheduler == 0) {
         

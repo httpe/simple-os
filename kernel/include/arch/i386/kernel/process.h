@@ -49,10 +49,13 @@ proc* create_process();
 void init_first_process();
 void scheduler();
 proc* curr_proc();
+void yield();
+void exit(int exit_code);
+int wait();
 void switch_process_memory_mapping(proc* p);
 extern context* kernel_boot_context;
 
 // defined in switch_kernel_context.asm
-extern void switch_kernel_context(struct context **old, struct context *new);
+extern void switch_kernel_context(struct context **old_context, struct context *new_context);
 
 #endif

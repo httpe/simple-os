@@ -158,14 +158,7 @@ int sys_print(trapframe* r)
 int sys_yield(trapframe* r)
 {
     UNUSED_ARG(r);
-
-    proc* p = curr_proc();
-    printf("SYS_YIELD: Yield process %u\n", p->pid);
-
-    p->state = RUNNABLE;
-    switch_kernel_context(&p->context, kernel_boot_context);
-
-    printf("SYS_YIELD: Returned to proces %u\n", p->pid);
+    yield();
     return 0;
 }
 
@@ -182,6 +175,20 @@ int sys_fork(trapframe* r)
     p_new->state = RUNNABLE;
     // return to parent process with child's pid
     return p_new->pid;
+}
+
+int sys_exit(trapframe* r)
+{
+    int32_t exit_code = *(int32_t*) (r->esp + 4);
+    printf("PID %u exiting with code %d\n", curr_proc()->pid, exit_code);
+    exit(exit_code);
+    PANIC("Returned to exited process\n");
+}
+
+int sys_wait(trapframe* r)
+{
+    UNUSED_ARG(r);
+    return wait();
 }
 
 void syscall_handler(trapframe* r)
@@ -201,6 +208,12 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_FORK:
         r->eax = sys_fork(r);
+        break;
+    case SYS_EXIT:
+        r->eax = sys_exit(r);
+        break;
+    case SYS_WAIT:
+        r->eax = sys_wait(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);

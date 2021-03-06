@@ -8,5 +8,7 @@
 #define SYS_PRINT 2
 #define SYS_YIELD 3
 #define SYS_FORK 4
+#define SYS_EXIT 5
+#define SYS_WAIT 6
 
 #endif
