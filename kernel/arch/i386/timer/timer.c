@@ -5,14 +5,28 @@
 #include <arch/i386/kernel/isr.h>
 #include <arch/i386/kernel/port_io.h>
 
+#include <arch/i386/kernel/process.h>
+
 // Ref: http://www.jamesmolloy.co.uk/tutorial_html/5.-IRQs%20and%20the%20PIT.html
 // Ref: https://github.com/cfenollosa/os-tutorial/blob/master/23-fixes/cpu/timer.c
 
-uint32_t tick = 0;
+
+static uint32_t tick_between_call_to_scheduler = 0;
+static uint32_t timer_freq = 0;
+static uint32_t tick = 0;
 
 static void timer_callback(trapframe *regs) {
     UNUSED_ARG(regs);
     tick++;
+    if(tick % timer_freq == 0) {
+        printf("Timer: 1 second elapsed\n", tick_between_call_to_scheduler / timer_freq);
+    }
+    if(tick_between_call_to_scheduler > 0 && tick % tick_between_call_to_scheduler == 0) {
+        
+        proc* p = curr_proc();
+        p->state = RUNNABLE;
+        switch_kernel_context(&p->context, kernel_boot_context);
+    }
 }
 
 /*
@@ -50,8 +64,8 @@ Bits         Usage
 */
 
 // Initialize timer (IRQ0 from Programmable Interval Timer)
-void init_timer(uint32_t freq) {
-    /* Install the function we just wrote */
+void init_timer(uint32_t freq, uint32_t tick_between_process_switch) {
+    /* Install the PIC interrupt handler */
     register_interrupt_handler(IRQ_TO_INTERRUPT(0), timer_callback);
 
     // The value we send to the PIT is the value to divide it's input clock
@@ -65,4 +79,7 @@ void init_timer(uint32_t freq) {
     outb(0x43, 0b00110110); /* Command port */
     outb(0x40, low);
     outb(0x40, high);
+
+    timer_freq = freq;
+    tick_between_call_to_scheduler = tick_between_process_switch;
 }

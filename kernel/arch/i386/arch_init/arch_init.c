@@ -34,13 +34,17 @@ void initialize_architecture(uint32_t mbt_physical_addr) {
     initialize_kernel_heap();
 
     // Set up system timer using PIT(Programmable Interval Timer)
-    init_timer(50);
+    // Set freq = 50 (i.e. 50 tick per seconds)
+    // and set tick_between_process_switch to 50, so switch process every 2 seconds
+    init_timer(50, 100);
 
     // initialize keyboard interrupt handler
     init_keyboard();
 
     // Enable interruptions (it was disabled by the bootloader)
-    asm volatile("sti");
+    // Commenting out, because here we not yet ready to do process/context switching based on PIT interrupt
+    // We will enable interrupt when entering user mode
+    // asm volatile("sti");
 
 }
 

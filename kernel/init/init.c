@@ -25,11 +25,11 @@ int user_main(int argc, char* argv[]) {
         if(fork_ret) {
             // parent
             do_sys_call(SYS_PRINT, "This is parent!");
-            do_sys_call(SYS_YIELD, NULL);
+            // do_sys_call(SYS_YIELD, NULL);
         } else {
             // child
             do_sys_call(SYS_PRINT, "This is child!");
-            do_sys_call(SYS_YIELD, NULL);
+            // do_sys_call(SYS_YIELD, NULL);
         }
     }
     

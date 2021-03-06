@@ -15,9 +15,6 @@
 
 extern char MAP_MEM_PA_ZERO_TO[];
 
-// defined in switch_kernel_context.asm
-extern void switch_kernel_context(struct context **old, struct context *new);
-
 // max number of command line arguments
 #define MAX_ARGC 10
 // user program stack size in pages
@@ -174,6 +171,7 @@ int sys_yield(trapframe* r)
 
 int sys_fork(trapframe* r)
 {
+    UNUSED_ARG(r);
     proc* p_new = create_process();
     proc* p_curr = curr_proc();
     p_new->page_dir = copy_user_space(p_curr->page_dir);
