@@ -125,7 +125,6 @@ int sys_exec(trapframe* r)
     char* dst = (char*) link_pages(page_dir, ustack_esp, stack_content_size, curr_page_dir(), true);
     memmove(dst, ustack, stack_content_size);
     unmap_pages(curr_page_dir(), (uint32_t) dst, stack_content_size);
-    // memmove_into_dir(page_dir, ustack_esp, ustack, stack_content_size, true);
 
     // maintain trapframe
     proc* p = curr_proc();
@@ -172,7 +171,7 @@ int sys_fork(trapframe* r)
     *p_new->tf = *p_curr->tf;
     // child process will have return value zero from fork
     p_new->tf->eax = 0;
-    p_new->state = RUNNABLE;
+    p_new->state = PROC_STATE_RUNNABLE;
     // return to parent process with child's pid
     return p_new->pid;
 }

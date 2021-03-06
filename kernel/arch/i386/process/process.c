@@ -37,7 +37,7 @@ proc* create_process()
 {
     proc* p = NULL;
     for(int i=0;i<N_PROCESS;i++) {
-        if(process_table.proc[i].state == UNUSED) {
+        if(process_table.proc[i].state == PROC_STATE_UNUSED) {
             p = &process_table.proc[i];
             break;
         }
@@ -47,7 +47,7 @@ proc* create_process()
     }
 
     p->pid = next_pid++;
-    p->state = EMBRYO;
+    p->state = PROC_STATE_EMBRYO;
     // allocate process's kernel stack
     p->kernel_stack = (char*) alloc_pages(curr_page_dir(), N_KERNEL_STACK_PAGE_SIZE, true, true);
     uint32_t stack_size = PAGE_SIZE*N_KERNEL_STACK_PAGE_SIZE;
@@ -100,7 +100,7 @@ void init_first_process()
     p->tf->esp = entry + PAGE_SIZE; // use the ending part of the page as stack 
     p->tf->eip = entry;
 
-    p->state = RUNNABLE;
+    p->state = PROC_STATE_RUNNABLE;
 }
 
 void switch_process_memory_mapping(proc* p)
@@ -117,14 +117,14 @@ void scheduler()
     proc* p;
     while(1) {
         for(p = process_table.proc; p < &process_table.proc[N_PROCESS]; p++){
-            if(p->state != RUNNABLE)
+            if(p->state != PROC_STATE_RUNNABLE)
                 continue;
 
             printf("Scheduling to process %u\n", p->pid);
 
             current_process = p;
             switch_process_memory_mapping(p);
-            p->state = RUNNING;
+            p->state = PROC_STATE_RUNNING;
             switch_kernel_context(&kernel_boot_context, p->context);
 
             printf("Switched back from process %u\n", p->pid);
@@ -151,7 +151,7 @@ void exit(int exit_code)
         }
     }
 
-    p->state = ZOMBIE;
+    p->state = PROC_STATE_ZOMBIE;
     switch_kernel_context(&p->context, kernel_boot_context);
 }
 
@@ -160,7 +160,7 @@ void yield()
     proc* p = curr_proc();
     printf("PID %u yield\n", p->pid);
 
-    p->state = RUNNABLE;
+    p->state = PROC_STATE_RUNNABLE;
     switch_kernel_context(&p->context, kernel_boot_context);
 
     printf("PID %u back from yield\n", p->pid);
@@ -176,12 +176,12 @@ int wait()
             proc* child = &process_table.proc[i];
             if(child->parent == p) {
                 no_child = false;
-                if(child->state == ZOMBIE) {
+                if(child->state == PROC_STATE_ZOMBIE) {
                     uint32_t child_pid = child->pid;
                     dealloc_pages(curr_page_dir(), (uint32_t) child->kernel_stack, 1);
                     free_user_space(child->page_dir);
                     *child = (proc) {0};
-                    child->state = UNUSED;
+                    child->state = PROC_STATE_UNUSED;
                     printf("PID %u wait found child %u\n", curr_proc()->pid, child_pid);
                     return child_pid;
                 }

@@ -24,7 +24,7 @@ static void timer_callback(trapframe *regs) {
     if(tick_between_call_to_scheduler > 0 && tick % tick_between_call_to_scheduler == 0) {
         
         proc* p = curr_proc();
-        p->state = RUNNABLE;
+        p->state = PROC_STATE_RUNNABLE;
         switch_kernel_context(&p->context, kernel_boot_context);
     }
 }
