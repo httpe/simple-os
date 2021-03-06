@@ -1,7 +1,7 @@
 #include <arch/i386/kernel/pic.h>
 
 static uint16_t __pic_get_irq_reg(int ocw3);
-static uint16_t pic_get_irr(void);
+// static uint16_t pic_get_irr(void);
 static uint16_t pic_get_isr(void);
 
 /* reinitialize the PIC controllers, giving them specified vector offsets
@@ -118,9 +118,10 @@ static uint16_t __pic_get_irq_reg(int ocw3) {
 }
 
 /* Returns the combined value of the cascaded PICs irq request register */
-static uint16_t pic_get_irr(void) {
-    return __pic_get_irq_reg(PIC_READ_IRR);
-}
+// Not used, commenting out
+// static uint16_t pic_get_irr(void) {
+//     return __pic_get_irq_reg(PIC_READ_IRR);
+// }
 
 /* Returns the combined value of the cascaded PICs in-service register */
 static uint16_t pic_get_isr(void) {
