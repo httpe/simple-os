@@ -33,16 +33,16 @@ extern char MAP_MEM_PA_ZERO_TO[];
 // buffer: load the file found into this address
 //
 // return: file size of the loaded file
-int tar_loopup_lazy(uint32_t LBA, char* filename, char** file_buffer) {
+int tar_loopup_lazy(bool slave, uint32_t LBA, char* filename, char** file_buffer) {
     unsigned char* sector_buffer = kmalloc(SECTOR_SIZE);
-    uint32_t max_lba = get_total_28bit_sectors();
+    uint32_t max_lba = get_total_28bit_sectors(slave);
 
     while(1) {
         if (LBA >= max_lba) {
             kfree(sector_buffer);
             return TAR_ERR_LBA_GT_MAX_SECTOR;
         }
-        read_sectors_ATA_28bit_PIO((uint16_t*)sector_buffer, LBA, 1);
+        read_sectors_ATA_28bit_PIO(slave, (uint16_t*)sector_buffer, LBA, 1);
         int match = tar_match_filename(sector_buffer, filename);
         if (match == TAR_ERR_NOT_USTAR) {
             kfree(sector_buffer);
@@ -55,7 +55,7 @@ int tar_loopup_lazy(uint32_t LBA, char* filename, char** file_buffer) {
                 continue;
             } else {
                 *file_buffer = kmalloc(SECTOR_SIZE*size_in_sector);
-                read_sectors_ATA_28bit_PIO((uint16_t*)*file_buffer, LBA + 1, size_in_sector);
+                read_sectors_ATA_28bit_PIO(slave, (uint16_t*)*file_buffer, LBA + 1, size_in_sector);
                 kfree(sector_buffer);
                 return filesize;
             }
@@ -74,7 +74,7 @@ int sys_exec(trapframe* r)
     // Load executable from tar file system
     // TODO: replace by real file system
     char* file_buffer = NULL;
-    int program_size = tar_loopup_lazy(BOOTLOADER_SECTORS, path, &file_buffer);
+    int program_size = tar_loopup_lazy(false, BOOTLOADER_SECTORS, path, &file_buffer);
     if(program_size <= 0) {
         printf("SYS_EXEC: File not found\n");
         kfree(file_buffer);

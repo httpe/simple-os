@@ -12,10 +12,10 @@ static void ATA_delay_400ns();
 // LBA: 0-based Linear Block Address, 28bit LBA shall be between 0 to 0x0FFFFFFF
 // sector_count: How many sectors you want to read. A sectorcount of 0 means 256 sectors = 128K
 //
-void read_sectors_ATA_28bit_PIO(uint16_t* target, uint32_t LBA, uint8_t sector_count) {
+void read_sectors_ATA_28bit_PIO(bool slave, uint16_t* target, uint32_t LBA, uint8_t sector_count) {
     ATA_wait_BSY();
     // Send 0xE0 for the "master" or 0xF0 for the "slave", ORed with the highest 4 bits of the LBA to port 0x1F6: outb(0x1F6, 0xE0 | (slavebit << 4) | ((LBA >> 24) & 0x0F))
-    outb(0x1F6, 0xE0 | ((LBA >> 24) & 0xF));
+    outb(0x1F6, 0xE0 | (slave << 4) | ((LBA >> 24) & 0xF));
     // Send the sectorcount to port 0x1F2: outb(0x1F2, (unsigned char) count)
     outb(0x1F2, sector_count);
     // Send the low 8 bits of the LBA to port 0x1F3: outb(0x1F3, (unsigned char) LBA))
@@ -45,9 +45,9 @@ void read_sectors_ATA_28bit_PIO(uint16_t* target, uint32_t LBA, uint8_t sector_c
 // sector_count: How many sectors you want to write
 // source: a buffer whose length is sector_count*512 bytes 
 //
-void write_sectors_ATA_28bit_PIO(uint32_t LBA, uint8_t sector_count, uint16_t* source) {
+void write_sectors_ATA_28bit_PIO(bool slave, uint32_t LBA, uint8_t sector_count, uint16_t* source) {
     ATA_wait_BSY();
-    outb(0x1F6, 0xE0 | ((LBA >> 24) & 0xF));
+    outb(0x1F6, 0xE0 | (slave << 4) | ((LBA >> 24) & 0xF));
     outb(0x1F2, sector_count);
     outb(0x1F3, (uint8_t)LBA);
     outb(0x1F4, (uint8_t)(LBA >> 8));
@@ -76,10 +76,10 @@ void write_sectors_ATA_28bit_PIO(uint32_t LBA, uint8_t sector_count, uint16_t* s
 // 
 // return: zero = success, otherwise failed
 // 
-int8_t ATA_Identify(uint16_t* target) {
+int8_t ATA_Identify(bool slave, uint16_t* target) {
     ATA_wait_BSY();
     // select a target drive by sending 0xA0 for the master drive, or 0xB0 for the slave, to the "drive select" IO port (0x1F6)
-    outb(0x1F6, 0xA0);
+    outb(0x1F6, 0xA0 | (slave << 4));
     // Then set the Sectorcount, LBAlo, LBAmid, and LBAhi IO ports to 0 (port 0x1F2 to 0x1F5)
     outb(0x1F2, 0);
     outb(0x1F3, 0);
@@ -113,9 +113,9 @@ int8_t ATA_Identify(uint16_t* target) {
 // Get count of all sectors available to address using a 28bit LBA
 //
 // return: number of 28bit LBA available
-uint32_t get_total_28bit_sectors() {
+uint32_t get_total_28bit_sectors(bool slave) {
     uint16_t identifier[256];
-    uint8_t ret = ATA_Identify(identifier);
+    uint8_t ret = ATA_Identify(slave, identifier);
     if (ret != 0) {
         return ret;
     }

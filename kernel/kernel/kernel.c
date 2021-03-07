@@ -38,9 +38,9 @@ void test_malloc()
 void test_ata()
 {
 	char* mbr = kmalloc(512);
-	uint32_t max_lba = get_total_28bit_sectors();
+	uint32_t max_lba = get_total_28bit_sectors(false);
 	printf("Disk max 28bit addressable LBA: %d\n", max_lba);
-    read_sectors_ATA_28bit_PIO((uint16_t*)mbr, 0, 1);
+    read_sectors_ATA_28bit_PIO(false, (uint16_t*)mbr, 0, 1);
 
 	printf("Disk MBR last four bytes: 0x%x\n", *(uint32_t*) &mbr[508]);
 	kfree(mbr);
