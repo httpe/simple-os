@@ -14,6 +14,12 @@ BOOTDIR?=$(EXEC_PREFIX)/boot
 INCLUDEDIR?=$(PREFIX)/include
 USER_SPACE_BINDIR?=$(PREFIX)/bin
 
+USER_CFLAGS:= $(CFLAGS) -ffreestanding -Wall -Wextra
+USER_CPPFLAGS:=$(CPPFLAGS) -Iinclude
+USER_LDFLAGS:=$(LDFLAGS)
+USER_LIBS:=$(LIBS) -nostdlib -lc -lgcc
+
+
 CFLAGS:=$(CFLAGS) -ffreestanding -Wall -Wextra
 CPPFLAGS:=$(CPPFLAGS) -D__is_kernel -Iinclude
 LDFLAGS:=$(LDFLAGS)
@@ -83,7 +89,10 @@ simple_os.kernel: $(OBJS) $(ARCHDIR)/linker.ld
 user_space_programs: $(USER_SPACE_BINARIES)
 
 init/init: $(INIT_OBJS) init/init.ld
-	$(CC) -MD -T init/init.ld -o $@ $(CFLAGS) -nostdlib $(INIT_OBJS)
+	$(CC) -MD -T init/init.ld -o $@ $(USER_CFLAGS) $(INIT_OBJS) $(USER_LIBS)
+
+init/init.o: init/init.c
+	$(CC) -MD -c $< -o $@ -std=gnu11 $(USER_CFLAGS) $(USER_CPPFLAGS)
 
 $(ARCHDIR)/crt/crtbegin.o $(ARCHDIR)/crt/crtend.o:
 	OBJ=`$(CC) $(CFLAGS) $(LDFLAGS) -print-file-name=$(@F)` && cp "$$OBJ" $@

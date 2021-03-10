@@ -120,14 +120,14 @@ void scheduler()
             if(p->state != PROC_STATE_RUNNABLE)
                 continue;
 
-            printf("Scheduling to process %u\n", p->pid);
+            // printf("Scheduling to process %u\n", p->pid);
 
             current_process = p;
             switch_process_memory_mapping(p);
             p->state = PROC_STATE_RUNNING;
             switch_kernel_context(&kernel_boot_context, p->context);
 
-            printf("Switched back from process %u\n", p->pid);
+            // printf("Switched back from process %u\n", p->pid);
             current_process = NULL;
         }
     }
@@ -158,12 +158,12 @@ void exit(int exit_code)
 void yield()
 {
     proc* p = curr_proc();
-    printf("PID %u yield\n", p->pid);
+    // printf("PID %u yield\n", p->pid);
 
     p->state = PROC_STATE_RUNNABLE;
     switch_kernel_context(&p->context, kernel_boot_context);
 
-    printf("PID %u back from yield\n", p->pid);
+    // printf("PID %u back from yield\n", p->pid);
 }
 
 int wait()
@@ -182,13 +182,13 @@ int wait()
                     free_user_space(child->page_dir);
                     *child = (proc) {0};
                     child->state = PROC_STATE_UNUSED;
-                    printf("PID %u wait found child %u\n", curr_proc()->pid, child_pid);
+                    printf("PID %u waiting: zombie child (PID %u) found\n", curr_proc()->pid, child_pid);
                     return child_pid;
                 }
             }
         }
         if(no_child) {
-            printf("PID %u wait no child\n", curr_proc()->pid);
+            printf("PID %u waiting: child not found\n", curr_proc()->pid);
             return -1;
         }
         yield();

@@ -150,7 +150,7 @@ int sys_exec(trapframe* r)
 int sys_print(trapframe* r)
 {
     char* str = (char*) *(uint32_t*) (r->esp + 4);
-    printf("SYS_PRINT: %s\n", str);
+    printf("%s", str);
     return 0;
 }
 

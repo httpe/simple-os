@@ -1,41 +1,34 @@
 #include <stddef.h>
 #include <syscall.h>
-
-int do_sys_call(int sys_call_num, void* arg)
-{
-    int ret_code;
-    asm volatile ("push %2; push $0; int $88; pop %%ebx; pop %%ebx"
-    :"=a"(ret_code)
-    :"a"(sys_call_num), "r"((unsigned int) arg)
-    :"ebx");
-    return ret_code;
-};
+#include <stdio.h>
 
 int user_main(int argc, char* argv[]) {
     (void) argc;
     (void) argv;
 
-    int ret = do_sys_call(SYS_PRINT, "Hello User World!");
-    ret = do_sys_call(SYS_YIELD, NULL);
-    ret = do_sys_call(SYS_PRINT, "Welcome Back User World!");
+    int ret = do_syscall_1(SYS_PRINT, "Hello User World!\n");
+    ret = do_syscall_1(SYS_YIELD, NULL);
+    ret = do_syscall_1(SYS_PRINT, "Welcome Back User World!\n");
     (void) ret;
 
-    int fork_ret = do_sys_call(SYS_FORK, NULL);
+    printf("Welcome to %s!\n", "libc");
+
+    int fork_ret = do_syscall_1(SYS_FORK, NULL);
     for(int i=0; i<3; i++) {
         if(fork_ret) {
             // parent
-            do_sys_call(SYS_PRINT, "This is parent!");
-            // do_sys_call(SYS_YIELD, NULL);
-            do_sys_call(SYS_WAIT, NULL);
+            printf("This is parent, child PID: %u\n", fork_ret);
+            // do_syscall_1(SYS_YIELD, NULL);
+            do_syscall_1(SYS_WAIT, NULL);
         } else {
             // child
-            do_sys_call(SYS_PRINT, "This is child!");
-            // do_sys_call(SYS_YIELD, NULL);
+            printf("This is child\n");
+            // do_syscall_1(SYS_YIELD, NULL);
         }
     }
 
     if(!fork_ret) {
-        do_sys_call(SYS_EXIT, 0);
+        do_syscall_1(SYS_EXIT, 0);
     }
     
     while(1);
