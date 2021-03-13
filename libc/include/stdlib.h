@@ -10,6 +10,9 @@ extern "C" {
 __attribute__((__noreturn__))
 void abort(void);
 
+void free(void *ap);
+void* malloc(unsigned int nbytes);
+
 #ifdef __cplusplus
 }
 #endif

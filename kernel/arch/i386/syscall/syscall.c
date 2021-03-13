@@ -116,7 +116,6 @@ int sys_exec(trapframe* r)
         char* dst = (char*) link_pages(page_dir, vaddr_ub, size, curr_page_dir(), false);
         memmove(dst, argv, size);
         unmap_pages(curr_page_dir(), (uint32_t) dst, size);
-        // memmove_into_dir(page_dir, vaddr_ub, argv, size, false);
         ustack[3 + argc] = vaddr_ub;
         vaddr_ub += size;
     }
