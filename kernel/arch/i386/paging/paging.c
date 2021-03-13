@@ -406,9 +406,13 @@ void copy_kernel_space_mapping(pde* page_dir)
 // make the vaddr[size] space of from_page_dir available in to_page_dir
 // link them to the same physical memory
 // if vaddr[size] space is not mapped in from_page_dir, allocate it first
+// shall only be used for user space memory area since kernel space is always linked
 // return: vaddr of to_page_dir to access the space
 uint32_t link_pages(pde* from_page_dir, uint32_t vaddr, uint32_t size, pde* to_page_dir, bool alloc_writable_page)
 {
+    // do not allow linking to kernel space
+    PANIC_ASSERT(vaddr >= (uint32_t) MAP_MEM_PA_ZERO_TO || vaddr + size >= (uint32_t) MAP_MEM_PA_ZERO_TO);
+
     uint32_t page_idx_foreign = PAGE_INDEX_FROM_VADDR(vaddr);
     uint32_t offset = vaddr - VADDR_FROM_PAGE_INDEX(page_idx_foreign);
     
