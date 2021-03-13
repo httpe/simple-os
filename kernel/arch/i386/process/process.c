@@ -2,12 +2,34 @@
 #include <string.h>
 #include <stdio.h>
 #include <common.h>
-#include <arch/i386/kernel/process.h>
 #include <kernel/process.h>
 #include <kernel/paging.h>
 #include <kernel/panic.h>
 #include <arch/i386/kernel/segmentation.h>
 #include <kernel/memory_bitmap.h>
+
+// Source: xv6/proc.h
+
+// Saved registers for kernel context switches.
+// Don't need to save all the segment registers (%cs, etc),
+// because they are constant across kernel contexts.
+// Don't need to save %eax, %ecx, %edx, because the
+// x86 convention is that the caller has saved them / shall save them
+//  if the caller need it
+// Contexts are stored at the bottom of the stack they
+// describe; the stack pointer is the address of the context.
+// The layout of the context matches the layout of the stack in switch_kernel_context.asm
+// Switch doesn't save eip explicitly,
+// but it is on the stack and create_process() manipulates it.
+// Ref: x86 calling convention, figure 3.4 Register Usage
+// https://github.com/hjl-tools/x86-psABI/wiki/x86-64-psABI-1.0.pdf
+typedef struct context {
+  uint32_t edi;
+  uint32_t esi;
+  uint32_t ebx;
+  uint32_t ebp;
+  uint32_t eip;
+} context;
 
 // defined in interrupt.asm
 extern void int_ret(void);
