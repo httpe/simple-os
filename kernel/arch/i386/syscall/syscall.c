@@ -133,6 +133,7 @@ int sys_exec(trapframe* r)
     p->tf->eip = entry_point;
 
     p->size = (vaddr_ub + (PAGE_SIZE - 1))/PAGE_SIZE * PAGE_SIZE;
+    p->orig_size = p->size;
 
     // switch to new page dir
     pde* old_page_dir = p->page_dir;
@@ -156,6 +157,10 @@ int sys_sbrk(trapframe* r)
     
     proc* p = curr_proc();
     uint32_t orig_size = p->size;
+    uint32_t new_size = p->size + delta;
+    if(new_size < p->orig_size || new_size < p->orig_size) {
+        return -1;
+    } 
     p->size = p->size + delta;
     uint32_t orig_last_pg_idx = PAGE_INDEX_FROM_VADDR(orig_size - 1);
     uint32_t new_last_pg_idx =  PAGE_INDEX_FROM_VADDR(p->size - 1);
@@ -164,6 +169,7 @@ int sys_sbrk(trapframe* r)
     } else if(new_last_pg_idx < orig_last_pg_idx) {
         dealloc_pages(p->page_dir, new_last_pg_idx + 1, orig_last_pg_idx - new_last_pg_idx); 
     }
+    // returning int but shall cast back to uint
     return (int) orig_size;
 }
 

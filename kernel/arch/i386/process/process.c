@@ -124,6 +124,7 @@ void init_first_process()
     p->tf->eip = entry;
 
     p->size = p->tf->esp;
+    p->orig_size = p->size;
 
     p->state = PROC_STATE_RUNNABLE;
 }

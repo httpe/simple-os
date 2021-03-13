@@ -28,6 +28,7 @@ typedef struct proc {
   struct trapframe *tf;               // Trap frame for current syscall
   struct context *context;            // swtch() here to run process; used for switching between process in kernel space
   uint32_t size;                      // process size, a pointer to the end of the process memory
+  uint32_t orig_size;                 // original size, size shall not shrink below this
 } proc;
 
 proc* create_process();
