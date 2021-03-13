@@ -20,7 +20,7 @@ To compile this project, you need to install the following dependencies:
 
 1. [NASM Assembler](https://www.nasm.us/)
 
-1. GCC & Binutils for x86: It is recommended to [compile a cross-compiler for your own](https://wiki.osdev.org/GCC_Cross-Compiler). Your system shall also have GCC tool chain installed, since we will use utility like GNU Make
+1. GCC & Binutils for x86: It is recommended to [compile a cross-compiler for your own](https://wiki.osdev.org/GCC_Cross-Compiler). Your system shall also have GCC tool chain installed, since we will use utility like GNU Make (for Ubuntu 20.04 LTS, you can try running `build_cross_compiler.sh`)
 
 1. [QEMU](https://www.qemu.org/) Emulator: We will use QEMU to emulate our system, avoiding restarting computer again and again just to test the system.
 
