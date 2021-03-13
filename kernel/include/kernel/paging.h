@@ -22,11 +22,6 @@ typedef struct page_directory_entry pde;
 
 pde* curr_page_dir();
 
-uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, bool is_kernel);
-
-uint32_t map_page(pde* page_dir, uint32_t page_index, uint32_t frame_index, bool is_kernel, bool is_writeable);
-uint32_t unmap_page(pde* page_dir, uint32_t page_index);
-
 uint32_t alloc_pages(pde* page_dir, size_t page_count, bool is_kernel, bool is_writeable);
 uint32_t alloc_pages_at(pde* page_dir, uint32_t page_index, size_t page_count, bool is_kernel, bool is_writeable);
 void dealloc_pages(pde* page_dir, uint32_t page_index, size_t page_count);

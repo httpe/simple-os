@@ -14,6 +14,12 @@ extern char MAP_MEM_PA_ZERO_TO[], KERNEL_VIRTUAL_END[];
 static segdesc gdt[NSEGS];
 static task_state tss;
 
+// Declare internal utility functions
+static uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, bool is_kernel);
+static uint32_t map_page(pde* page_dir, uint32_t page_index, uint32_t frame_index, bool is_kernel, bool is_writeable);
+static uint32_t unmap_page(pde* page_dir, uint32_t page_index);
+
+
 // Load GDT
 static inline void lgdt(struct segdesc *p, uint16_t size)
 {
@@ -106,7 +112,7 @@ static void return_page_table(pde* page_dir, page_t* page_table)
 // Find contiguous pages that have not been mapped
 // If is for kernel, search vaddr space after KERNEL_VIRTUAL_END
 // return: the first page index of the contiguous unmapped virtual memory space
-uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, bool is_kernel) {
+static uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, bool is_kernel) {
     uint32_t page_dir_idx_0;
     if(is_kernel) {
         page_dir_idx_0 = PAGE_INDEX_FROM_VADDR((uint32_t) KERNEL_VIRTUAL_END) / PAGE_TABLE_SIZE;
@@ -143,13 +149,12 @@ uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, bool is_ke
         }
     }
 
-    printf("KERNEL PANIC: Find contiguous VA failed\n");
-    while (1);
+    PANIC("Failed to find a contiguous VA");
 
 }
 
 // return: physical frame index unmapped
-uint32_t unmap_page(pde* page_dir, uint32_t page_index)
+static uint32_t unmap_page(pde* page_dir, uint32_t page_index)
 {
     uint32_t vaddr = VADDR_FROM_PAGE_INDEX(page_index);
     uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
@@ -175,7 +180,7 @@ uint32_t unmap_page(pde* page_dir, uint32_t page_index)
 }
 
 // return: mapped vaddr
-uint32_t map_page(pde* page_dir, uint32_t page_index, uint32_t frame_index, bool is_kernel, bool is_writeable)
+static uint32_t map_page(pde* page_dir, uint32_t page_index, uint32_t frame_index, bool is_kernel, bool is_writeable)
 {
     uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
     uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
@@ -466,18 +471,4 @@ void initialize_paging() {
     printf("vaddr2paddr: page_dir is mapped to: %u, PHY=%u\n", vaddr2paddr(curr_dir, (uint32_t) curr_dir), PAGE_DIR_PHYSICAL_ADDR);
     PANIC_ASSERT((uint32_t) PAGE_DIR_PHYSICAL_ADDR == vaddr2paddr(curr_page_dir(), (uint32_t) curr_page_dir()));
 
-    // uint32_t array_len = 0x9FC00;
-    // uint32_t alloc_addr = kmalloc(PAGE_COUNT_FROM_BYTES(array_len), true, true);
-    // printf("Allocated an uint32_t[%d] array at virtual address: 0x%x\n", array_len, alloc_addr);
-    // uint8_t *array = (uint8_t*) alloc_addr;
-    // array[0] = 1;
-    // array[array_len-1] = 10;
-    // printf("Array[0]=%d; Array[%d]=%d\n", array[0], array_len-1, array[array_len-1]);
-
-    // uint32_t alloc_addr2 = kmalloc(PAGE_COUNT_FROM_BYTES(0x3000), true, true);
-    // printf("Allocated second uint32_t[0x3000] array at virtual address: 0x%x\n", alloc_addr2);
-    // uint8_t *array2 = (uint8_t*) alloc_addr2;
-    // array2[0] = 6;
-    // array2[0x3000-1] = 9;
-    // printf("Array2[0]=%d; Array2[0x3000-1]=%d\n", array2[0], array2[0x3000-1]);
 }
