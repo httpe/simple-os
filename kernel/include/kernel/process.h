@@ -29,6 +29,7 @@ typedef struct proc {
   struct context *context;            // swtch() here to run process; used for switching between process in kernel space
   uint32_t size;                      // process size, a pointer to the end of the process memory
   uint32_t orig_size;                 // original size, size shall not shrink below this
+  int32_t exit_code;                  // exit code for zombie process
 } proc;
 
 proc* create_process();

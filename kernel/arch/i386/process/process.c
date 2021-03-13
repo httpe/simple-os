@@ -69,6 +69,7 @@ proc* create_process()
         }
     }
 
+    memset(p, 0, sizeof(*p));
     p->pid = next_pid++;
     p->state = PROC_STATE_EMBRYO;
     // allocate process's kernel stack
@@ -166,8 +167,6 @@ proc* curr_proc()
 
 void exit(int exit_code)
 {
-    UNUSED_ARG(exit_code);
-
     proc* p = curr_proc();
 
     // pass children to init
@@ -178,6 +177,8 @@ void exit(int exit_code)
     }
 
     p->state = PROC_STATE_ZOMBIE;
+    p->exit_code = exit_code;
+    
     switch_kernel_context(&p->context, kernel_boot_context);
 }
 
@@ -192,7 +193,7 @@ void yield()
     // printf("PID %u back from yield\n", p->pid);
 }
 
-int wait()
+int wait(int* exit_code)
 {
     proc* p = curr_proc();
     printf("PID %u waiting\n", curr_proc()->pid);
@@ -204,6 +205,7 @@ int wait()
                 no_child = false;
                 if(child->state == PROC_STATE_ZOMBIE) {
                     uint32_t child_pid = child->pid;
+                    *exit_code = child->exit_code;
                     dealloc_pages(curr_page_dir(), PAGE_INDEX_FROM_VADDR((uint32_t) child->kernel_stack), 1);
                     free_user_space(child->page_dir);
                     *child = (proc) {0};

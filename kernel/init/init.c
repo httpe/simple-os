@@ -16,12 +16,18 @@ int user_main(int argc, char* argv[]) {
     printf("Welcome to %s!\n", "libc");
 
     int fork_ret = do_syscall_1(SYS_FORK, NULL);
+    int child_exit_code;
     for(int i=0; i<3; i++) {
         if(fork_ret) {
             // parent
             printf("This is parent, child PID: %u\n", fork_ret);
             // do_syscall_1(SYS_YIELD, NULL);
-            do_syscall_1(SYS_WAIT, NULL);
+            int wait_ret = do_syscall_1(SYS_WAIT, &child_exit_code);
+            if(wait_ret < 0) {
+                printf("No child exited\n");
+            } else {
+                printf("Child %u exited, exit code = %d\n", wait_ret, child_exit_code);
+            }
         } else {
             // child
             printf("This is child\n");
@@ -30,7 +36,8 @@ int user_main(int argc, char* argv[]) {
     }
 
     if(!fork_ret) {
-        do_syscall_1(SYS_EXIT, 0);
+        // exit child process
+        abort();
     }
     
     ret = do_syscall_1(SYS_SBRK, (void*) 100);

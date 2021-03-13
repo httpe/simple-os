@@ -211,8 +211,8 @@ void sys_exit(trapframe* r)
 
 int sys_wait(trapframe* r)
 {
-    UNUSED_ARG(r);
-    return wait();
+    int32_t* exit_code =  (int32_t*) *(uint32_t*) (r->esp + 4);
+    return wait(exit_code);
 }
 
 void syscall_handler(trapframe* r)
