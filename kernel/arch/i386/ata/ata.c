@@ -113,16 +113,16 @@ int8_t ATA_Identify(bool slave, uint16_t* target) {
 // Get count of all sectors available to address using a 28bit LBA
 //
 // return: number of 28bit LBA available
-uint32_t get_total_28bit_sectors(bool slave) {
+int32_t get_total_28bit_sectors(bool slave) {
     uint16_t identifier[256];
-    uint8_t ret = ATA_Identify(slave, identifier);
+    int8_t ret = ATA_Identify(slave, identifier);
     if (ret != 0) {
         return ret;
     }
     // uint16_t 60 & 61 taken as a uint32_t contain the total number of 28 bit LBA addressable sectors on the drive. (If non-zero, the drive supports LBA28.)
     // uint16_t 100 through 103 taken as a uint64_t contain the total number of 48 bit addressable sectors on the drive. (Probably also proof that LBA48 is supported.)
     uint32_t max_sector_28bit_lba = (((uint32_t)identifier[61]) << 16) + identifier[60];
-    return max_sector_28bit_lba;
+    return (int32_t) max_sector_28bit_lba;
 }
 
 

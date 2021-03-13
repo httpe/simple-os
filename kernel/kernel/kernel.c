@@ -38,7 +38,7 @@ void test_malloc()
 void test_ata()
 {
 	char* mbr = kmalloc(512);
-	uint32_t max_lba = get_total_28bit_sectors(false);
+	int32_t max_lba = get_total_28bit_sectors(false);
 	printf("Disk max 28bit addressable LBA: %d\n", max_lba);
     read_sectors_ATA_28bit_PIO(false, (uint16_t*)mbr, 0, 1);
 
@@ -66,11 +66,11 @@ void kernel_main(uint32_t mbt_physical_addr) {
 	printf("Welcome to Simple-OS!\n");
 	printf("\nPress any key to start typing on the screen!\n");
 
+	test_malloc();
+	test_ata();
+
 	// unused tests
 	UNUSED_ARG(test_paging);
-	UNUSED_ARG(test_paging);
-	UNUSED_ARG(test_malloc);
-	UNUSED_ARG(test_ata);
 
 	// Enter user space and running init
 	init_first_process();

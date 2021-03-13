@@ -35,10 +35,12 @@ extern char MAP_MEM_PA_ZERO_TO[];
 // return: file size of the loaded file
 int tar_loopup_lazy(bool slave, uint32_t LBA, char* filename, char** file_buffer) {
     unsigned char* sector_buffer = kmalloc(SECTOR_SIZE);
-    uint32_t max_lba = get_total_28bit_sectors(slave);
-
+    int32_t max_lba = get_total_28bit_sectors(slave);
+    if(max_lba < 0) {
+        return TAR_ERR_GENERAL;
+    }
     while(1) {
-        if (LBA >= max_lba) {
+        if (LBA >= (uint32_t) max_lba) {
             kfree(sector_buffer);
             return TAR_ERR_LBA_GT_MAX_SECTOR;
         }

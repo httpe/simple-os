@@ -8,6 +8,6 @@ void read_sectors_ATA_28bit_PIO(bool slave, uint16_t* target, uint32_t LBA, uint
 void write_sectors_ATA_28bit_PIO(bool slave, uint32_t LBA, uint8_t sector_count, uint16_t* words);
 
 int8_t ATA_Identify(bool slave, uint16_t* target);
-uint32_t get_total_28bit_sectors(bool slave);
+int32_t get_total_28bit_sectors(bool slave);
 
 #endif
