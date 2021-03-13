@@ -149,45 +149,50 @@ heap_header_t* unify_free_space(heap_t* heap, heap_header_t* free_header) {
     PANIC_ASSERT(free_header->next != NULL); // assert is a free block
     heap_footer_t* free_footer = HEAP_FOOTER_FROM_HEADER(free_header);
 
-    heap_footer_t* left_footer = (heap_footer_t*)((uint32_t)free_header - sizeof(heap_footer_t));
-    if (is_vaddr_accessible(curr_page_dir(), (uint32_t)left_footer, heap->is_kernel, true)) {
-        if (left_footer->magic == HEAP_FOOTER_MAGIC_MID || left_footer->magic == HEAP_FOOTER_MAGIC_RIGHT) {
-            heap_header_t* left_header = left_footer->header;
-            ASSERT_VALID_HEAP_HEADER(left_header);
-            if (left_header->next != NULL) {
-                printf("Heap unify left\n");
-                // if on the left there is a free block, merge free_header into it
-                // [left_header | left_header->size | left_footer | free_header | free_header->size | free_footer]
-                // =>
-                // [left_header | left_header->size + sizeof(left_footer) + sizeof(free_header) + free_header->size | free_footer pointing to left_header]
-                claim_free_space(heap, left_header);
-                claim_free_space(heap, free_header);
-                left_header->size += sizeof(heap_footer_t) + sizeof(heap_header_t) + free_header->size;
-                memset(left_footer, 0, sizeof(heap_footer_t) + sizeof(heap_header_t));
-                free_footer->header = left_header;
-                insert_free_space(heap, left_header);
-                return unify_free_space(heap, left_header);
+    if((uint32_t)free_header > sizeof(heap_footer_t)) {
+        heap_footer_t* left_footer = (heap_footer_t*)((uint32_t)free_header - sizeof(heap_footer_t));
+        if (is_vaddr_accessible(curr_page_dir(), (uint32_t)left_footer, heap->is_kernel, true)) {
+            if (left_footer->magic == HEAP_FOOTER_MAGIC_MID || left_footer->magic == HEAP_FOOTER_MAGIC_RIGHT) {
+                heap_header_t* left_header = left_footer->header;
+                ASSERT_VALID_HEAP_HEADER(left_header);
+                if (left_header->next != NULL) {
+                    printf("Heap unify left\n");
+                    // if on the left there is a free block, merge free_header into it
+                    // [left_header | left_header->size | left_footer | free_header | free_header->size | free_footer]
+                    // =>
+                    // [left_header | left_header->size + sizeof(left_footer) + sizeof(free_header) + free_header->size | free_footer pointing to left_header]
+                    claim_free_space(heap, left_header);
+                    claim_free_space(heap, free_header);
+                    left_header->size += sizeof(heap_footer_t) + sizeof(heap_header_t) + free_header->size;
+                    memset(left_footer, 0, sizeof(heap_footer_t) + sizeof(heap_header_t));
+                    free_footer->header = left_header;
+                    insert_free_space(heap, left_header);
+                    return unify_free_space(heap, left_header);
+                }
             }
         }
     }
-    heap_header_t* right_header = (heap_header_t*)((uint32_t)free_footer + sizeof(heap_footer_t));
-    if (is_vaddr_accessible(curr_page_dir(), (uint32_t)right_header, heap->is_kernel, true)) {
-        if ((right_header->magic == HEAP_HEADER_MAGIC_MID || right_header->magic == HEAP_HEADER_MAGIC_LEFT) && right_header->next != NULL) {
-            printf("Heap unify right\n");
-            // if on the right there is a free block, merge it into free_header
-            // [free_header | free_header->size|free_footer|right_header|right_header->size|right_footer]
-            // =>
-            // [free_header | free_header->size + sizeof(free_footer) + sizeof(right_header) + right_header->size | right_footer pointing to free_header]
-            heap_footer_t* right_footer = HEAP_FOOTER_FROM_HEADER(right_header);
-            ASSERT_VALID_HEAP_FOOTER(right_footer);
 
-            claim_free_space(heap, free_header);
-            claim_free_space(heap, right_header);
-            free_header->size += sizeof(heap_footer_t) + sizeof(heap_header_t) + right_header->size;
-            memset(free_footer, 0, sizeof(heap_footer_t) + sizeof(heap_header_t));
-            right_footer->header = free_header;
-            insert_free_space(heap, free_header);
-            return unify_free_space(heap, free_header);
+    if((uint32_t)free_footer + sizeof(heap_footer_t) > (uint32_t)free_footer) { //prevent overflow
+        heap_header_t* right_header = (heap_header_t*)((uint32_t)free_footer + sizeof(heap_footer_t));
+        if (is_vaddr_accessible(curr_page_dir(), (uint32_t)right_header, heap->is_kernel, true)) {
+            if ((right_header->magic == HEAP_HEADER_MAGIC_MID || right_header->magic == HEAP_HEADER_MAGIC_LEFT) && right_header->next != NULL) {
+                printf("Heap unify right\n");
+                // if on the right there is a free block, merge it into free_header
+                // [free_header | free_header->size|free_footer|right_header|right_header->size|right_footer]
+                // =>
+                // [free_header | free_header->size + sizeof(free_footer) + sizeof(right_header) + right_header->size | right_footer pointing to free_header]
+                heap_footer_t* right_footer = HEAP_FOOTER_FROM_HEADER(right_header);
+                ASSERT_VALID_HEAP_FOOTER(right_footer);
+
+                claim_free_space(heap, free_header);
+                claim_free_space(heap, right_header);
+                free_header->size += sizeof(heap_footer_t) + sizeof(heap_header_t) + right_header->size;
+                memset(free_footer, 0, sizeof(heap_footer_t) + sizeof(heap_header_t));
+                right_footer->header = free_header;
+                insert_free_space(heap, free_header);
+                return unify_free_space(heap, free_header);
+            }
         }
     }
 
@@ -250,7 +255,7 @@ void kfree(void* vaddr) {
 
 
 heap_header_t* expand_heap(heap_t* heap, heap_header_t* largest_free_header, size_t requested_size) {
-    printf("Expand_heap: largetst block %d bytes, requested: %d bytes\n", largest_free_header->size, requested_size);
+    printf("Expand_heap: largest block %d bytes, requested: %d bytes\n", largest_free_header->size, requested_size);
 
     PANIC_ASSERT(requested_size > 0);
     if (largest_free_header) {
