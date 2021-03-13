@@ -235,6 +235,10 @@ static uint32_t map_page(pde* page_dir, uint32_t page_index, uint32_t frame_inde
 {
     uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
     uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
+
+    uint32_t kernel_page_dir_idx = PAGE_INDEX_FROM_VADDR((uint32_t) MAP_MEM_PA_ZERO_TO) / PAGE_TABLE_SIZE;
+    PANIC_ASSERT((page_dir_idx < kernel_page_dir_idx) ^ is_kernel);
+
     set_frame(frame_index);                    // ensure is frame is marked used
 
     page_t* page_table;
@@ -411,7 +415,7 @@ void copy_kernel_space_mapping(pde* page_dir)
 uint32_t link_pages(pde* from_page_dir, uint32_t vaddr, uint32_t size, pde* to_page_dir, bool alloc_writable_page)
 {
     // do not allow linking to kernel space
-    PANIC_ASSERT(vaddr >= (uint32_t) MAP_MEM_PA_ZERO_TO || vaddr + size >= (uint32_t) MAP_MEM_PA_ZERO_TO);
+    PANIC_ASSERT(vaddr < (uint32_t) MAP_MEM_PA_ZERO_TO || vaddr + size < (uint32_t) MAP_MEM_PA_ZERO_TO);
 
     uint32_t page_idx_foreign = PAGE_INDEX_FROM_VADDR(vaddr);
     uint32_t offset = vaddr - VADDR_FROM_PAGE_INDEX(page_idx_foreign);
