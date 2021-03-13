@@ -1,4 +1,5 @@
 #include <kernel/serial.h>
+#include <kernel/panic.h>
 #include <arch/i386/kernel/port_io.h>
 
 // Serial port I/O utilities
@@ -9,7 +10,7 @@
 
 static bool serial_port_initialized = false;
 
-int init_serial() {
+void init_serial() {
     outb(PORT + 1, 0x00);    // Disable all interrupts
     outb(PORT + 3, 0x80);    // Enable DLAB (set baud rate divisor)
     outb(PORT + 0, 0x03);    // Set divisor to 3 (lo byte) 38400 baud
@@ -22,7 +23,7 @@ int init_serial() {
 
     // Check if serial is faulty (i.e: not same byte as sent)
     if (inb(PORT + 0) != 0xAE) {
-        return 1;
+        PANIC("Serial Port Init Failed");
     }
 
     // If serial is not faulty set it in normal operation mode
@@ -30,8 +31,7 @@ int init_serial() {
     outb(PORT + 4, 0x0F);
 
     serial_port_initialized = true;
-
-    return 0;
+    
 }
 
 bool is_serial_port_initialized() {
