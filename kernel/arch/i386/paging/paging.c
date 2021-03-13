@@ -161,14 +161,17 @@ static void return_page_table(pde* page_dir, page_t* page_table)
 // If is for kernel, search vaddr space after KERNEL_VIRTUAL_END
 // return: the first page index of the contiguous unmapped virtual memory space
 static uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, bool is_kernel) {
-    uint32_t page_dir_idx_0;
+    uint32_t page_dir_idx_0, page_dir_idx_max;
+    uint32_t kernel_page_dir_idx = PAGE_INDEX_FROM_VADDR((uint32_t) MAP_MEM_PA_ZERO_TO) / PAGE_TABLE_SIZE;
     if(is_kernel) {
         page_dir_idx_0 = PAGE_INDEX_FROM_VADDR((uint32_t) KERNEL_VIRTUAL_END) / PAGE_TABLE_SIZE;
+        page_dir_idx_max = PAGE_DIR_SIZE;
     } else {
         page_dir_idx_0 = 0;
+        page_dir_idx_max = kernel_page_dir_idx;
     }
     uint32_t contiguous_page_count = 0;
-    for (uint32_t page_dir_idx = page_dir_idx_0; page_dir_idx < PAGE_DIR_SIZE; page_dir_idx++) {
+    for (uint32_t page_dir_idx = page_dir_idx_0; page_dir_idx < page_dir_idx_max; page_dir_idx++) {
         if (page_dir[page_dir_idx].present == 0) {
             if (contiguous_page_count + PAGE_TABLE_SIZE >= page_count) {
                 return page_dir_idx * PAGE_TABLE_SIZE - contiguous_page_count;
