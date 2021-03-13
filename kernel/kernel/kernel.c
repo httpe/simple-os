@@ -1,5 +1,5 @@
 #include <stdio.h>
-
+#include <string.h>
 #include <common.h>
 #include <kernel/tty.h>
 #include <kernel/arch_init.h>
@@ -7,8 +7,8 @@
 #include <kernel/heap.h>
 #include <kernel/ata.h>
 #include <kernel/panic.h>
-
 #include <kernel/process.h>
+#include <kernel/block_io.h>
 
 typedef void entry_main(void);
 
@@ -43,7 +43,14 @@ void test_ata()
 	printf("Disk max 28bit addressable LBA: %d\n", max_lba);
     read_sectors_ATA_28bit_PIO(false, (uint16_t*)mbr, 0, 1);
 
-	printf("Disk MBR last four bytes: 0x%x\n", *(uint32_t*) &mbr[508]);
+	printf("(ATA) Disk MBR last four bytes: 0x%x\n", *(uint32_t*) &mbr[508]);
+
+	memset(mbr, 0, 512);
+	block_storage* storage = get_block_storage(1);
+	storage->read_blocks(storage, mbr, 0, 1);
+	printf("(Block IO) Disk MBR last four bytes: 0x%x\n", *(uint32_t*) &mbr[508]);
+
+
 	kfree(mbr);
 }
 
@@ -58,11 +65,19 @@ void test_paging()
 	PANIC("Failed to trigger page fault");
 }
 
+void init()
+{
+	initialize_block_storage();
+}
+
 void kernel_main(uint32_t mbt_physical_addr) {
 
 	// Architecture specific initialization
 	initialize_architecture(mbt_physical_addr);
-
+	
+	// Non-architecture specific initialization
+	init();
+	
 	terminal_clear_screen();
 
 	printf("Welcome to Simple-OS!\n");
