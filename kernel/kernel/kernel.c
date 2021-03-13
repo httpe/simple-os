@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <kernel/heap.h>
 #include <kernel/ata.h>
+#include <kernel/panic.h>
 
 #include <arch/i386/kernel/process.h>
 
@@ -54,6 +55,7 @@ void test_paging()
 	uint32_t* ptr = (uint32_t*)0xA0000000;
 	uint32_t volatile do_page_fault = *ptr;
 	UNUSED_ARG(do_page_fault);
+	PANIC("Failed to trigger page fault");
 }
 
 void kernel_main(uint32_t mbt_physical_addr) {
@@ -76,7 +78,6 @@ void kernel_main(uint32_t mbt_physical_addr) {
 	init_first_process();
 	scheduler();
 
-	// Hang by infinite loop
-	while (1);
+	PANIC("Returned from scheduler");
 }
 
