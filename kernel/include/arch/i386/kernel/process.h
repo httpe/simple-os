@@ -43,6 +43,7 @@ typedef struct proc {
   struct proc *parent;                // Parent process
   struct trapframe *tf;               // Trap frame for current syscall
   struct context *context;            // swtch() here to run process; used for switching between process in kernel space
+  uint32_t size;                      // process size, a pointer to the end of the process memory
 } proc;
 
 proc* create_process();

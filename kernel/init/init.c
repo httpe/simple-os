@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <syscall.h>
 #include <stdio.h>
+#include <string.h>
 
 int user_main(int argc, char* argv[]) {
     (void) argc;
@@ -31,5 +32,10 @@ int user_main(int argc, char* argv[]) {
         do_syscall_1(SYS_EXIT, 0);
     }
     
+    ret = do_syscall_1(SYS_SBRK, 100);
+    const char* str1 = "Test SBRK!";
+    memmove((char*) ret, str1, strlen(str1)+1);
+    printf("%s", (char*) ret);
+
     while(1);
 }

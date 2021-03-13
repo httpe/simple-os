@@ -247,12 +247,11 @@ static uint32_t alloc_frame(pde* page_dir, uint32_t page_index, bool is_kernel, 
     return frame_index;
 }
 
-void dealloc_pages(pde* page_dir, uint32_t vaddr, size_t page_count) {
+void dealloc_pages(pde* page_dir, uint32_t page_index, size_t page_count) {
     if (page_count == 0) {
         return;
     }
-
-    uint32_t page_index = PAGE_INDEX_FROM_VADDR(vaddr);
+    
     for (uint32_t idx = page_index; idx < page_index + page_count; idx++) {
         free_frame(page_dir, idx);
     }
@@ -260,11 +259,8 @@ void dealloc_pages(pde* page_dir, uint32_t vaddr, size_t page_count) {
 
 // allocate frames for pages starting at vaddr, panic if already mapped
 // return: starting vaddr of the allocated pages 
-uint32_t alloc_pages_at(pde* page_dir, uint32_t vaddr, size_t size, bool is_kernel, bool is_writeable)
+uint32_t alloc_pages_at(pde* page_dir, uint32_t page_index, size_t page_count, bool is_kernel, bool is_writeable)
 {
-    uint32_t offset = vaddr - VADDR_FROM_PAGE_INDEX(PAGE_INDEX_FROM_VADDR(vaddr));
-    uint32_t page_index = PAGE_INDEX_FROM_VADDR(vaddr);
-    uint32_t page_count = PAGE_COUNT_FROM_BYTES(offset + size);
     for (uint32_t idx = page_index; idx < page_index + page_count; idx++) {
         alloc_frame(page_dir, idx, is_kernel, is_writeable);
     }

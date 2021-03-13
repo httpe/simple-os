@@ -100,6 +100,8 @@ void init_first_process()
     p->tf->esp = entry + PAGE_SIZE; // use the ending part of the page as stack 
     p->tf->eip = entry;
 
+    p->size = p->tf->esp;
+
     p->state = PROC_STATE_RUNNABLE;
 }
 
@@ -178,7 +180,7 @@ int wait()
                 no_child = false;
                 if(child->state == PROC_STATE_ZOMBIE) {
                     uint32_t child_pid = child->pid;
-                    dealloc_pages(curr_page_dir(), (uint32_t) child->kernel_stack, 1);
+                    dealloc_pages(curr_page_dir(), PAGE_INDEX_FROM_VADDR((uint32_t) child->kernel_stack), 1);
                     free_user_space(child->page_dir);
                     *child = (proc) {0};
                     child->state = PROC_STATE_UNUSED;

@@ -97,8 +97,7 @@ int sys_exec(trapframe* r)
 
     // allocate stack to just below the higher half kernel mapping
     uint32_t ustack_end = (uint32_t) MAP_MEM_PA_ZERO_TO;
-    uint32_t ustack_size = PAGE_SIZE*USER_STACK_PAGE_SIZE;
-    alloc_pages_at(page_dir, ustack_end - ustack_size, ustack_size, false, true);
+    alloc_pages_at(page_dir, PAGE_INDEX_FROM_VADDR(ustack_end) - 1, USER_STACK_PAGE_SIZE, false, true);
     
     // user stack, mimic a normal function call
     uint32_t ustack[3+MAX_ARGC+1]; // +1: add a termination zero
@@ -131,6 +130,8 @@ int sys_exec(trapframe* r)
     p->tf->esp = ustack_esp;
     p->tf->eip = entry_point;
 
+    p->size = (vaddr_ub + (PAGE_SIZE - 1))/PAGE_SIZE * PAGE_SIZE;
+
     // switch to new page dir
     pde* old_page_dir = p->page_dir;
     p->page_dir = page_dir;
@@ -145,6 +146,24 @@ int sys_exec(trapframe* r)
     PANIC_ASSERT(is_vaddr_accessible(curr_page_dir(), p->tf->esp, false, false));
     
     return 0;
+}
+
+// increase/decrease process image size
+int sys_sbrk(trapframe* r)
+{
+    int32_t delta = *(int32_t*) (r->esp + 4);
+    
+    proc* p = curr_proc();
+    uint32_t orig_size = p->size;
+    p->size = p->size + delta;
+    uint32_t orig_last_pg_idx = PAGE_INDEX_FROM_VADDR(orig_size - 1);
+    uint32_t new_last_pg_idx =  PAGE_INDEX_FROM_VADDR(p->size - 1);
+    if(new_last_pg_idx > orig_last_pg_idx) {
+        alloc_pages_at(p->page_dir, orig_last_pg_idx + 1, new_last_pg_idx - orig_last_pg_idx, false, true);
+    } else if(new_last_pg_idx < orig_last_pg_idx) {
+        dealloc_pages(p->page_dir, new_last_pg_idx + 1, orig_last_pg_idx - new_last_pg_idx); 
+    }
+    return (int) orig_size;
 }
 
 int sys_print(trapframe* r)
@@ -168,6 +187,7 @@ int sys_fork(trapframe* r)
     proc* p_curr = curr_proc();
     p_new->page_dir = copy_user_space(p_curr->page_dir);
     p_new->parent = p_curr;
+    p_new->size = p_curr->size;
     *p_new->tf = *p_curr->tf;
     // child process will have return value zero from fork
     p_new->tf->eax = 0;
@@ -213,6 +233,9 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_WAIT:
         r->eax = sys_wait(r);
+        break;
+    case SYS_SBRK:
+        r->eax = sys_sbrk(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);

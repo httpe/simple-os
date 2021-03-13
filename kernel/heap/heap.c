@@ -214,7 +214,7 @@ void heap_free(heap_t* heap, uint32_t vaddr) {
             claim_free_space(heap, unified_free_header);
             memset(unified_free_header, 0, sizeof(heap_header_t));
             memset(unified_free_footer, 0, sizeof(heap_footer_t));
-            dealloc_pages(curr_page_dir(), (uint32_t)unified_free_header, page_count);
+            dealloc_pages(curr_page_dir(), PAGE_INDEX_FROM_VADDR((uint32_t)unified_free_header), page_count);
             heap->size_in_pages -= page_count;
             return;
         }
@@ -236,7 +236,7 @@ void heap_free(heap_t* heap, uint32_t vaddr) {
             new_footer->magic = HEAP_FOOTER_MAGIC_RIGHT;
             new_footer->header = unified_free_header;
             insert_free_space(heap, unified_free_header);
-            dealloc_pages(curr_page_dir(), (uint32_t)new_footer + sizeof(heap_footer_t), page_to_shrink);
+            dealloc_pages(curr_page_dir(), PAGE_INDEX_FROM_VADDR((uint32_t)new_footer + sizeof(heap_footer_t)), page_to_shrink);
             heap->size_in_pages -= page_to_shrink;
         }
 
