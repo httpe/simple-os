@@ -98,10 +98,10 @@ $(ARCHDIR)/crt/crtbegin.o $(ARCHDIR)/crt/crtend.o:
 	OBJ=`$(CC) $(CFLAGS) $(LDFLAGS) -print-file-name=$(@F)` && cp "$$OBJ" $@
 
 .c.o:
-	$(CC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) $(CPPFLAGS)
+	$(CC) -MD -MP -c $< -o $@ -std=gnu11 $(CFLAGS) $(CPPFLAGS)
 
 .S.o:
-	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+	$(CC) -MD -MP -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 %.o: %.asm
 	$(AS) $(ASMFLAGS) $< -o $@
