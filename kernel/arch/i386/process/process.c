@@ -96,6 +96,7 @@ proc* create_process()
 void init_first_process()
 {
     proc* p = create_process();
+    PANIC_ASSERT(p != NULL);
     init_process = p;
 
     // allocate page dir
