@@ -8,7 +8,7 @@
 #include <kernel/ata.h>
 #include <kernel/panic.h>
 
-#include <arch/i386/kernel/process.h>
+#include <kernel/process.h>
 
 typedef void entry_main(void);
 

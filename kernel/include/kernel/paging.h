@@ -21,6 +21,7 @@ struct page_directory_entry;
 typedef struct page_directory_entry pde;
 
 pde* curr_page_dir();
+pde* alloc_page_dir();
 
 uint32_t alloc_pages(pde* page_dir, size_t page_count, bool is_kernel, bool is_writeable);
 uint32_t alloc_pages_at(pde* page_dir, uint32_t page_index, size_t page_count, bool is_kernel, bool is_writeable);

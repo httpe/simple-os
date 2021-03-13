@@ -1,13 +1,12 @@
 #include <stdio.h>
 #include <syscall.h>
 #include <kernel/paging.h>
-#include <arch/i386/kernel/paging.h>
+#include <kernel/syscall.h>
 #include <arch/i386/kernel/segmentation.h>
 #include <arch/i386/kernel/isr.h>
 #include <arch/i386/kernel/idt.h>
 #include <arch/i386/kernel/port_io.h>
 #include <arch/i386/kernel/pic.h>
-#include <arch/i386/kernel/syscall.h>
 
 
 

@@ -9,8 +9,9 @@
 #include <kernel/tar.h>
 #include <common.h>
 
-#include <arch/i386/kernel/syscall.h>
-#include <arch/i386/kernel/process.h>
+#include <arch/i386/kernel/isr.h>
+#include <kernel/process.h>
+#include <kernel/paging.h>
 
 
 extern char MAP_MEM_PA_ZERO_TO[];
@@ -90,8 +91,7 @@ int sys_exec(trapframe* r)
     }
 
     // allocate page dir
-    pde* page_dir = (pde*) alloc_pages(curr_page_dir(), 1, true, true);
-    memset(page_dir, 0, sizeof(pde)*PAGE_DIR_SIZE);
+    pde* page_dir = alloc_page_dir();
 
     // parse and load ELF binary
     uint32_t vaddr_ub = 0;
@@ -141,9 +141,8 @@ int sys_exec(trapframe* r)
     // free_user_space(old_page_dir); // free frames occupied by the old page dir
 
     PANIC_ASSERT(p->page_dir != old_page_dir);
-    PANIC_ASSERT((uint32_t) PAGE_DIR_PHYSICAL_ADDR != vaddr2paddr(curr_page_dir(), (uint32_t) old_page_dir));
-    PANIC_ASSERT(vaddr2paddr(curr_page_dir(), (uint32_t) curr_page_dir()) == (uint32_t) PAGE_DIR_PHYSICAL_ADDR);
-    PANIC_ASSERT((uint32_t) PAGE_DIR_PHYSICAL_ADDR == vaddr2paddr(curr_page_dir(), (uint32_t) page_dir));
+    PANIC_ASSERT((uint32_t) vaddr2paddr(curr_page_dir(), (uint32_t) curr_page_dir()) != vaddr2paddr(curr_page_dir(), (uint32_t) old_page_dir));
+    PANIC_ASSERT((uint32_t) vaddr2paddr(curr_page_dir(), (uint32_t) curr_page_dir()) == vaddr2paddr(curr_page_dir(), (uint32_t) page_dir));
     PANIC_ASSERT(is_vaddr_accessible(curr_page_dir(), p->tf->eip, false, false));
     PANIC_ASSERT(is_vaddr_accessible(curr_page_dir(), p->tf->esp, false, false));
     

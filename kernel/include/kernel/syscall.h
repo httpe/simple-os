@@ -12,4 +12,12 @@
 #define SYS_WAIT 6
 #define SYS_SBRK 7
 
+// defined in interrupt.asm
+extern void int88();
+
+// arch specific, defined in isr.h
+struct trapframe;
+
+void syscall_handler(struct trapframe* r);
+
 #endif

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <common.h>
 #include <arch/i386/kernel/process.h>
+#include <kernel/process.h>
 #include <kernel/paging.h>
 #include <kernel/panic.h>
 #include <arch/i386/kernel/segmentation.h>
@@ -76,8 +77,7 @@ void init_first_process()
     init_process = p;
 
     // allocate page dir
-    p->page_dir = (pde*) alloc_pages(curr_page_dir(), 1, true, true);
-    memset(p->page_dir, 0, sizeof(pde)*PAGE_DIR_SIZE);
+    p->page_dir = alloc_page_dir();
 
     // allocate/map user space page for the start_init routine
     PANIC_ASSERT((uint32_t)START_INIT_RELOC_BEGIN % 0x1000 == 0);
