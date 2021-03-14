@@ -10,7 +10,7 @@ static void ATA_delay_400ns();
 // LBA: 0-based Linear Block Address, 28bit LBA shall be between 0 to 0x0FFFFFFF
 // sector_count: How many sectors you want to read. A sectorcount of 0 means 256 sectors = 128K
 //
-void read_sectors_ATA_28bit_PIO(uint16_t* target, uint32_t LBA, uint8_t sector_count) {
+static void read_sectors_ATA_28bit_PIO(uint16_t* target, uint32_t LBA, uint8_t sector_count) {
     ATA_wait_BSY();
     // Send 0xE0 for the "master" or 0xF0 for the "slave", ORed with the highest 4 bits of the LBA to port 0x1F6: outb(0x1F6, 0xE0 | (slavebit << 4) | ((LBA >> 24) & 0x0F))
     outb(0x1F6, 0xE0 | ((LBA >> 24) & 0xF));
@@ -24,8 +24,13 @@ void read_sectors_ATA_28bit_PIO(uint16_t* target, uint32_t LBA, uint8_t sector_c
     outb(0x1F5, (uint8_t)(LBA >> 16));
     // Send the "READ SECTORS" command (0x20) to port 0x1F7: outb(0x1F7, 0x20)
     outb(0x1F7, 0x20); //Send the read command
-
-    for (int j = 0;j < sector_count;j++) {
+    int count;
+    if(sector_count == 0) {
+        count = 256;
+    } else {
+        count = sector_count;
+    }
+    for (int j = 0;j < count;j++) {
         // Poll for status
         ATA_delay_400ns();
         ATA_wait_BSY();
@@ -37,35 +42,23 @@ void read_sectors_ATA_28bit_PIO(uint16_t* target, uint32_t LBA, uint8_t sector_c
     }
 }
 
-// Write sectors to the primary ATA device using 28bit PIO method 
-// 
-// LBA: 0-based Linear Block Address, 28bit LBA shall be between 0 to 0x0FFFFFFF
-// sector_count: How many sectors you want to write
-// source: a buffer whose length is sector_count*512 bytes 
-//
-void write_sectors_ATA_28bit_PIO(uint32_t LBA, uint8_t sector_count, uint16_t* source) {
-    ATA_wait_BSY();
-    outb(0x1F6, 0xE0 | ((LBA >> 24) & 0xF));
-    outb(0x1F2, sector_count);
-    outb(0x1F3, (uint8_t)LBA);
-    outb(0x1F4, (uint8_t)(LBA >> 8));
-    outb(0x1F5, (uint8_t)(LBA >> 16));
-    // To write sectors in 28 bit PIO mode, send command "WRITE SECTORS" (0x30) to the Command port
-    outb(0x1F7, 0x30); //Send the write command
-
-    for (int j = 0;j < sector_count;j++) {
-        ATA_wait_BSY();
-        ATA_wait_DRQ();
-        for (int i = 0;i < 256;i++) {
-            // Do not use REP OUTSW to transfer data. There must be a tiny delay between each OUTSW output uint16_t. A jmp $+2 size of delay
-            outw(0x1F0, source[i]);
-            io_wait();
+void read_sectors_ATA_PIO(void* buf, uint32_t LBA, uint32_t sector_count)
+{
+    while(sector_count) {
+        if(sector_count < 256) {
+            read_sectors_ATA_28bit_PIO((uint16_t*) buf, LBA, sector_count);
+            return;
+        } else {
+            // read 256 sectors
+            read_sectors_ATA_28bit_PIO((uint16_t*) buf, LBA, 0);
+            LBA += 256;
+            sector_count -= 256;
+            buf += 256*512;
         }
     }
-
-    // Make sure to do a Cache Flush (ATA command 0xE7) after each write command completes.
-    outb(0x1F7, 0xE7);
 }
+
+
 
 // Execute ATA PIO IDENTIFY command
 // Ref: https://wiki.osdev.org/ATA_PIO_Mode#IDENTIFY_command
@@ -74,7 +67,7 @@ void write_sectors_ATA_28bit_PIO(uint32_t LBA, uint8_t sector_count, uint16_t* s
 // 
 // return: zero = success, otherwise failed
 // 
-int8_t ATA_Identify(uint16_t* target) {
+static int8_t ATA_Identify(uint16_t* target) {
     ATA_wait_BSY();
     // select a target drive by sending 0xA0 for the master drive, or 0xB0 for the slave, to the "drive select" IO port (0x1F6)
     outb(0x1F6, 0xA0);

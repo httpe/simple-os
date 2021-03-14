@@ -25,10 +25,7 @@ ERR: a 1 indicates that an error occured. An error code has been placed in the e
 #define STATUS_DF 0x20
 #define STATUS_ERR 0x01
 
-void read_sectors_ATA_28bit_PIO(uint16_t* target, uint32_t LBA, uint8_t sector_count);
-void write_sectors_ATA_28bit_PIO(uint32_t LBA, uint8_t sector_count, uint16_t* words);
-
-int8_t ATA_Identify(uint16_t* target);
+void read_sectors_ATA_PIO(void* buf, uint32_t LBA, uint32_t sector_count);
 uint32_t get_total_28bit_sectors();
 
 #endif
