@@ -4,6 +4,20 @@
 // Memory allocator by Kernighan and Ritchie,
 // The C programming Language, 2nd ed.  Section 8.7.
 
+#if defined(__is_libk)
+
+#include <kernel/heap.h>
+
+void free(void *ap) {
+  kfree(ap);
+}
+
+void* malloc(uint32_t size) {
+  return kmalloc(size);
+}
+
+#else
+
 #include <syscall.h>
 
 typedef unsigned int   uint;
@@ -26,7 +40,7 @@ static Header base;
 static Header *freep;
 
 
-void *sbrk(int increment)
+static void *sbrk(int increment)
 {
     return (void*) do_syscall_1(SYS_SBRK, (void*) increment);
 }
@@ -98,3 +112,5 @@ malloc(uint nbytes)
         return 0;
   }
 }
+
+#endif
