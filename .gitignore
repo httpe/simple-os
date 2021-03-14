@@ -10,3 +10,4 @@ simple_os.kernel
 init
 !init/
 serial_port_output.txt
+*.fat
