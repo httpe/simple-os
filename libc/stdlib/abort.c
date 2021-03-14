@@ -5,6 +5,7 @@
 #include <kernel/panic.h>
 #else
 #include <syscall.h>
+static inline _syscall1(SYS_EXIT, int, sys_exit, int, exit_code)
 #endif
 
 __attribute__((__noreturn__))
@@ -13,7 +14,7 @@ void abort(void) {
 	PANIC("Kernel abort()");
 #else
 // TODO: Abnormally terminate the process as if by SIGABRT.
-	do_syscall_1(SYS_EXIT, -1);
+	sys_exit(-1);
 #endif
 	while (1) { }
 	__builtin_unreachable();

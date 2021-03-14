@@ -20,6 +20,8 @@ void* malloc(uint32_t size) {
 
 #include <syscall.h>
 
+static inline _syscall1(SYS_SBRK, void*, sbrk, int, size_delta)
+
 typedef unsigned int   uint;
 typedef unsigned short ushort;
 typedef unsigned char  uchar;
@@ -39,11 +41,6 @@ typedef union header Header;
 static Header base;
 static Header *freep;
 
-
-static void *sbrk(int increment)
-{
-    return (void*) do_syscall_1(SYS_SBRK, (void*) increment);
-}
 
 void
 free(void *ap)

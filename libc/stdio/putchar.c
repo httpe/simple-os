@@ -4,6 +4,7 @@
 #include <kernel/tty.h>
 #else
 #include <syscall.h>
+static inline _syscall1(SYS_PRINT, int, sys_print, char*, str)
 #endif
 
 int putchar(int ic) {
@@ -14,7 +15,7 @@ int putchar(int ic) {
 #else
 	// TODO: Implement stdio and the write system call.
 	char c[2] = {ic, 0};
-	do_syscall_1(SYS_PRINT, c);
+	sys_print(c);
 #endif
 	return ic;
 }
