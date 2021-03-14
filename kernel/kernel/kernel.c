@@ -9,6 +9,7 @@
 #include <kernel/panic.h>
 #include <kernel/process.h>
 #include <kernel/block_io.h>
+#include <time.h>
 
 typedef void entry_main(void);
 
@@ -81,6 +82,8 @@ void kernel_main(uint32_t mbt_physical_addr) {
 	terminal_clear_screen();
 
 	printf("Welcome to Simple-OS!\n");
+	date_time dt = current_datetime();
+	printf("CMOS Time: %u-%u-%u %u:%u:%u", dt.tm_year + 1900, dt.tm_mon, dt.tm_mday, dt.tm_hour, dt.tm_min, dt.tm_sec);
 	printf("\nPress any key to start typing on the screen!\n");
 
 	test_malloc();
