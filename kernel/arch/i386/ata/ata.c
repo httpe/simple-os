@@ -114,6 +114,7 @@ static void write_sectors_ATA_28bit_PIO(bool slave, uint32_t LBA, uint8_t sector
             outw(0x1F0, source[i]);
             io_wait();
         }
+        source += 256;
     }
 
     // Make sure to do a Cache Flush (ATA command 0xE7) after each write command completes.
