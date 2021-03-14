@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-
+#include <common.h>
 #include <assert.h>
 
 #include <stddef.h>
@@ -88,18 +88,18 @@ static fat_cluster_status fat32_interpret_fat_entry(uint32_t entry)
     return FAT_CLUSTER_RESERVED;
 }
 
-static int32_t fat32_get_meta(fat32_meta* meta)
+static int fat32_get_meta(fat32_meta* meta)
 {
     block_storage* storage = meta->storage;
     
     //TODO: Recognize MBR partitions
-    uint32_t sectors_to_read = 1 + (sizeof(fat32_bootsector) - 1) / storage->block_size;
+    uint sectors_to_read = 1 + (sizeof(fat32_bootsector) - 1) / storage->block_size;
     uint8_t* buff = malloc(sectors_to_read*storage->block_size);
     int64_t bytes_read = storage->read_blocks(storage, buff, 0, sectors_to_read);
     if(bytes_read != storage->block_size*sectors_to_read) {
         goto free_buff;
     }
-    uint32_t partition_start_lba = 0;
+    uint partition_start_lba = 0;
     mbr_partition_table_entry* partition_table = (mbr_partition_table_entry*) &buff[0x1BE];
     for(int i=0;i<4;i++) {
         if(partition_table[i].driver_attributes == 0x80 && partition_table[i].partition_type == 0x0C) {
@@ -119,7 +119,7 @@ static int32_t fat32_get_meta(fat32_meta* meta)
     meta->bootsector = malloc(sizeof(fat32_bootsector));
     memmove(meta->bootsector, buff, sizeof(*meta->bootsector));
     // Sanity check
-    uint32_t good = 1;
+    uint good = 1;
     good = good & (meta->bootsector->mbr_signature == 0xAA55); // ensure MBR magic number
     good = good & (meta->bootsector->bytes_per_sector ==  storage->block_size); // ensure sector size
     good = good & (meta->bootsector->root_entry_count == 0); // ensure is FAT32 not FAT12/16
@@ -148,7 +148,7 @@ static int32_t fat32_get_meta(fat32_meta* meta)
     if(meta->bootsector->table_count == 0) {
         goto free_fs_info;
     }
-    uint32_t fat_byte_size = meta->bootsector->table_sector_size_32 * meta->bootsector->bytes_per_sector;
+    uint fat_byte_size = meta->bootsector->table_sector_size_32 * meta->bootsector->bytes_per_sector;
     meta->fat = malloc(fat_byte_size);
     bytes_read = storage->read_blocks(storage, (uint8_t*) meta->fat, meta->bootsector->hidden_sector_count +  meta->bootsector->reserved_sector_count, meta->bootsector->table_sector_size_32);
     if(bytes_read != fat_byte_size) {
@@ -189,7 +189,7 @@ return -1;
 
 }
 
-static fat_cluster_status fat32_get_cluster_info(fat32_meta* meta, uint32_t cluster_number, fat_cluster* cluster)
+static fat_cluster_status fat32_get_cluster_info(fat32_meta* meta, uint cluster_number, fat_cluster* cluster)
 {
     // First&second cluster are reserved for FAT ID and End of Cluster Mark 
     if(cluster_number <= 1) {
@@ -207,11 +207,11 @@ static fat_cluster_status fat32_get_cluster_info(fat32_meta* meta, uint32_t clus
     return status;
 }
 
-static uint32_t count_clusters(fat32_meta* meta, uint32_t cluster_number)
+static uint count_clusters(fat32_meta* meta, uint cluster_number)
 {
     fat_cluster cluster;
     cluster.next = cluster_number;
-    uint32_t total_cluster_count = 0;
+    uint total_cluster_count = 0;
     while(1) {
         fat32_get_cluster_info(meta, cluster.next, &cluster);
         total_cluster_count++;
@@ -222,14 +222,14 @@ static uint32_t count_clusters(fat32_meta* meta, uint32_t cluster_number)
 }
 
 // Get cluster number by indexing into a cluster chain, negative index means counting from EOC
-static uint32_t fat32_index_cluster_chain(fat32_meta* meta, uint32_t cluster_number, int32_t index)
+static uint fat32_index_cluster_chain(fat32_meta* meta, uint cluster_number, int index)
 {
     if(cluster_number == 0) {
         return 0;
     }
 
     if(index < 0) {
-        uint32_t cluster_count = count_clusters(meta, cluster_number);
+        uint cluster_count = count_clusters(meta, cluster_number);
         index = cluster_count + index;
     }
     if(index < 0) {
@@ -249,14 +249,14 @@ static uint32_t fat32_index_cluster_chain(fat32_meta* meta, uint32_t cluster_num
     return cluster.next;
 }
 
-static int32_t fat32_write_meta(fat32_meta* meta, fat32_meta* new_meta)
+static int fat32_write_meta(fat32_meta* meta, fat32_meta* new_meta)
 {
-    uint32_t fat_byte_size = meta->bootsector->table_sector_size_32*meta->bootsector->bytes_per_sector;
+    uint fat_byte_size = meta->bootsector->table_sector_size_32*meta->bootsector->bytes_per_sector;
     // Write new FAT to main FAT and backups
-    uint32_t fat_idx;
-    uint32_t bytes_written;
+    uint fat_idx;
+    uint bytes_written;
     for(fat_idx = 0; fat_idx < meta->bootsector->table_count; fat_idx++){
-        uint32_t lba = meta->bootsector->hidden_sector_count + meta->bootsector->reserved_sector_count + fat_idx*meta->bootsector->table_sector_size_32;
+        uint lba = meta->bootsector->hidden_sector_count + meta->bootsector->reserved_sector_count + fat_idx*meta->bootsector->table_sector_size_32;
         bytes_written = meta->storage->write_blocks(meta->storage, lba, meta->bootsector->table_sector_size_32, (uint8_t*) new_meta->fat);
         if(bytes_written != fat_byte_size) {
             break;
@@ -266,8 +266,8 @@ static int32_t fat32_write_meta(fat32_meta* meta, fat32_meta* new_meta)
     if(fat_idx != meta->bootsector->table_count) {
         // FAT corrupted!
         // Try restore back to the original FAT
-        for(uint32_t fat_idx_recover = 0; fat_idx_recover <= fat_idx; fat_idx_recover++){
-            uint32_t lba = meta->bootsector->hidden_sector_count + meta->bootsector->reserved_sector_count + fat_idx_recover*meta->bootsector->table_sector_size_32;
+        for(uint fat_idx_recover = 0; fat_idx_recover <= fat_idx; fat_idx_recover++){
+            uint lba = meta->bootsector->hidden_sector_count + meta->bootsector->reserved_sector_count + fat_idx_recover*meta->bootsector->table_sector_size_32;
             bytes_written = meta->storage->write_blocks(meta->storage, lba, meta->bootsector->table_sector_size_32, (uint8_t*) meta->fat);
             // If recover attempt failed, panic
             assert(bytes_written != fat_byte_size);
@@ -276,7 +276,7 @@ static int32_t fat32_write_meta(fat32_meta* meta, fat32_meta* new_meta)
     }
     
     // FS Info is information only, so no rollback and return 0 even if error
-    uint32_t fsinfo_sector_size = 1 + (sizeof(fat32_fsinfo) - 1) / new_meta->storage->block_size;
+    uint fsinfo_sector_size = 1 + (sizeof(fat32_fsinfo) - 1) / new_meta->storage->block_size;
     bytes_written = new_meta->storage->write_blocks(new_meta->storage, meta->bootsector->hidden_sector_count + new_meta->bootsector->fs_info_sector, fsinfo_sector_size, (uint8_t*) new_meta->fs_info);
     // if(bytes_written != new_meta->storage->block_size*fsinfo_sector_size) {
     //     return -1;
@@ -289,7 +289,7 @@ static int32_t fat32_write_meta(fat32_meta* meta, fat32_meta* new_meta)
 static void fat32_copy_meta(fat32_meta* new_meta, fat32_meta* meta)
 {
 
-    uint32_t fat_byte_size = meta->bootsector->table_sector_size_32*meta->bootsector->bytes_per_sector;
+    uint fat_byte_size = meta->bootsector->table_sector_size_32*meta->bootsector->bytes_per_sector;
     if(new_meta->fat == NULL) {
         new_meta->fat = malloc(fat_byte_size);
     }
@@ -320,15 +320,15 @@ static void fat32_free_meta(fat32_meta* meta)
 }
 
 // Return: Cluster number of the first newly allocated cluster
-static uint32_t fat32_allocate_cluster(fat32_meta* meta, uint32_t prev_cluster_number, uint32_t cluster_count_to_allocate)
+static uint fat32_allocate_cluster(fat32_meta* meta, uint prev_cluster_number, uint cluster_count_to_allocate)
 {
-    uint32_t cluster_number = meta->fs_info->next_free_cluster;
+    uint cluster_number = meta->fs_info->next_free_cluster;
     if(cluster_number == 0xFFFFFFFF) {
         cluster_number = 2;
     }
-    uint32_t cluster_number_first_tried = cluster_number;
-    uint32_t max_cluster_number = meta->bootsector->table_sector_size_32*meta->bootsector->bytes_per_sector / 4 - 1;
-    uint32_t allocated = 0, first_new_cluster_number = 0;
+    uint cluster_number_first_tried = cluster_number;
+    uint max_cluster_number = meta->bootsector->table_sector_size_32*meta->bootsector->bytes_per_sector / 4 - 1;
+    uint allocated = 0, first_new_cluster_number = 0;
     
     fat32_meta new_meta = {0};
     fat32_copy_meta(&new_meta, meta);
@@ -365,7 +365,7 @@ static uint32_t fat32_allocate_cluster(fat32_meta* meta, uint32_t prev_cluster_n
     }
     meta->fs_info->next_free_cluster = cluster_number; // not a free cluster, but a good place to start looking for one
 
-    int32_t res = fat32_write_meta(meta, &new_meta);
+    int res = fat32_write_meta(meta, &new_meta);
     if(res == 0) {
         // Update memory cache
         fat32_copy_meta(meta, &new_meta);
@@ -380,7 +380,7 @@ static uint32_t fat32_allocate_cluster(fat32_meta* meta, uint32_t prev_cluster_n
 
 
 // cluster_count_to_free = 0 means free to the end of the chain
-static int32_t fat32_free_cluster(fat32_meta* meta, uint32_t prev_cluster_number, uint32_t cluster_number, uint32_t cluster_count_to_free)
+static int fat32_free_cluster(fat32_meta* meta, uint prev_cluster_number, uint cluster_number, uint cluster_count_to_free)
 {
     if(cluster_number == 0) {
         return 0;
@@ -389,7 +389,7 @@ static int32_t fat32_free_cluster(fat32_meta* meta, uint32_t prev_cluster_number
     fat32_meta new_meta = {0};
     fat32_copy_meta(&new_meta, meta);
     
-    uint32_t cluster_freed = 0;
+    uint cluster_freed = 0;
     fat_cluster cluster = {.next = cluster_number};
     while(cluster.next && (cluster_freed < cluster_count_to_free || cluster_count_to_free == 0)) {
         fat_cluster_status status = fat32_get_cluster_info(meta, cluster.next, &cluster);
@@ -411,7 +411,7 @@ static int32_t fat32_free_cluster(fat32_meta* meta, uint32_t prev_cluster_number
         meta->fs_info->free_cluster_count += cluster_freed;
     }
 
-    int32_t res = fat32_write_meta(meta, &new_meta);
+    int res = fat32_write_meta(meta, &new_meta);
     if(res == 0) {
         // Update memory cache
         fat32_copy_meta(meta, &new_meta);
@@ -425,19 +425,19 @@ static int32_t fat32_free_cluster(fat32_meta* meta, uint32_t prev_cluster_number
 
 }
 
-static int64_t fat32_read_clusters(fat32_meta* meta, uint32_t cluster_number, uint32_t clusters_to_read, uint8_t* buff) 
+static int64_t fat32_read_clusters(fat32_meta* meta, uint cluster_number, uint clusters_to_read, uint8_t* buff) 
 {
     assert(cluster_number >= 2);
-    uint32_t cluster_byte_size = meta->bootsector->bytes_per_sector*meta->bootsector->sectors_per_cluster;
+    uint cluster_byte_size = meta->bootsector->bytes_per_sector*meta->bootsector->sectors_per_cluster;
 
     fat_cluster cluster = {.next = cluster_number};
     int64_t total_bytes_read = 0;
-    for(uint32_t i=0; i < clusters_to_read; i++) {
+    for(uint i=0; i < clusters_to_read; i++) {
         assert(cluster.next != 0);
         fat_cluster_status status = fat32_get_cluster_info(meta, cluster.next, &cluster);
         assert(status == FAT_CLUSTER_USED || (status == FAT_CLUSTER_EOC && i == clusters_to_read-1));
         // the cluster 0 and 1 are not of size sectors_per_cluster
-        uint32_t lba = meta->bootsector->hidden_sector_count + meta->bootsector->reserved_sector_count + meta->bootsector->table_sector_size_32*meta->bootsector->table_count + (cluster.curr-2)*meta->bootsector->sectors_per_cluster;
+        uint lba = meta->bootsector->hidden_sector_count + meta->bootsector->reserved_sector_count + meta->bootsector->table_sector_size_32*meta->bootsector->table_count + (cluster.curr-2)*meta->bootsector->sectors_per_cluster;
         int64_t bytes_read = meta->storage->read_blocks(meta->storage, buff, lba, meta->bootsector->sectors_per_cluster);
         if(bytes_read < 0) {
             return bytes_read;
@@ -450,19 +450,19 @@ static int64_t fat32_read_clusters(fat32_meta* meta, uint32_t cluster_number, ui
     return total_bytes_read;
 }
 
-static int64_t fat32_write_clusters(fat32_meta* meta, uint32_t cluster_number, uint32_t clusters_to_write, uint8_t* buff)
+static int64_t fat32_write_clusters(fat32_meta* meta, uint cluster_number, uint clusters_to_write, uint8_t* buff)
 {
     assert(cluster_number >= 2);
-    uint32_t cluster_byte_size = meta->bootsector->bytes_per_sector*meta->bootsector->sectors_per_cluster;
+    uint cluster_byte_size = meta->bootsector->bytes_per_sector*meta->bootsector->sectors_per_cluster;
 
     fat_cluster cluster = {.next = cluster_number};
     int64_t total_bytes_written = 0;
-    for(uint32_t i=0; i < clusters_to_write; i++) {
+    for(uint i=0; i < clusters_to_write; i++) {
         assert(cluster.next != 0);
         fat_cluster_status status = fat32_get_cluster_info(meta, cluster.next, &cluster);
         assert(status == FAT_CLUSTER_USED || (status == FAT_CLUSTER_EOC && i == clusters_to_write-1));
         // the cluster 0 and 1 are not of size sectors_per_cluster
-        uint32_t lba = meta->bootsector->hidden_sector_count + meta->bootsector->reserved_sector_count + meta->bootsector->table_sector_size_32*meta->bootsector->table_count + (cluster.curr-2)*meta->bootsector->sectors_per_cluster;
+        uint lba = meta->bootsector->hidden_sector_count + meta->bootsector->reserved_sector_count + meta->bootsector->table_sector_size_32*meta->bootsector->table_count + (cluster.curr-2)*meta->bootsector->sectors_per_cluster;
         int64_t bytes_written = meta->storage->write_blocks(meta->storage, lba, meta->bootsector->sectors_per_cluster, buff);
         if(bytes_written < 0) {
             return bytes_written;
@@ -480,7 +480,7 @@ static void trim_file_name(char* str)
     if(str == NULL) {
         return;
     }
-    uint32_t start = 0;
+    uint start = 0;
     while(str[start] == ' ' && str[start] != 0) {
         start++;
     }
@@ -489,7 +489,7 @@ static void trim_file_name(char* str)
         str[0] = 0;
         return;
     }
-    uint32_t end = strlen(str) - 1;
+    uint end = strlen(str) - 1;
     while((str[end] == ' ' || str[end] == '.') && end > start) {
         end--;
     }
@@ -512,7 +512,7 @@ static void fat_standardize_short_name(char* filename, fat32_direntry_short* sho
     }
     filename[FAT_SHORT_NAME_LEN] = 0;
     trim_file_name((char*)filename);
-    uint32_t name_len = strlen((char*)filename);
+    uint name_len = strlen((char*)filename);
     filename[name_len] = '.';
     memmove(&filename[name_len+1],  short_entry->ext, FAT_SHORT_EXT_LEN);
     filename[name_len+1+FAT_SHORT_EXT_LEN] = 0;
@@ -541,8 +541,8 @@ static fat_iterate_dir_status fat32_iterate_dir(fat32_meta* meta, fat_dir_iterat
 {
     if(iter->dir_entries == NULL) {
         // if buff is null, read the whole dir into memory
-        uint32_t cluster_byte_size = meta->bootsector->sectors_per_cluster * meta->bootsector->bytes_per_sector;
-        uint32_t dir_total_cluster_count = count_clusters(meta, iter->first_cluster);
+        uint cluster_byte_size = meta->bootsector->sectors_per_cluster * meta->bootsector->bytes_per_sector;
+        uint dir_total_cluster_count = count_clusters(meta, iter->first_cluster);
         iter->dir_entries = malloc(dir_total_cluster_count*cluster_byte_size);
         int64_t read_res = fat32_read_clusters(meta, iter->first_cluster, dir_total_cluster_count, (uint8_t*) iter->dir_entries);
         if(read_res < 0) {
@@ -556,7 +556,7 @@ static fat_iterate_dir_status fat32_iterate_dir(fat32_meta* meta, fat_dir_iterat
 
     memset(file_entry, 0, sizeof(*file_entry));
     file_entry->dir_cluster = iter->first_cluster;
-	uint32_t lfn_entry_buffered = 0;
+	uint lfn_entry_buffered = 0;
 	uint8_t last_lfn_checksum = 0;
 
     while(1)
@@ -605,9 +605,9 @@ static fat_iterate_dir_status fat32_iterate_dir(fat32_meta* meta, fat_dir_iterat
                 // We do not support USC-2 UNICODE character, any non US-ASCII character will be replaced by '_'
                 // as per Microsoft's documentation "Microsoft Extensible Firmware Initiative FAT32 File System Specification" 
                 // https://download.microsoft.com/download/1/6/1/161ba512-40e2-4cc9-843a-923143f3456c/fatgen103.doc
-                uint32_t lfn_name_byte_len =  FAT32_USC2_FILE_NAME_LEN_PER_LFN*2*lfn_entry_buffered;
+                uint lfn_name_byte_len =  FAT32_USC2_FILE_NAME_LEN_PER_LFN*2*lfn_entry_buffered;
                 char* start_of_filename = &file_entry->filename[sizeof(file_entry->filename)] - lfn_name_byte_len;
-                for(uint32_t i=0; i<lfn_name_byte_len/2; i++) {
+                for(uint i=0; i<lfn_name_byte_len/2; i++) {
                     char usc2_first = start_of_filename[i*2];
                     char usc2_second = start_of_filename[i*2+1];
                     // Unicode (and UCS-2) is compatible with 7-bit ASCII / US-ASCII
@@ -756,73 +756,15 @@ void fat32_set_timestamp(uint16_t* date_entry, uint16_t* time_entry)
 }
 
 
-
-// Free non-used clusters for a directory
-// static int32_t fat32_trim_directory(block_storage_t* storage, fat32_meta_t* meta, uint32_t start_cluster_number, uint32_t end_cluster_number)
-// {
-//     fat_cluster cluster;
-//     fat_cluster_status cluster_status = fat32_get_cluster_info(meta, start_cluster_number, &cluster);
-
-//     if(cluster.prev == 0 && start_cluster_number == end_cluster_number) {
-//         // do no trim if only first cluster is affected
-//         return 0;
-//     }
-//     if(cluster.prev == 0) {
-//         // start trimming from at least the second cluster
-//         cluster_status = fat32_get_cluster_info(meta, cluster.next, &cluster);
-//     }
-
-//     uint32_t cluster_byte_size = meta->bootsector->bytes_per_sector*meta->bootsector->sectors_per_cluster;
-//     fat32_direntry_t* dir =  malloc(cluster_byte_size);
-//     uint32_t max_dir_entry_count = cluster_byte_size / sizeof(fat32_direntry_t);
-    
-//     int32_t freed = 0; 
-//     while(1) {
-//         uint32_t bytes_read = fat32_read_cluster(storage, meta, cluster.curr, (uint8_t*) dir);
-//         if(bytes_read != cluster_byte_size) {
-//             free(dir);
-//             return -1;
-//         }
-//         // Check if all entries are unused
-//         uint32_t idx;
-//         for(idx = 0; idx <= max_dir_entry_count; idx++) {
-//             if(dir[idx].short_entry.name[0] != 0xE5 && dir[idx].short_entry.name[0] != 0) {
-//                 // If an entry is used
-//                 break;
-//             }
-//         }
-
-//         if(idx == max_dir_entry_count) {
-//             // all entries are unused
-//             int32_t res = fat32_free_cluster(storage, meta, cluster.curr, 1);
-//             if(res < 0) {
-//                 free(dir);
-//                 return -1;
-//             }
-//             freed++;
-//         }
-
-//         if(cluster.curr == end_cluster_number) {
-//             free(dir);
-//             return freed;
-//         }
-//         assert(cluster.next != 0);
-//         cluster_status = fat32_get_cluster_info(meta, cluster.next, &cluster);
-//     }
-
-
-// }
-
-
 // Set short name according to the standardized filename
-static int32_t fat32_set_short_name(fat32_file_entry* file_entry)
+static int fat32_set_short_name(fat32_file_entry* file_entry)
 {
     // TODO: Add checks for illegal characters
-    int32_t filename_len = (int32_t) strlen((char*)file_entry->filename);
+    int filename_len = (int) strlen((char*)file_entry->filename);
     assert(filename_len > 0);
     memset(file_entry->direntry.nameext, ' ', FAT_SHORT_NAME_LEN + FAT_SHORT_EXT_LEN);
-    uint32_t copied = 0;
-    for(int32_t i = 0; copied < FAT_SHORT_NAME_LEN && i < filename_len; i++) {
+    uint copied = 0;
+    for(int i = 0; copied < FAT_SHORT_NAME_LEN && i < filename_len; i++) {
         if(file_entry->filename[i] == ' ') {
             continue;
         }
@@ -839,10 +781,10 @@ static int32_t fat32_set_short_name(fat32_file_entry* file_entry)
         copied++;
     }
     copied = 0;
-    for(int32_t i = filename_len - 1; i >= 0; i--) {
+    for(int i = filename_len - 1; i >= 0; i--) {
         // find last period
         if(file_entry->filename[i] == '.') {
-            for(int32_t j = i + 1; j < filename_len; j++) {
+            for(int j = i + 1; j < filename_len; j++) {
                 if(file_entry->filename[j] != ' ' && file_entry->filename[j] != '.') {
                     file_entry->direntry.ext[copied] = file_entry->filename[j];
                     copied++;
@@ -858,7 +800,7 @@ static int32_t fat32_set_short_name(fat32_file_entry* file_entry)
 }
 
 // Return: numeric tail appended for short name collision prevention
-static int32_t fat32_set_numeric_tail(fat32_meta* meta, fat_dir_iterator* iter, fat32_file_entry* file_entry)
+static int fat32_set_numeric_tail(fat32_meta* meta, fat_dir_iterator* iter, fat32_file_entry* file_entry)
 {
     char shortname[FAT_SHORT_NAME_LEN + FAT_SHORT_EXT_LEN+1];
     fat32_file_entry existing_entry = {0};
@@ -866,9 +808,9 @@ static int32_t fat32_set_numeric_tail(fat32_meta* meta, fat_dir_iterator* iter, 
 
     // Assume we always need to add numeric tail here
     // Ref: http://elm-chan.org/fsw/ff/00index_e.html
-    for (uint32_t number_tail = 1; number_tail <= 999999; number_tail++) {
-        uint32_t seq = number_tail;
-        int32_t i=FAT_SHORT_NAME_LEN - 1;
+    for (uint number_tail = 1; number_tail <= 999999; number_tail++) {
+        uint seq = number_tail;
+        int i=FAT_SHORT_NAME_LEN - 1;
         do {
             uint8_t c = (uint8_t)((seq % 16) + '0');
             if (c > '9') c += 7;
@@ -879,7 +821,7 @@ static int32_t fat32_set_numeric_tail(fat32_meta* meta, fat_dir_iterator* iter, 
 
         fat32_file_entry working_entry = *file_entry;
         /* Append the number to the SFN body */
-        int32_t j = 0;
+        int j = 0;
         for (; j < i && working_entry.direntry.name[j] != ' '; j++);
         do {
             working_entry.direntry.name[j++] = (i < 8) ? buff[i++] : ' ';
@@ -896,16 +838,16 @@ static int32_t fat32_set_numeric_tail(fat32_meta* meta, fat_dir_iterator* iter, 
     return -1;
 }
 
-static int32_t fat32_write_to_offset(fat32_meta* meta, uint32_t first_cluster, uint32_t offset, uint32_t size, const uint8_t* buff)
+static int fat32_write_to_offset(fat32_meta* meta, uint first_cluster, uint offset, uint size, const uint8_t* buff)
 {
-    uint32_t bytes_per_cluster = meta->bootsector->sectors_per_cluster*meta->bootsector->bytes_per_sector;
-    uint32_t cluster_start_writing = fat32_index_cluster_chain(meta, first_cluster, offset / bytes_per_cluster);
-    uint32_t clusters_to_write = 1 + ((offset + size - 1) / bytes_per_cluster) - (offset / bytes_per_cluster);
+    uint bytes_per_cluster = meta->bootsector->sectors_per_cluster*meta->bootsector->bytes_per_sector;
+    uint cluster_start_writing = fat32_index_cluster_chain(meta, first_cluster, offset / bytes_per_cluster);
+    uint clusters_to_write = 1 + ((offset + size - 1) / bytes_per_cluster) - (offset / bytes_per_cluster);
     fat_cluster cluster = {.next = cluster_start_writing};
 
     uint8_t* cluster_buff = malloc(bytes_per_cluster);
-    uint32_t start_offset_in_cluster, end_offset_in_cluster;
-    for(uint32_t i=0; i < clusters_to_write; i++) {
+    uint start_offset_in_cluster, end_offset_in_cluster;
+    for(uint i=0; i < clusters_to_write; i++) {
         assert(cluster.next != 0);
         fat_cluster_status cluster_status = fat32_get_cluster_info(meta, cluster.next, &cluster);
         assert(cluster_status == FAT_CLUSTER_USED || cluster_status == FAT_CLUSTER_EOC);
@@ -937,23 +879,23 @@ static int32_t fat32_write_to_offset(fat32_meta* meta, uint32_t first_cluster, u
 }
 
 // Return: dir entries added
-static int32_t fat32_add_file_entry(fat32_meta* meta, fat_dir_iterator* iter, fat32_file_entry* file_entry)
+static int fat32_add_file_entry(fat32_meta* meta, fat_dir_iterator* iter, fat32_file_entry* file_entry)
 {
-    uint32_t cluster_byte_size = meta->bootsector->bytes_per_sector*meta->bootsector->sectors_per_cluster;
-    uint32_t dir_entry_per_cluster = cluster_byte_size / sizeof(fat32_direntry_t);
+    uint cluster_byte_size = meta->bootsector->bytes_per_sector*meta->bootsector->sectors_per_cluster;
+    uint dir_entry_per_cluster = cluster_byte_size / sizeof(fat32_direntry_t);
 
     // for sake of simplicity, will always save the file name as LFN entry, even if it fits into 8.3 format
     // filename are US-ASCII characters, each will take a USC-2 char space in LFN
-    uint32_t lfn_len = strlen(file_entry->filename);
-    uint32_t lfn_entry_needed = lfn_len == 0? 0: (lfn_len - 1)/FAT32_USC2_FILE_NAME_LEN_PER_LFN + 1;
-    uint32_t dir_entry_needed = lfn_entry_needed + 1;
+    uint lfn_len = strlen(file_entry->filename);
+    uint lfn_entry_needed = lfn_len == 0? 0: (lfn_len - 1)/FAT32_USC2_FILE_NAME_LEN_PER_LFN + 1;
+    uint dir_entry_needed = lfn_entry_needed + 1;
 
     fat32_file_entry candidate_entry = {0};
     fat32_reset_dir_iterator(iter);
 
     // Find contagious free space for the entries
-    uint32_t free_entry_count = 0;
-    int32_t first_free_entry_idx = -1;
+    uint free_entry_count = 0;
+    int first_free_entry_idx = -1;
     while(1) {
         if(free_entry_count >= dir_entry_needed) {
             break;
@@ -977,8 +919,8 @@ static int32_t fat32_add_file_entry(fat32_meta* meta, fat_dir_iterator* iter, fa
         assert(iter_status == FAT_DIR_ITER_NO_MORE_ENTRY);
         assert(free_entry_count < dir_entry_needed);
         // if reach the end of entries and still no enough space, allocate a new cluster
-        uint32_t clusters_to_alloc = (dir_entry_needed - free_entry_count - 1) / dir_entry_per_cluster + 1;
-        uint32_t first_new_cluster = fat32_allocate_cluster(meta, fat32_index_cluster_chain(meta, iter->first_cluster, -1), clusters_to_alloc);
+        uint clusters_to_alloc = (dir_entry_needed - free_entry_count - 1) / dir_entry_per_cluster + 1;
+        uint first_new_cluster = fat32_allocate_cluster(meta, fat32_index_cluster_chain(meta, iter->first_cluster, -1), clusters_to_alloc);
         if(first_new_cluster == 0) {
             return -EIO;
         }
@@ -997,17 +939,16 @@ static int32_t fat32_add_file_entry(fat32_meta* meta, fat_dir_iterator* iter, fa
     fat32_direntry_t* dir = iter->dir_entries;
 
     // Write dir entries to the buffer
-    // uint32_t dir_entry_added = 0;
-    uint32_t remaining_char_to_copy = lfn_len;
+    uint remaining_char_to_copy = lfn_len;
     char* p_filename = &file_entry->filename[lfn_len];
     fat32_set_short_name(file_entry);
-    int32_t res_numtail = fat32_set_numeric_tail(meta, iter, file_entry);
+    int res_numtail = fat32_set_numeric_tail(meta, iter, file_entry);
     if(res_numtail < 0) {
         return -ENOSPC;
     }
     fat32_direntry_short short_entry = file_entry->direntry;
     fat32_direntry_long long_entry = {.attr = FAT_ATTR_LFN, .csum = lfn_checksum(short_entry.nameext), .type=0x00, .reserved2=0x00};
-    for(uint32_t idx = 0; idx < dir_entry_needed; idx++) {
+    for(uint idx = 0; idx < dir_entry_needed; idx++) {
         if(idx == dir_entry_needed - 1) {
             // only short entry left to write
             dir[first_free_entry_idx + idx].short_entry = short_entry;
@@ -1021,7 +962,7 @@ static int32_t fat32_add_file_entry(fat32_meta* meta, fat_dir_iterator* iter, fa
                 e.seq += 0x40; 
             }
 
-            uint32_t char_to_copy;
+            uint char_to_copy;
             if(remaining_char_to_copy % FAT32_USC2_FILE_NAME_LEN_PER_LFN != 0) {
                 char_to_copy = remaining_char_to_copy % FAT32_USC2_FILE_NAME_LEN_PER_LFN;
             } else {
@@ -1034,7 +975,7 @@ static int32_t fat32_add_file_entry(fat32_meta* meta, fat_dir_iterator* iter, fa
             memset(e.name2, 0xFF, 6*2);
             memset(e.name3, 0xFF, 2*2);
             assert(5+6+2 == FAT32_USC2_FILE_NAME_LEN_PER_LFN);
-            for(uint32_t i=0; i<char_to_copy; i++) {
+            for(uint i=0; i<char_to_copy; i++) {
                 if(p_filename[i] == 0) {
                     break;
                 }
@@ -1073,7 +1014,7 @@ static int32_t fat32_add_file_entry(fat32_meta* meta, fat_dir_iterator* iter, fa
 }
 
 //Return: dir entries removed
-static int32_t fat32_rm_file_entry(fat32_meta* meta, fat_dir_iterator* iter, fat32_file_entry* file_entry)
+static int fat32_rm_file_entry(fat32_meta* meta, fat_dir_iterator* iter, fat32_file_entry* file_entry)
 {
     // Reuse iterator dir buffer, need to ensure the iter is initialized
     fat32_file_entry entry = {0};
@@ -1081,7 +1022,7 @@ static int32_t fat32_rm_file_entry(fat32_meta* meta, fat_dir_iterator* iter, fat
     fat32_direntry_t* dir = iter->dir_entries;
 
     // Write dir entries to the buffer
-    for(uint32_t i = 0; i < file_entry->dir_entry_count; i++) {
+    for(uint i = 0; i < file_entry->dir_entry_count; i++) {
         // Set dir entry as deleted
         dir[file_entry->first_dir_entry_idx + i].short_entry.name[0] = 0xE5;
     }
@@ -1115,7 +1056,7 @@ static int64_t fat32_create_new(fat32_meta* meta, const char *path, fat32_dirent
     // when resolve returns not found, the file entry is filled with last entry in the target dir
     // so we can use it to retrieve the dir cluster info 
     fat_dir_iterator iter = {.first_cluster = file_entry.dir_cluster};
-    uint32_t path_len = strlen(path);
+    uint path_len = strlen(path);
     assert(path_len > 1);
     char* filename = (char*) &path[path_len-1];
     while(*filename == '/') {
@@ -1141,7 +1082,7 @@ static int64_t fat32_create_new(fat32_meta* meta, const char *path, fat32_dirent
     file_entry.direntry.mtime_date = date;
     file_entry.direntry.mtime_time = time;
 
-    int32_t res = fat32_add_file_entry(meta, &iter, &file_entry);
+    int res = fat32_add_file_entry(meta, &iter, &file_entry);
     *short_dir_entry = file_entry.direntry;
     fat_free_dir_iterator(&iter);
     if(res < 0) {
@@ -1152,10 +1093,10 @@ static int64_t fat32_create_new(fat32_meta* meta, const char *path, fat32_dirent
 }
 
 
-static int32_t fat32_update_file_entry(fat32_meta* meta, fat32_file_entry* file_entry)
+static int fat32_update_file_entry(fat32_meta* meta, fat32_file_entry* file_entry)
 {
     fat_dir_iterator iter = {.first_cluster = file_entry->dir_cluster};
-    int32_t dir_res = fat32_rm_file_entry(meta, &iter, file_entry);
+    int dir_res = fat32_rm_file_entry(meta, &iter, file_entry);
     if(dir_res<0) {
         return dir_res;
     }
@@ -1168,7 +1109,7 @@ static int32_t fat32_update_file_entry(fat32_meta* meta, fat32_file_entry* file_
 }
 
 
-static int fat32_readdir(struct fs_mount_point* mount_point, const char * path, int64_t offset, struct fs_dir_filler_info* info, fs_dir_filler filler)
+static int fat32_readdir(struct fs_mount_point* mount_point, const char * path, uint offset, struct fs_dir_filler_info* info, fs_dir_filler filler)
 {
     fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
 
@@ -1242,13 +1183,13 @@ static int fat32_getattr(struct fs_mount_point* mount_point, const char * path, 
     fat32_file_entry file_entry = {0};
     fat_resolve_path_status status = fat32_resolve_path(meta, path, &file_entry);
 
-    uint32_t bytes_per_cluster = meta->bootsector->bytes_per_sector*meta->bootsector->sectors_per_cluster;
+    uint bytes_per_cluster = meta->bootsector->bytes_per_sector*meta->bootsector->sectors_per_cluster;
 
     if(status == FAT_PATH_RESOLVE_ROOT_DIR) {
         // For root dir
         st->mode = S_IFDIR | S_IRWXU | S_IRWXG | S_IRWXO;
         st->nlink = 2;
-        uint32_t cluster_number = meta->bootsector->root_cluster;
+        uint cluster_number = meta->bootsector->root_cluster;
         st->inum = cluster_number;
         st->size = count_clusters(meta, cluster_number)*bytes_per_cluster;
         st->blocks = st->size/512;
@@ -1270,7 +1211,7 @@ static int fat32_getattr(struct fs_mount_point* mount_point, const char * path, 
         } else {
             st->mode = S_IRWXU | S_IRWXG | S_IRWXO;
         }
-        uint32_t cluster_number = file_entry.direntry.cluster_lo + (file_entry.direntry.cluster_hi << 16);
+        uint cluster_number = file_entry.direntry.cluster_lo + (file_entry.direntry.cluster_hi << 16);
         if (HAS_ATTR(file_entry.direntry.attr, FAT_ATTR_DIRECTORY)) {
             st->mode |= S_IFDIR;
             st->nlink = 2;
@@ -1291,15 +1232,10 @@ static int fat32_getattr(struct fs_mount_point* mount_point, const char * path, 
     return 0;
 }
 
-static int fat32_read(struct fs_mount_point* mount_point, const char * path, char *buf, uint64_t size, int64_t offset, struct fs_file_info *fi)
+static int fat32_read(struct fs_mount_point* mount_point, const char * path, char *buf, uint size, uint offset, struct fs_file_info *fi)
 {
 
     fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
-
-    if(offset < 0) {
-        return -EINVAL;
-    }
-    uint32_t unsigned_offset = offset;
 
     fat32_file_entry file_entry = {0};
     if(fi != NULL) {
@@ -1338,9 +1274,9 @@ static int fat32_read(struct fs_mount_point* mount_point, const char * path, cha
 
     fat_cluster cluster;
     cluster.next = file_entry.direntry.cluster_lo + (file_entry.direntry.cluster_hi << 16);
-    uint32_t bytes_per_cluster = meta->bootsector->sectors_per_cluster*meta->bootsector->bytes_per_sector;
+    uint bytes_per_cluster = meta->bootsector->sectors_per_cluster*meta->bootsector->bytes_per_sector;
     uint8_t* cluster_buffer = malloc(bytes_per_cluster);
-    uint32_t size_in_this_cluster;
+    uint size_in_this_cluster;
     int64_t total_bytes_read = 0;
     while(1) {
         fat_cluster_status cluster_status = fat32_get_cluster_info(meta, cluster.next, &cluster);
@@ -1351,24 +1287,24 @@ static int fat32_read(struct fs_mount_point* mount_point, const char * path, cha
         }
         assert(cluster_status == FAT_CLUSTER_USED || cluster_status == FAT_CLUSTER_EOC);
 
-        if(unsigned_offset < bytes_per_cluster) {
+        if(offset < bytes_per_cluster) {
             int64_t read_res = fat32_read_clusters(meta, cluster.curr, 1, cluster_buffer);
             if(read_res < 0) {
                 free(cluster_buffer);
                 return read_res;
             }
-            if(size <= bytes_per_cluster - unsigned_offset) {
+            if(size <= bytes_per_cluster - offset) {
                 size_in_this_cluster = size;
             } else {
-                size_in_this_cluster = bytes_per_cluster - unsigned_offset;
+                size_in_this_cluster = bytes_per_cluster - offset;
             }
-            memmove(buf, cluster_buffer + unsigned_offset, size_in_this_cluster);
+            memmove(buf, cluster_buffer + offset, size_in_this_cluster);
             buf += size_in_this_cluster;
-            unsigned_offset = 0;
+            offset = 0;
             size -= size_in_this_cluster;
             total_bytes_read += size_in_this_cluster;
         } else {
-            unsigned_offset -= bytes_per_cluster;
+            offset -= bytes_per_cluster;
         }
 
         if(size == 0) {
@@ -1382,7 +1318,7 @@ static int fat32_read(struct fs_mount_point* mount_point, const char * path, cha
     }
 }
 
-static int fat32_mknod(struct fs_mount_point* mount_point, const char * path, uint32_t mode)
+static int fat32_mknod(struct fs_mount_point* mount_point, const char * path, uint mode)
 {
     (void) mode;
 
@@ -1396,14 +1332,14 @@ static int fat32_mknod(struct fs_mount_point* mount_point, const char * path, ui
     return 0;
 }
 
-static int fat32_mkdir(struct fs_mount_point* mount_point, const char * path, uint32_t mode)
+static int fat32_mkdir(struct fs_mount_point* mount_point, const char * path, uint mode)
 {
     (void) mode;
 
     fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
     
     fat32_direntry_short short_dir_entry = {.attr = FAT_ATTR_DIRECTORY};
-    uint32_t first_new_cluster = fat32_allocate_cluster(meta, 0, 1);
+    uint first_new_cluster = fat32_allocate_cluster(meta, 0, 1);
     if(first_new_cluster == 0) {
         return -EIO;
     }
@@ -1415,7 +1351,7 @@ static int fat32_mkdir(struct fs_mount_point* mount_point, const char * path, ui
     }
     
     // Add dot entries
-    uint32_t cluster_byte_size = meta->bootsector->bytes_per_sector*meta->bootsector->sectors_per_cluster;
+    uint cluster_byte_size = meta->bootsector->bytes_per_sector*meta->bootsector->sectors_per_cluster;
     fat32_direntry_t* dir_buff = malloc(cluster_byte_size);
     memset(dir_buff, 0, cluster_byte_size);
     // Add .
@@ -1435,13 +1371,13 @@ static int fat32_mkdir(struct fs_mount_point* mount_point, const char * path, ui
     return 0;
 }
 
-static int32_t fat32_is_cluster_opened(fat32_meta* meta, uint32_t cluster)
+static int fat32_is_cluster_opened(fat32_meta* meta, uint cluster)
 {
     if(cluster <= 1) {
         return 0;
     }
     for(int i=0;i<FAT32_N_OPEN_FILE;i++) {
-        uint32_t opened_cluster =  meta->file_table[i].direntry.cluster_lo + (meta->file_table[i].direntry.cluster_hi << 16);
+        uint opened_cluster =  meta->file_table[i].direntry.cluster_lo + (meta->file_table[i].direntry.cluster_hi << 16);
         if(cluster == opened_cluster) {
             return 1;
         }
@@ -1450,7 +1386,7 @@ static int32_t fat32_is_cluster_opened(fat32_meta* meta, uint32_t cluster)
 }
 
 //return: 0 - not empty, 1 - empty, <0 - error
-static int32_t fat32_is_dir_empty(fat32_meta* meta, fat_dir_iterator* iter)
+static int fat32_is_dir_empty(fat32_meta* meta, fat_dir_iterator* iter)
 {
     fat32_file_entry file_in_dir = {0};
 
@@ -1480,7 +1416,7 @@ static int32_t fat32_is_dir_empty(fat32_meta* meta, fat_dir_iterator* iter)
     }
 }
 
-static int32_t fat32_rm(fat32_meta* meta, const char * path, enum fat32_rm_type rm_type)
+static int fat32_rm(fat32_meta* meta, const char * path, enum fat32_rm_type rm_type)
 {
     fat32_file_entry file_entry = {0};
     fat_resolve_path_status status = fat32_resolve_path(meta, path, &file_entry);
@@ -1497,7 +1433,7 @@ static int32_t fat32_rm(fat32_meta* meta, const char * path, enum fat32_rm_type 
     }
     assert(status == FAT_PATH_RESOLVE_FOUND);
 
-    uint32_t cluster = file_entry.direntry.cluster_lo + (file_entry.direntry.cluster_hi << 16);
+    uint cluster = file_entry.direntry.cluster_lo + (file_entry.direntry.cluster_hi << 16);
     if(fat32_is_cluster_opened(meta, cluster)) {
         // shall not delete opened file
         return -EPERM;
@@ -1508,7 +1444,7 @@ static int32_t fat32_rm(fat32_meta* meta, const char * path, enum fat32_rm_type 
             return -ENOTDIR;
         }
         fat_dir_iterator iter = {.first_cluster = cluster};
-        int32_t is_empty = fat32_is_dir_empty(meta, &iter);
+        int is_empty = fat32_is_dir_empty(meta, &iter);
         if(is_empty < 0) {
             return is_empty;
         }
@@ -1523,7 +1459,7 @@ static int32_t fat32_rm(fat32_meta* meta, const char * path, enum fat32_rm_type 
     }
 
     fat_dir_iterator iter = {.first_cluster = file_entry.dir_cluster};
-    int32_t res = fat32_rm_file_entry(meta, &iter, &file_entry);
+    int res = fat32_rm_file_entry(meta, &iter, &file_entry);
     fat_free_dir_iterator(&iter);
     if(res < 0) {
         return res;
@@ -1541,24 +1477,20 @@ static int32_t fat32_rm(fat32_meta* meta, const char * path, enum fat32_rm_type 
 static int fat32_unlink(struct fs_mount_point* mount_point, const char * path)
 {
     fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
-    int32_t res = fat32_rm(meta, path, FAT32_RM_FILE);
+    int res = fat32_rm(meta, path, FAT32_RM_FILE);
     return res;
 }
 
 static int fat32_rmdir(struct fs_mount_point* mount_point, const char * path)
 {
     fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
-    int32_t res = fat32_rm(meta, path, FAT32_RM_DIR);
+    int res = fat32_rm(meta, path, FAT32_RM_DIR);
     return res;
 }
 
-static int fat32_write(struct fs_mount_point* mount_point, const char * path, const char *buf, uint64_t size, int64_t offset, struct fs_file_info * fi)
+static int fat32_write(struct fs_mount_point* mount_point, const char * path, const char *buf, uint size, uint offset, struct fs_file_info * fi)
 {
     fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
-
-    if(offset < 0) {
-        return -EINVAL;
-    }
 
     fat32_file_entry file_entry = {0};
     if(fi != NULL) {
@@ -1587,14 +1519,14 @@ static int fat32_write(struct fs_mount_point* mount_point, const char * path, co
         return -EISDIR;
     }
 
-    uint32_t first_cluster = file_entry.direntry.cluster_lo + (file_entry.direntry.cluster_hi << 16);
+    uint first_cluster = file_entry.direntry.cluster_lo + (file_entry.direntry.cluster_hi << 16);
 
-    uint32_t cluster_count = first_cluster == 0 ? 0 : count_clusters(meta, first_cluster);
-    uint32_t bytes_per_cluster = meta->bootsector->sectors_per_cluster*meta->bootsector->bytes_per_sector;
-    uint32_t allocated_size = bytes_per_cluster * cluster_count;
+    uint cluster_count = first_cluster == 0 ? 0 : count_clusters(meta, first_cluster);
+    uint bytes_per_cluster = meta->bootsector->sectors_per_cluster*meta->bootsector->bytes_per_sector;
+    uint allocated_size = bytes_per_cluster * cluster_count;
     if(offset + size > allocated_size) {
-        uint32_t clusters_to_allocate = ((offset + size) - allocated_size - 1) / bytes_per_cluster + 1;
-        uint32_t first_allocated_cluster = fat32_allocate_cluster(meta, fat32_index_cluster_chain(meta, first_cluster, -1), clusters_to_allocate);
+        uint clusters_to_allocate = ((offset + size) - allocated_size - 1) / bytes_per_cluster + 1;
+        uint first_allocated_cluster = fat32_allocate_cluster(meta, fat32_index_cluster_chain(meta, first_cluster, -1), clusters_to_allocate);
         if(first_allocated_cluster == 0) {
             return -EIO;
         }
@@ -1614,7 +1546,7 @@ static int fat32_write(struct fs_mount_point* mount_point, const char * path, co
     file_entry.direntry.mtime_time = time;
     file_entry.direntry.mtime_date = date;
 
-    int32_t dir_res = fat32_update_file_entry(meta, &file_entry);
+    int dir_res = fat32_update_file_entry(meta, &file_entry);
     if(dir_res < 0) {
         return dir_res;
     }
@@ -1623,7 +1555,7 @@ static int fat32_write(struct fs_mount_point* mount_point, const char * path, co
         return 0;
     }
 
-    int32_t write_res = fat32_write_to_offset(meta, first_cluster, offset, size, (uint8_t*) buf);
+    int write_res = fat32_write_to_offset(meta, first_cluster, offset, size, (uint8_t*) buf);
     if(write_res < 0) {
         return write_res;
     }
@@ -1631,7 +1563,7 @@ static int fat32_write(struct fs_mount_point* mount_point, const char * path, co
     return size;
 }
 
-static int fat32_truncate(struct fs_mount_point* mount_point, const char * path, int64_t size, struct fs_file_info *fi)
+static int fat32_truncate(struct fs_mount_point* mount_point, const char * path, uint size, struct fs_file_info *fi)
 {
     fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
     
@@ -1667,15 +1599,15 @@ static int fat32_truncate(struct fs_mount_point* mount_point, const char * path,
         return 0;
     }
 
-    uint32_t first_cluster = file_entry.direntry.cluster_lo + (file_entry.direntry.cluster_hi << 16);
-    uint32_t orig_size = file_entry.direntry.size;
+    uint first_cluster = file_entry.direntry.cluster_lo + (file_entry.direntry.cluster_hi << 16);
+    uint orig_size = file_entry.direntry.size;
 
-    uint32_t cluster_count = first_cluster == 0 ? 0 : count_clusters(meta, first_cluster);
-    uint32_t bytes_per_cluster = meta->bootsector->sectors_per_cluster*meta->bootsector->bytes_per_sector;
-    uint32_t allocated_size = bytes_per_cluster * cluster_count;
+    uint cluster_count = first_cluster == 0 ? 0 : count_clusters(meta, first_cluster);
+    uint bytes_per_cluster = meta->bootsector->sectors_per_cluster*meta->bootsector->bytes_per_sector;
+    uint allocated_size = bytes_per_cluster * cluster_count;
     if(size > allocated_size) {
-        uint32_t clusters_to_allocate = (size - allocated_size - 1) / bytes_per_cluster + 1;
-        uint32_t first_allocated_cluster = fat32_allocate_cluster(meta, fat32_index_cluster_chain(meta, first_cluster, -1), clusters_to_allocate);
+        uint clusters_to_allocate = (size - allocated_size - 1) / bytes_per_cluster + 1;
+        uint first_allocated_cluster = fat32_allocate_cluster(meta, fat32_index_cluster_chain(meta, first_cluster, -1), clusters_to_allocate);
         if(first_allocated_cluster == 0) {
             return -EIO;
         }
@@ -1685,9 +1617,9 @@ static int fat32_truncate(struct fs_mount_point* mount_point, const char * path,
             file_entry.direntry.cluster_hi = first_allocated_cluster >> 16;
         }
     } else if(allocated_size - size >= bytes_per_cluster){
-        int32_t clusters_to_free = (allocated_size - size) / bytes_per_cluster;
-        uint32_t first_cluster_to_free = fat32_index_cluster_chain(meta, first_cluster, -clusters_to_free);
-        uint32_t last_remaining_cluster;
+        int clusters_to_free = (allocated_size - size) / bytes_per_cluster;
+        uint first_cluster_to_free = fat32_index_cluster_chain(meta, first_cluster, -clusters_to_free);
+        uint last_remaining_cluster;
         if(first_cluster_to_free == first_cluster) {
             last_remaining_cluster = 0;
             file_entry.direntry.cluster_lo = 0;
@@ -1695,7 +1627,7 @@ static int fat32_truncate(struct fs_mount_point* mount_point, const char * path,
         } else {
             last_remaining_cluster = fat32_index_cluster_chain(meta, first_cluster, -clusters_to_free - 1);
         }
-        int32_t free_res = fat32_free_cluster(meta, last_remaining_cluster, first_cluster_to_free, 0);
+        int free_res = fat32_free_cluster(meta, last_remaining_cluster, first_cluster_to_free, 0);
         if(free_res < 0) {
             return free_res;
         }
@@ -1706,7 +1638,7 @@ static int fat32_truncate(struct fs_mount_point* mount_point, const char * path,
     file_entry.direntry.mtime_time = time;
     file_entry.direntry.mtime_date = date;
 
-    int32_t dir_res = fat32_update_file_entry(meta, &file_entry);
+    int dir_res = fat32_update_file_entry(meta, &file_entry);
     if(dir_res < 0) {
         return dir_res;
     }
@@ -1719,7 +1651,7 @@ static int fat32_truncate(struct fs_mount_point* mount_point, const char * path,
         // Zero out the allocated space
         uint8_t* zeros = malloc(size - orig_size);
         memset(zeros, 0, size - orig_size);
-        int32_t write_res = fat32_write_to_offset(meta, first_cluster, orig_size, size - orig_size, zeros);
+        int write_res = fat32_write_to_offset(meta, first_cluster, orig_size, size - orig_size, zeros);
         free(zeros);
         if(write_res < 0) {
             return write_res;
@@ -1729,7 +1661,7 @@ static int fat32_truncate(struct fs_mount_point* mount_point, const char * path,
     return 0;
 }
 
-static int fat32_rename(struct fs_mount_point* mount_point, const char * from, const char * to, uint32_t flags)
+static int fat32_rename(struct fs_mount_point* mount_point, const char * from, const char * to, uint flags)
 {
     fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
 
@@ -1757,14 +1689,14 @@ static int fat32_rename(struct fs_mount_point* mount_point, const char * from, c
 
     assert(from_status == FAT_PATH_RESOLVE_FOUND);
 
-    uint32_t from_file_content_cluster_number = from_file_entry.direntry.cluster_lo + (from_file_entry.direntry.cluster_hi << 16);
+    uint from_file_content_cluster_number = from_file_entry.direntry.cluster_lo + (from_file_entry.direntry.cluster_hi << 16);
     // Shall not rename file opened
     if(fat32_is_cluster_opened(meta, from_file_content_cluster_number)) {
         return -EBUSY;
     }
 
     // Remove anything at the "to" path, if exist
-    int32_t rm_res = fat32_rm(meta, to, FAT32_RM_ANY);
+    int rm_res = fat32_rm(meta, to, FAT32_RM_ANY);
     if(rm_res < 0 && rm_res != -ENOENT) {
         return rm_res;
     }
@@ -1776,7 +1708,7 @@ static int fat32_rename(struct fs_mount_point* mount_point, const char * from, c
 
     // Remove old dir entry
     fat_dir_iterator iter = {.first_cluster = from_file_entry.dir_cluster};
-    int32_t dir_res = fat32_rm_file_entry(meta, &iter, &from_file_entry);
+    int dir_res = fat32_rm_file_entry(meta, &iter, &from_file_entry);
     fat_free_dir_iterator(&iter);
     if(dir_res<0) {
         return dir_res;
@@ -1819,7 +1751,7 @@ static int fat32_open(struct fs_mount_point* mount_point, const char * path, str
             }
         }
         if(HAS_ATTR(fi->flags, O_TRUNC)) {
-            int32_t res = fat32_truncate(mount_point, path, 0, fi);
+            int res = fat32_truncate(mount_point, path, 0, fi);
             if(res < 0) {
                 return res;
             }
@@ -1831,7 +1763,7 @@ static int fat32_open(struct fs_mount_point* mount_point, const char * path, str
     // Save the resolved file entry to the file table
     //   in order to reuse the path resolution result
     assert(file_entry.dir_entry_count > 0);
-    uint32_t i;
+    uint i;
     for(i=0; i<FAT32_N_OPEN_FILE; i++) {
         if(meta->file_table[i].dir_entry_count == 0) {
             meta->file_table[i] = file_entry;
@@ -1884,7 +1816,7 @@ static int fat32_mount(fs_mount_point* mount_point)
 
     meta->storage = mount_point->storage;
     // Read header
-    int32_t res = fat32_get_meta(meta);
+    int res = fat32_get_meta(meta);
     if(res != 0) {
         return res;
     }
@@ -1898,7 +1830,7 @@ static int fat32_unmount(fs_mount_point* mount_point)
     return 0;
 }
 
-int32_t fat32_init(struct file_system* fs)
+int fat32_init(struct file_system* fs)
 {
     fs->mount = fat32_mount;
     fs->unmount = fat32_unmount;

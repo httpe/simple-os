@@ -5,7 +5,7 @@
 
 #include <kernel/block_io.h>
 #include <stat.h>
-
+#include <common.h>
 
 ////////////////////////////////////////
 //
@@ -44,7 +44,7 @@ typedef struct file_system {
 // Mimic FUSE struct fuse_file_info
 typedef struct fs_file_info {
 	/** Open flags.	 Available in open() and release() */
-	int32_t flags;
+	int flags;
 	/** File handle id.  May be filled in by filesystem in create,
 	 * open, and opendir().  Available in most other file operations on the
 	 * same file handle. */
@@ -61,17 +61,17 @@ struct fs_mount_point; // Declaring below
 // Mimic FUSE struct fuse_operations
 typedef struct file_system_operations {
     int (*getattr) (struct fs_mount_point* mount_point, const char * path, struct fs_stat *, struct fs_file_info *);
-    int (*mknod) (struct fs_mount_point* mount_point, const char * path, uint32_t mode);
-    int (*mkdir) (struct fs_mount_point* mount_point, const char * path, uint32_t mode);
+    int (*mknod) (struct fs_mount_point* mount_point, const char * path, uint mode);
+    int (*mkdir) (struct fs_mount_point* mount_point, const char * path, uint mode);
     int (*unlink) (struct fs_mount_point* mount_point, const char * path);
     int (*rmdir) (struct fs_mount_point* mount_point, const char * path);
-    int (*rename) (struct fs_mount_point* mount_point, const char * from, const char * to, uint32_t flags);
-    int (*truncate) (struct fs_mount_point* mount_point, const char * path, int64_t size, struct fs_file_info *fi);
+    int (*rename) (struct fs_mount_point* mount_point, const char * from, const char * to, uint flags);
+    int (*truncate) (struct fs_mount_point* mount_point, const char * path, uint size, struct fs_file_info *fi);
     int (*open) (struct fs_mount_point* mount_point, const char * path, struct fs_file_info *);
-    int (*read) (struct fs_mount_point* mount_point, const char * path, char *buf, uint64_t size, int64_t offset, struct fs_file_info *);
-	int (*write) (struct fs_mount_point* mount_point, const char * path, const char *buf, uint64_t size, int64_t offset, struct fs_file_info *);
+    int (*read) (struct fs_mount_point* mount_point, const char * path, char *buf, uint size, uint offset, struct fs_file_info *);
+	int (*write) (struct fs_mount_point* mount_point, const char * path, const char *buf, uint size, uint offset, struct fs_file_info *);
 	int (*release) (struct fs_mount_point* mount_point, const char * path, struct fs_file_info *);
-	int (*readdir) (struct fs_mount_point* mount_point, const char * path, int64_t offset, struct fs_dir_filler_info* filler_info, fs_dir_filler filler);
+	int (*readdir) (struct fs_mount_point* mount_point, const char * path, uint offset, struct fs_dir_filler_info* filler_info, fs_dir_filler filler);
 } file_system_operations;
 
 ////////////////////////////////////////
@@ -81,12 +81,12 @@ typedef struct file_system_operations {
 ////////////////////////////////////////
 
 typedef struct fs_mount_option {
-    uint32_t flag; // not yet used
+    uint flag; // not yet used
 } fs_mount_option;
 
 struct file_system_operations;
 typedef struct fs_mount_point {
-    uint32_t id;
+    uint id;
     struct file_system* fs;
     block_storage* storage;
     char* mount_target;
@@ -115,13 +115,13 @@ enum file_type {
 typedef struct file {
   enum file_type type;
   char* path;               /* path into the mount point */
-  int32_t open_flags;
+  int open_flags;
   struct fs_mount_point* mount_point;        /* Mount Point ID  */
   uint64_t inum;                  /* File serial number.	*/
-  int32_t ref;                    /* Reference count */
+  int ref;                    /* Reference count */
   char readable;
   char writable;
-  uint32_t offset;
+  uint offset;
 } file;
 
 

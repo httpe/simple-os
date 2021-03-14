@@ -232,7 +232,7 @@ int fs_unlink(const char * path)
     return res;
 }
 
-int fs_truncate(const char * path, int64_t size)
+int fs_truncate(const char * path, uint size)
 {
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(path, &remaining_path);
@@ -360,7 +360,7 @@ static int dir_filler(fs_dir_filler_info* filler_info, const char *name, const s
     }
 }
 
-int fs_readdir(const char * path, int64_t entry_offset, fs_dirent* buf, uint buf_size) 
+int fs_readdir(const char * path, uint entry_offset, fs_dirent* buf, uint buf_size) 
 {
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(path, &remaining_path);

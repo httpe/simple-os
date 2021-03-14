@@ -173,7 +173,7 @@ enum fat32_rm_type {
     FAT32_RM_ANY
 };
 
-int32_t fat32_init(struct file_system* fs);
+int fat32_init(struct file_system* fs);
 
 // Used by make_fs
 void fat32_set_timestamp(uint16_t* date_entry, uint16_t* time_entry);
