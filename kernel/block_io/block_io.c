@@ -82,12 +82,13 @@ void initialize_block_storage()
 
     int32_t slave_total_block_count = get_total_28bit_sectors(true);
     if(slave_total_block_count > 0) {
+        // if slave IDE drive exist
         ata_storage_info* slave_info = kmalloc(sizeof(ata_storage_info));
         slave_info->is_slave = true;
         block_storage slave_storage = (block_storage) {
             .type=BLK_STORAGE_TYP_ATA_HARD_DRIVE, 
             .block_size=512, 
-            .block_count=total_block_count, 
+            .block_count=slave_total_block_count, 
             .read_blocks=read_blocks_ata,
             .write_blocks=write_blocks_ata,
             .internal_info=slave_info
