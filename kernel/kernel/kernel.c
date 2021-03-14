@@ -1,6 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <common.h>
+#include <time.h>
 #include <kernel/tty.h>
 #include <kernel/arch_init.h>
 #include <stdint.h>
@@ -9,7 +11,6 @@
 #include <kernel/panic.h>
 #include <kernel/process.h>
 #include <kernel/block_io.h>
-#include <time.h>
 
 typedef void entry_main(void);
 
@@ -42,15 +43,17 @@ void test_ata()
 	char* mbr = kmalloc(512);
 	int32_t max_lba = get_total_28bit_sectors(false);
 	printf("Disk max 28bit addressable LBA: %d\n", max_lba);
-    read_sectors_ATA_28bit_PIO(false, (uint16_t*)mbr, 0, 1);
+    read_sectors_ATA_PIO(false, mbr, 0, 1);
 
 	printf("(ATA) Disk MBR last four bytes: 0x%x\n", *(uint32_t*) &mbr[508]);
 
 	memset(mbr, 0, 512);
-	block_storage* storage = get_block_storage(1);
-	storage->read_blocks(storage, mbr, 0, 1);
-	printf("(Block IO) Disk MBR last four bytes: 0x%x\n", *(uint32_t*) &mbr[508]);
-
+	
+	block_storage* storage = get_block_storage(2);
+	if(storage != NULL) {
+		storage->read_blocks(storage, mbr, 0, 1);
+		printf("(Block IO slave) Disk MBR last four bytes: 0x%x\n", *(uint32_t*) &mbr[508]);
+	}
 
 	kfree(mbr);
 }

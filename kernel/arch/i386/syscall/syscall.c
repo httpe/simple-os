@@ -45,7 +45,7 @@ int tar_loopup_lazy(bool slave, uint32_t LBA, char* filename, char** file_buffer
             kfree(sector_buffer);
             return TAR_ERR_LBA_GT_MAX_SECTOR;
         }
-        read_sectors_ATA_28bit_PIO(slave, (uint16_t*)sector_buffer, LBA, 1);
+        read_sectors_ATA_PIO(slave, sector_buffer, LBA, 1);
         int match = tar_match_filename(sector_buffer, filename);
         if (match == TAR_ERR_NOT_USTAR) {
             kfree(sector_buffer);
@@ -58,7 +58,7 @@ int tar_loopup_lazy(bool slave, uint32_t LBA, char* filename, char** file_buffer
                 continue;
             } else {
                 *file_buffer = kmalloc(SECTOR_SIZE*size_in_sector);
-                read_sectors_ATA_28bit_PIO(slave, (uint16_t*)*file_buffer, LBA + 1, size_in_sector);
+                read_sectors_ATA_PIO(slave, *file_buffer, LBA + 1, size_in_sector);
                 kfree(sector_buffer);
                 return filesize;
             }

@@ -33,7 +33,7 @@ static void ATA_delay_400ns();
 // LBA: 0-based Linear Block Address, 28bit LBA shall be between 0 to 0x0FFFFFFF
 // sector_count: How many sectors you want to read. A sectorcount of 0 means 256 sectors = 128K
 //
-void read_sectors_ATA_28bit_PIO(bool slave, uint16_t* target, uint32_t LBA, uint8_t sector_count) {
+static void read_sectors_ATA_28bit_PIO(bool slave, uint16_t* target, uint32_t LBA, uint8_t sector_count) {
     ATA_wait_BSY();
     // Send 0xE0 for the "master" or 0xF0 for the "slave", ORed with the highest 4 bits of the LBA to port 0x1F6: outb(0x1F6, 0xE0 | (slavebit << 4) | ((LBA >> 24) & 0x0F))
     outb(0x1F6, 0xE0 | (slave << 4) | ((LBA >> 24) & 0xF));
@@ -47,8 +47,15 @@ void read_sectors_ATA_28bit_PIO(bool slave, uint16_t* target, uint32_t LBA, uint
     outb(0x1F5, (uint8_t)(LBA >> 16));
     // Send the "READ SECTORS" command (0x20) to port 0x1F7: outb(0x1F7, 0x20)
     outb(0x1F7, 0x20); //Send the read command
+    
+    int count;
+    if(sector_count == 0) {
+        count = 256;
+    } else {
+        count = sector_count;
+    }
 
-    for (int j = 0;j < sector_count;j++) {
+    for (int j = 0;j < count;j++) {
         // Poll for status
         ATA_delay_400ns();
         ATA_wait_BSY();
@@ -60,13 +67,29 @@ void read_sectors_ATA_28bit_PIO(bool slave, uint16_t* target, uint32_t LBA, uint
     }
 }
 
+void read_sectors_ATA_PIO(bool slave, void* buf, uint32_t LBA, uint32_t sector_count)
+{
+    while(sector_count) {
+        if(sector_count < 256) {
+            read_sectors_ATA_28bit_PIO(slave, (uint16_t*) buf, LBA, sector_count);
+            return;
+        } else {
+            // read 256 sectors
+            read_sectors_ATA_28bit_PIO(slave, (uint16_t*) buf, LBA, 0);
+            LBA += 256;
+            sector_count -= 256;
+            buf += 256*512;
+        }
+    }
+}
+
 // Write sectors to the primary ATA device using 28bit PIO method 
 // 
 // LBA: 0-based Linear Block Address, 28bit LBA shall be between 0 to 0x0FFFFFFF
 // sector_count: How many sectors you want to write
 // source: a buffer whose length is sector_count*512 bytes 
 //
-void write_sectors_ATA_28bit_PIO(bool slave, uint32_t LBA, uint8_t sector_count, uint16_t* source) {
+static void write_sectors_ATA_28bit_PIO(bool slave, uint32_t LBA, uint8_t sector_count, uint16_t* source) {
     ATA_wait_BSY();
     outb(0x1F6, 0xE0 | (slave << 4) | ((LBA >> 24) & 0xF));
     outb(0x1F2, sector_count);
@@ -76,7 +99,14 @@ void write_sectors_ATA_28bit_PIO(bool slave, uint32_t LBA, uint8_t sector_count,
     // To write sectors in 28 bit PIO mode, send command "WRITE SECTORS" (0x30) to the Command port
     outb(0x1F7, 0x30); //Send the write command
 
-    for (int j = 0;j < sector_count;j++) {
+    int count;
+    if(sector_count == 0) {
+        count = 256;
+    } else {
+        count = sector_count;
+    }
+
+    for (int j = 0;j < count;j++) {
         ATA_wait_BSY();
         ATA_wait_DRQ();
         for (int i = 0;i < 256;i++) {
@@ -88,6 +118,22 @@ void write_sectors_ATA_28bit_PIO(bool slave, uint32_t LBA, uint8_t sector_count,
 
     // Make sure to do a Cache Flush (ATA command 0xE7) after each write command completes.
     outb(0x1F7, 0xE7);
+}
+
+void write_sectors_ATA_PIO(bool slave, const void* buf, uint32_t LBA, uint32_t sector_count)
+{
+    while(sector_count) {
+        if(sector_count < 256) {
+            write_sectors_ATA_28bit_PIO(slave, LBA, sector_count, (uint16_t*) buf);
+            return;
+        } else {
+            // read 256 sectors
+            write_sectors_ATA_28bit_PIO(slave, LBA, 0, (uint16_t*) buf);
+            LBA += 256;
+            sector_count -= 256;
+            buf += 256*512;
+        }
+    }
 }
 
 // Execute ATA PIO IDENTIFY command

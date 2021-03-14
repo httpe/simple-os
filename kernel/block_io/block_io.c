@@ -16,25 +16,25 @@ static block_storage storage_list[MAX_STORAGE_DEV_COUNT];
 
 
 
-static int64_t read_blocks_ata(block_storage* storage, char* buff,  uint32_t LBA, uint32_t block_count)
+static int64_t read_blocks_ata(block_storage* storage, void* buff,  uint32_t LBA, uint32_t block_count)
 {
     ata_storage_info* info = (ata_storage_info*) storage->internal_info;
     PANIC_ASSERT(storage->block_size == 512);
     if(LBA >= storage->block_count || LBA + block_count >= storage->block_count) {
         return -1;
     }
-    read_sectors_ATA_28bit_PIO(info->is_slave, (uint16_t*) buff, LBA, block_count);
+    read_sectors_ATA_PIO(info->is_slave, buff, LBA, block_count);
     return 512 * block_count;
 }
 
-static int64_t write_blocks_ata(block_storage* storage, uint32_t LBA, uint32_t block_count, const char* buff)
+static int64_t write_blocks_ata(block_storage* storage, uint32_t LBA, uint32_t block_count, const void* buff)
 {
     ata_storage_info* info = (ata_storage_info*) storage->internal_info;
     PANIC_ASSERT(storage->block_size == 512);
     if(LBA >= storage->block_count || LBA + block_count >= storage->block_count) {
         return -1;
     }
-    write_sectors_ATA_28bit_PIO(info->is_slave, LBA, block_count, (uint16_t*) buff);
+    write_sectors_ATA_PIO(info->is_slave, buff, LBA, block_count);
     return 512 * block_count;
 }
 
