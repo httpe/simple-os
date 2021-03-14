@@ -1,5 +1,5 @@
-#ifndef	ERRNO_H
-#define	ERRNO_H
+#ifndef	_ERRNO_H
+#define	_ERRNO_H
 
 // Sourced from Linux errno-base.h
 
