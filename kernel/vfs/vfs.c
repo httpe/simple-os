@@ -17,7 +17,7 @@
 #define N_FILE_STRUCTURE 12
 
 
-static uint32_t next_mount_point_id = 1;
+static uint next_mount_point_id = 1;
 
 static fs_mount_point mount_points[N_MOUNT_POINT];
 static file_system fs[N_FILE_SYSTEM_TYPES];
@@ -85,7 +85,7 @@ fs_mount_point* find_mount_point(const char* path, const char**remaining_path)
 }
 
 
-int32_t fs_mount(block_storage* storage, const char* target, enum file_system_type file_system_type, 
+int fs_mount(block_storage* storage, const char* target, enum file_system_type file_system_type, 
             fs_mount_option option, void* fs_option, fs_mount_point** mount_point)
 {
     int i;
@@ -132,14 +132,14 @@ int32_t fs_mount(block_storage* storage, const char* target, enum file_system_ty
     return -1;
 }
 
-int32_t fs_unmount(const char* mount_root)
+int fs_unmount(const char* mount_root)
 {
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(mount_root, &remaining_path);
     if(mp == NULL || strcmp(remaining_path, root_path) != 0) {
         return -ENXIO;
     }
-    int32_t res = mp->fs->unmount(mp);
+    int res = mp->fs->unmount(mp);
     if(res < 0) {
         return res;
     }
@@ -147,7 +147,7 @@ int32_t fs_unmount(const char* mount_root)
     return 0;
 }
 
-int64_t fs_getattr(const char * path, struct fs_stat * stat)
+int fs_getattr(const char * path, struct fs_stat * stat)
 {
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(path, &remaining_path);
@@ -164,7 +164,7 @@ int64_t fs_getattr(const char * path, struct fs_stat * stat)
     return res;
 }
 
-int64_t fs_mknod(const char * path, uint32_t mode)
+int fs_mknod(const char * path, uint mode)
 {
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(path, &remaining_path);
@@ -181,7 +181,7 @@ int64_t fs_mknod(const char * path, uint32_t mode)
     return res;
 }
 
-int64_t fs_mkdir(const char * path, uint32_t mode)
+int fs_mkdir(const char * path, uint mode)
 {
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(path, &remaining_path);
@@ -198,7 +198,7 @@ int64_t fs_mkdir(const char * path, uint32_t mode)
     return res;
 }
 
-int64_t fs_rmdir(const char * path)
+int fs_rmdir(const char * path)
 {
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(path, &remaining_path);
@@ -215,7 +215,7 @@ int64_t fs_rmdir(const char * path)
     return res;
 }
 
-int64_t fs_unlink(const char * path)
+int fs_unlink(const char * path)
 {
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(path, &remaining_path);
@@ -232,7 +232,7 @@ int64_t fs_unlink(const char * path)
     return res;
 }
 
-int64_t fs_truncate(const char * path, int64_t size)
+int fs_truncate(const char * path, int64_t size)
 {
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(path, &remaining_path);
@@ -249,7 +249,7 @@ int64_t fs_truncate(const char * path, int64_t size)
     return res;
 }
 
-int64_t fs_rename(const char * from, const char* to, uint32_t flags)
+int fs_rename(const char * from, const char* to, uint flags)
 {
     const char* remaining_path_from = NULL;
     fs_mount_point* mp_from = find_mount_point(from, &remaining_path_from);
@@ -276,7 +276,7 @@ int64_t fs_rename(const char * from, const char* to, uint32_t flags)
     return res;
 }
 
-int32_t fs_open(const char * path, int32_t flags)
+int fs_open(const char * path, int flags)
 {
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(path, &remaining_path);
@@ -315,7 +315,7 @@ int32_t fs_open(const char * path, int32_t flags)
     }
 
     fs_file_info fi = {.flags = flags, .fh=0};
-    int32_t res = mp->operations.open(mp, remaining_path, &fi);
+    int res = mp->operations.open(mp, remaining_path, &fi);
     if(res < 0) {
         return res;
     }
@@ -337,8 +337,8 @@ int32_t fs_open(const char * path, int32_t flags)
 
 struct fs_dir_filler_info {
     void* buf;
-    uint32_t buf_size;
-    uint32_t entry_written;
+    uint buf_size;
+    uint entry_written;
 };
 
 static int dir_filler(fs_dir_filler_info* filler_info, const char *name, const struct fs_stat *st)
@@ -349,7 +349,7 @@ static int dir_filler(fs_dir_filler_info* filler_info, const char *name, const s
         // buffer full
         return 1;
     } else {
-        uint32_t len = strlen(name);
+        uint len = strlen(name);
         if(len > FS_MAX_FILENAME_LEN) {
             len = FS_MAX_FILENAME_LEN;
         }
@@ -360,7 +360,7 @@ static int dir_filler(fs_dir_filler_info* filler_info, const char *name, const s
     }
 }
 
-int32_t fs_readdir(const char * path, int64_t entry_offset, fs_dirent* buf, uint32_t buf_size) 
+int fs_readdir(const char * path, int64_t entry_offset, fs_dirent* buf, uint buf_size) 
 {
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(path, &remaining_path);
@@ -380,7 +380,7 @@ int32_t fs_readdir(const char * path, int64_t entry_offset, fs_dirent* buf, uint
     return filler_info.entry_written;
 }
 
-static file* fd2file(int32_t fd)
+static file* fd2file(int fd)
 {
     proc* p = curr_proc();
     if(fd < 0 || fd >= N_FILE_STRUCTURE || p->files[fd] == NULL || p->files[fd]->ref == 0) {
@@ -390,7 +390,7 @@ static file* fd2file(int32_t fd)
     return f;
 }
 
-int32_t fs_close(int32_t fd)
+int fs_close(int fd)
 {
     proc* p = curr_proc();
     file* f = fd2file(fd);
@@ -403,7 +403,7 @@ int32_t fs_close(int32_t fd)
     }
 
     struct fs_file_info fi = {.flags = f->open_flags, .fh=f->inum};
-    int32_t res = f->mount_point->operations.release(f->mount_point, f->path, &fi);
+    int res = f->mount_point->operations.release(f->mount_point, f->path, &fi);
     if(res < 0) {
         return res;
     }
@@ -419,7 +419,7 @@ int32_t fs_close(int32_t fd)
     return 0;
 }
 
-int64_t fs_read(int32_t fd, void *buf, uint32_t size)
+int fs_read(int fd, void *buf, uint size)
 {
     file* f = fd2file(fd);
     if(f == NULL) {
@@ -431,7 +431,7 @@ int64_t fs_read(int32_t fd, void *buf, uint32_t size)
     }
 
     struct fs_file_info fi = {.flags = f->open_flags, .fh=f->inum};
-    int64_t res = f->mount_point->operations.read(f->mount_point, f->path, buf, size, f->offset, &fi);
+    int res = f->mount_point->operations.read(f->mount_point, f->path, buf, size, f->offset, &fi);
     if(res < 0) {
         return res;
     }
@@ -440,7 +440,7 @@ int64_t fs_read(int32_t fd, void *buf, uint32_t size)
     return res;
 }
 
-int64_t fs_write(int32_t fd, void *buf, uint32_t size)
+int fs_write(int fd, void *buf, uint size)
 {
     file* f = fd2file(fd);
     if(f == NULL) {
@@ -452,7 +452,7 @@ int64_t fs_write(int32_t fd, void *buf, uint32_t size)
     }
 
     struct fs_file_info fi = {.flags = f->open_flags, .fh=f->inum};
-    int64_t res = f->mount_point->operations.write(f->mount_point, f->path, buf, size, f->offset, &fi);
+    int res = f->mount_point->operations.write(f->mount_point, f->path, buf, size, f->offset, &fi);
     if(res < 0) {
         return res;
     }
@@ -461,7 +461,7 @@ int64_t fs_write(int32_t fd, void *buf, uint32_t size)
     return res;
 }
 
-int64_t fs_seek(int32_t fd, int32_t offset, int32_t whence)
+int fs_seek(int fd, int offset, int whence)
 {
     file* f = fd2file(fd);
     if(f == NULL) {
@@ -491,7 +491,7 @@ int64_t fs_seek(int32_t fd, int32_t offset, int32_t whence)
     
 }
 
-int32_t init_vfs()
+int init_vfs()
 {
     // initialize all supported file systems
     fs[0] = (struct file_system) {.type = FILE_SYSTEM_FAT_32};
