@@ -221,10 +221,10 @@ static uint32_t unmap_page(pde* page_dir, uint32_t page_index)
     
     if(is_curr_page_dir(page_dir)) {
         flush_tlb(vaddr);   // flush
-        printf("Page unmapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, page->frame);
+        // printf("Page unmapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, page->frame);
     } else {
         return_page_table(page_dir, page_table);
-        printf("Foreign Page unmapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, page->frame);
+        // printf("Foreign Page unmapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, page->frame);
     }
 
     return page_frame;
@@ -266,10 +266,10 @@ static uint32_t map_page(pde* page_dir, uint32_t page_index, uint32_t frame_inde
 
     if(is_curr_page_dir(page_dir)) {
         flush_tlb(VADDR_FROM_PAGE_INDEX(page_index));
-        printf("Page frame mapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, frame_index);
+        // printf("Page frame mapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, frame_index);
     } else {
         return_page_table(page_dir, page_table);
-        printf("Foreign Page frame mapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, frame_index);
+        // printf("Foreign Page frame mapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, frame_index);
     }
 
     return VADDR_FROM_PAGE_INDEX(page_index);
