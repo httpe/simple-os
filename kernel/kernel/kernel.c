@@ -11,6 +11,8 @@
 #include <kernel/panic.h>
 #include <kernel/process.h>
 #include <kernel/block_io.h>
+#include <kernel/vfs.h>
+
 
 typedef void entry_main(void);
 
@@ -53,9 +55,17 @@ void test_ata()
 	if(storage != NULL) {
 		storage->read_blocks(storage, mbr, 0, 1);
 		printf("(Block IO slave) Disk MBR last four bytes: 0x%x\n", *(uint32_t*) &mbr[508]);
+
+		int i = 0;
+		fs_dirent* dirent_buf = malloc(sizeof(fs_dirent));
+		while(fs_readdir("/hdb", i++, dirent_buf, sizeof(fs_dirent)) > 0) {
+			printf("Enum root dir: %s\n", dirent_buf->name);
+		}
+		free(dirent_buf);
 	}
 
 	kfree(mbr);
+
 }
 
 void test_paging()
@@ -72,6 +82,16 @@ void test_paging()
 void init()
 {
 	initialize_block_storage();
+	init_vfs();
+
+	// mount hdb (IDE slave drive)
+	block_storage* storage = get_block_storage(2);
+	if(storage != NULL) {
+		fs_mount_option mount_option = {0};
+		fs_mount_point* mp = NULL;
+		int32_t mount_res = fs_mount(storage, "/hdb", FILE_SYSTEM_FAT_32, mount_option, NULL, &mp);
+		PANIC_ASSERT(mount_res == 0);
+	}
 }
 
 void kernel_main(uint32_t mbt_physical_addr) {

@@ -11,6 +11,11 @@
 #define SYS_EXIT 5
 #define SYS_WAIT 6
 #define SYS_SBRK 7
+#define SYS_OPEN 8
+#define SYS_CLOSE 9
+#define SYS_READ 10
+#define SYS_WRITE 11
+#define SYS_SEEK 12
 
 // defined in interrupt.asm
 extern void int88();

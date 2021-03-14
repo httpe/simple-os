@@ -3,11 +3,18 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <common.h>
+#include <fs.h>
 
 static inline _syscall0(SYS_YIELD, int, sys_yield)
 static inline _syscall0(SYS_FORK, int, sys_fork)
 static inline _syscall1(SYS_WAIT, int, sys_wait, int*, exit_code)
 static inline _syscall1(SYS_SBRK, int, sys_sbrk, int, size_delta)
+static inline _syscall2(SYS_OPEN, int, sys_open, char*, path, int, flags)
+static inline _syscall1(SYS_CLOSE, int, sys_close, int, fd)
+static inline _syscall3(SYS_READ, int, sys_read, int, fd, void*, buf, uint, size)
+static inline _syscall3(SYS_WRITE, int, sys_write, int, fd, const void*, buf, uint, size)
+static inline _syscall3(SYS_SEEK, int, sys_seek, int, fd, int, offset, int, whence)
 
 int user_main(int argc, char* argv[]) {
     (void) argc;
@@ -26,7 +33,7 @@ int user_main(int argc, char* argv[]) {
         if(fork_ret) {
             // parent
             printf("This is parent, child PID: %u\n", fork_ret);
-            // do_syscall_1(SYS_YIELD, NULL);
+            // sys_yield();
             int wait_ret = sys_wait(&child_exit_code);
             if(wait_ret < 0) {
                 printf("No child exited\n");
@@ -36,7 +43,7 @@ int user_main(int argc, char* argv[]) {
         } else {
             // child
             printf("This is child\n");
-            // do_syscall_1(SYS_YIELD, NULL);
+            // sys_yield();
         }
     }
 
@@ -55,6 +62,33 @@ int user_main(int argc, char* argv[]) {
     memmove(buf, str2, strlen(str2)+1);
     printf("%s", buf);
     free(buf);
+
+    char buf1[100] = {0};
+    int fd = sys_open("/hdb/RAND.OM", 0);
+    if(fd >= 0) {
+        int read = sys_read(fd, buf1, 10);
+        int close = sys_close(fd);
+        printf("FD(%d), READ(%d), CLOSE(%d)\n", fd, read, close);
+        printf("READ content: \n%s\n", buf1);
+    } else {
+        printf("OPEN error\n");
+    }
+
+
+    const char* to_write = "Hello User I/O World!";
+    fd = sys_open("/hdb/RAND.OM", 0);
+    if(fd >= 0) {
+        int written = sys_write(fd, to_write, strlen(to_write) + 1);
+        int lseek_res = sys_seek(fd, -(strlen(to_write) + 1), SEEK_WHENCE_CUR);
+        memset(buf1, 0, 100);
+        int read = sys_read(fd, buf1, strlen(to_write) + 1);
+        int close = sys_close(fd);
+        printf("FD(%d), WRITE(%d), LSEEK(%d), READ(%d), CLOSE(%d)\n", fd, written, lseek_res, read, close);
+        printf("READ content: \n%s\n", buf1);
+    } else {
+        printf("OPEN error\n");
+    }
+
 
     while(1);
 }

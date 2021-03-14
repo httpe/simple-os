@@ -1,13 +1,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <syscall.h>
+#include <common.h>
 #include <kernel/heap.h>
 #include <kernel/panic.h>
 #include <kernel/multiboot.h>
 #include <kernel/ata.h>
 #include <kernel/elf.h>
 #include <kernel/tar.h>
-#include <common.h>
+#include <kernel/vfs.h>
+#include <kernel/file_system.h>
 
 #include <arch/i386/kernel/isr.h>
 #include <kernel/process.h>
@@ -215,6 +217,43 @@ int sys_wait(trapframe* r)
     return wait(exit_code);
 }
 
+int sys_open(trapframe* r)
+{
+    char* path = *(char**) (r->esp + 4);
+    int32_t flags = *(int*) (r->esp + 8);
+    return fs_open(path, flags);
+}
+
+int sys_close(trapframe* r)
+{
+    int32_t fd = *(int*) (r->esp + 4);
+    return fs_close(fd);
+}
+
+int sys_read(trapframe* r)
+{
+    int32_t fd = *(int*) (r->esp + 4);
+    void* buf = *(void**) (r->esp + 8);
+    uint32_t size = *(uint32_t*) (r->esp + 12);
+    return fs_read(fd, buf, size);
+}
+
+int sys_write(trapframe* r)
+{
+    int32_t fd = *(int*) (r->esp + 4);
+    void* buf = *(void**) (r->esp + 8);
+    uint32_t size = *(uint32_t*) (r->esp + 12);
+    return fs_write(fd, buf, size);
+}
+
+int sys_seek(trapframe* r)
+{
+    int32_t fd = *(int*) (r->esp + 4);
+    int32_t offset = *(int32_t*) (r->esp + 8);
+    int32_t whence = *(int32_t*) (r->esp + 12);
+    return fs_seek(fd, offset, whence);
+}
+
 void syscall_handler(trapframe* r)
 {
     // trapframe r will be pop when returning to user space
@@ -242,6 +281,21 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_SBRK:
         r->eax = sys_sbrk(r);
+        break;
+    case SYS_OPEN:
+        r->eax = sys_open(r);
+        break;
+    case SYS_CLOSE:
+        r->eax = sys_close(r);
+        break;
+    case SYS_READ:
+        r->eax = sys_read(r);
+        break;
+    case SYS_WRITE:
+        r->eax = sys_write(r);
+        break;
+    case SYS_SEEK:
+        r->eax = sys_seek(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);
