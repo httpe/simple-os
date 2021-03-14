@@ -83,7 +83,7 @@ int user_main(int argc, char* argv[]) {
         memset(buf1, 0, 100);
         int read = sys_read(fd, buf1, strlen(to_write) + 1);
         int close = sys_close(fd);
-        printf("FD(%d), WRITE(%d), LSEEK(%d), READ(%d), CLOSE(%d)\n", fd, written, lseek_res, read, close);
+        printf("FD(%d), WRITE(%d), SEEK(%d), READ(%d), CLOSE(%d)\n", fd, written, lseek_res, read, close);
         printf("READ content: \n%s\n", buf1);
     } else {
         printf("OPEN error\n");
