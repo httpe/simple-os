@@ -41,6 +41,7 @@ void init_first_process();
 void scheduler();
 proc* curr_proc();
 void yield();
+int fork();
 void exit(int exit_code);
 int wait();
 void switch_process_memory_mapping(proc* p);

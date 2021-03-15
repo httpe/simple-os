@@ -162,17 +162,7 @@ int sys_yield(trapframe* r)
 int sys_fork(trapframe* r)
 {
     UNUSED_ARG(r);
-    proc* p_new = create_process();
-    proc* p_curr = curr_proc();
-    p_new->page_dir = copy_user_space(p_curr->page_dir);
-    p_new->parent = p_curr;
-    p_new->size = p_curr->size;
-    *p_new->tf = *p_curr->tf;
-    // child process will have return value zero from fork
-    p_new->tf->eax = 0;
-    p_new->state = PROC_STATE_RUNNABLE;
-    // return to parent process with child's pid
-    return p_new->pid;
+    return fork();
 }
 
 void sys_exit(trapframe* r)

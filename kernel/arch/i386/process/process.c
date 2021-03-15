@@ -5,8 +5,9 @@
 #include <kernel/process.h>
 #include <kernel/paging.h>
 #include <kernel/panic.h>
-#include <arch/i386/kernel/segmentation.h>
 #include <kernel/memory_bitmap.h>
+#include <kernel/vfs.h>
+#include <arch/i386/kernel/segmentation.h>
 
 // Source: xv6/proc.h
 
@@ -169,6 +170,13 @@ void exit(int exit_code)
 {
     proc* p = curr_proc();
 
+    // close fd
+    for(int fd=0; fd<N_FILE_DESCRIPTOR_PER_PROCESS; fd++) {
+        if(p->files[fd] != NULL) {
+            fs_close(fd);
+        }
+    }
+
     // pass children to init
     for(int i=0; i<N_PROCESS; i++) {
         if(process_table.proc[i].parent == p) {
@@ -221,4 +229,29 @@ int wait(int* exit_code)
         }
         yield();
     }
+}
+
+int fork()
+{
+    proc* p_new = create_process();
+    proc* p_curr = curr_proc();
+    p_new->page_dir = copy_user_space(p_curr->page_dir);
+    p_new->parent = p_curr;
+    p_new->size = p_curr->size;
+    p_new->orig_size = p_curr->orig_size;
+    *p_new->tf = *p_curr->tf;
+
+    // duplicate fd
+    for(int i=0;i<N_FILE_DESCRIPTOR_PER_PROCESS;i++) {
+        if(p_curr->files[i] != NULL) {
+            p_curr->files[i]->ref++;
+            p_new->files[i] = p_curr->files[i];
+        }
+    }
+
+    // child process will have return value zero from fork
+    p_new->tf->eax = 0;
+    p_new->state = PROC_STATE_RUNNABLE;
+    // return to parent process with child's pid
+    return p_new->pid;
 }
