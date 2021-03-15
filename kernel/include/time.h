@@ -1,5 +1,5 @@
-#ifndef TIME_H
-#define TIME_H
+#ifndef _TIME_H
+#define _TIME_H
 
 // From Linux struct_tm.h
 /* ISO C `broken-down time' structure.  */
