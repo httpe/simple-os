@@ -274,7 +274,7 @@ Although the final goal is to make the system self-hosting, we planned for sever
     - Build user space standard C library with system calls, e.g. printf, malloc and open/read/write
     - Write a shell to allow navigating through the file system
     - Write a editor to show file content, allowing editing and saving to disk
-    - **In progress**: See our sub-project [Simple-FS](https://github.com/httpe/simple-fs)
+    - **In progress**: File system ported from our sub-project [Simple-FS](https://github.com/httpe/simple-fs)
 
 1. **Milestone Five: User Space Compiler**
     - Build our OS specific compiling tool chain
