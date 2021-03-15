@@ -23,51 +23,6 @@ extern char MAP_MEM_PA_ZERO_TO[];
 // user program stack size in pages
 #define USER_STACK_PAGE_SIZE 1
 
-// Copied from bootloader
-// The whole bootloader binary is assumed to take the first 16 sectors
-// must be in sync of BOOTLOADER_MAX_SIZE in Makefile (of bootloader)
-#define BOOTLOADER_SECTORS 16
-#define SECTOR_SIZE 512
-
-// Load a file from the tar file system
-//
-// LBA: 0-based Linear Block Address, 28bit LBA shall be between 0 to 0x0FFFFFFF
-// filename: get a file with this name from the tar file system
-// buffer: load the file found into this address
-//
-// return: file size of the loaded file
-int tar_loopup_lazy(bool slave, uint32_t LBA, char* filename, char** file_buffer) {
-    unsigned char* sector_buffer = kmalloc(SECTOR_SIZE);
-    int32_t max_lba = get_total_28bit_sectors(slave);
-    if(max_lba < 0) {
-        return TAR_ERR_GENERAL;
-    }
-    while(1) {
-        if (LBA >= (uint32_t) max_lba) {
-            kfree(sector_buffer);
-            return TAR_ERR_LBA_GT_MAX_SECTOR;
-        }
-        read_sectors_ATA_PIO(slave, sector_buffer, LBA, 1);
-        int match = tar_match_filename(sector_buffer, filename);
-        if (match == TAR_ERR_NOT_USTAR) {
-            kfree(sector_buffer);
-            return TAR_ERR_NOT_USTAR;
-        } else {
-            int filesize = tar_get_filesize(sector_buffer);
-            int size_in_sector = ((filesize + (SECTOR_SIZE-1)) / SECTOR_SIZE) + 1; // plus one for the meta sector
-            if (match == TAR_ERR_FILE_NAME_NOT_MATCH) {
-                LBA += size_in_sector;
-                continue;
-            } else {
-                *file_buffer = kmalloc(SECTOR_SIZE*size_in_sector);
-                read_sectors_ATA_PIO(slave, *file_buffer, LBA + 1, size_in_sector);
-                kfree(sector_buffer);
-                return filesize;
-            }
-        }
-    }
-}
-
 int sys_exec(trapframe* r)
 {
     // TODO: parameter security check
@@ -76,16 +31,32 @@ int sys_exec(trapframe* r)
     char** argv = (char**) *(uint32_t*) (r->esp + 8);
     printf("SYS_EXEC: eip: %u, path: %s\n", num, path);
 
-    // Load executable from tar file system
-    // TODO: replace by real file system
-    char* file_buffer = NULL;
-    int program_size = tar_loopup_lazy(false, BOOTLOADER_SECTORS, path, &file_buffer);
-    if(program_size <= 0) {
-        printf("SYS_EXEC: File not found\n");
-        kfree(file_buffer);
+    // Load executable from file system
+
+    fs_stat st = {0};
+    int fs_res = fs_getattr(path, &st);
+    if(fs_res < 0) {
+        printf("SYS_EXEC: Cannot open the file\n");
         return -1;
     }
-	printf("SYS_EXEC: program size: %u\n", program_size);
+    if(st.size == 0) {
+        printf("SYS_EXEC: File has size zero\n");
+        return -1;
+    }
+    printf("SYS_EXEC: program size: %u\n", st.size);
+
+    int fd = fs_open(path, 0);
+    if(fd < 0) {
+        return -1;
+    }
+    char* file_buffer = kmalloc(st.size);
+    fs_res = fs_read(fd, file_buffer, st.size);
+    if(fs_res < 0) {
+        return -1;
+    }
+    fs_close(fd);
+    
+
     if (!is_elf(file_buffer)) {
         printf("SYS_EXEC: Invalid program\n");
         kfree(file_buffer);

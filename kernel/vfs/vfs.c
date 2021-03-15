@@ -10,6 +10,7 @@
 #include <kernel/block_io.h>
 #include <kernel/vfs.h>
 #include <kernel/fat.h>
+#include <kernel/tar.h>
 #include <kernel/process.h>
 
 
@@ -114,10 +115,9 @@ int fs_mount(block_storage* storage, const char* target, enum file_system_type f
                 .fs = &fs[i],
                 .storage = storage,
                 .mount_target=strdup(target), 
-                .mount_option=option, 
-                .fs_option = fs_option
+                .mount_option=option
             };
-            int res = fs[i].mount(&mount_points[j]);
+            int res = fs[i].mount(&mount_points[j], fs_option);
             if(res < 0) {
                 free(mount_points[j].mount_target);
                 memset(&mount_points[j], 0, sizeof(mount_points[j]));
@@ -283,10 +283,6 @@ int fs_open(const char * path, int flags)
     if(mp == NULL) {
         return -ENXIO;
     }
-    if(mp->operations.open == NULL) {
-        // if file system does not support this operation
-        return -EPERM;
-    }
 
     // allocate kernel file structure
     file* f = NULL; 
@@ -315,10 +311,14 @@ int fs_open(const char * path, int flags)
     }
 
     fs_file_info fi = {.flags = flags, .fh=0};
-    int res = mp->operations.open(mp, remaining_path, &fi);
-    if(res < 0) {
-        return res;
+    if(mp->operations.open != NULL) {
+        // if the file system support opening file internally 
+        int res = mp->operations.open(mp, remaining_path, &fi);
+        if(res < 0) {
+            return res;
+        }
     }
+
     *f = (file) {
         .inum = fi.fh, // file system's internal inode number / file handler number
         .open_flags = flags,
@@ -397,15 +397,14 @@ int fs_close(int fd)
     if(f == NULL) {
         return -EBADF;
     }
-    if(f->mount_point->operations.release == NULL) {
-        // if file system does not support this operation
-        return -EPERM;
-    }
 
     struct fs_file_info fi = {.flags = f->open_flags, .fh=f->inum};
-    int res = f->mount_point->operations.release(f->mount_point, f->path, &fi);
-    if(res < 0) {
-        return res;
+    if(f->mount_point->operations.release != NULL) {
+        // if file system does support closing/release files internally
+        int res = f->mount_point->operations.release(f->mount_point, f->path, &fi);
+        if(res < 0) {
+            return res;
+        }
     }
 
     p->files[fd]->ref--;
@@ -496,6 +495,27 @@ int init_vfs()
     // initialize all supported file systems
     fs[0] = (struct file_system) {.type = FILE_SYSTEM_FAT_32};
     int res = fat32_init(&fs[0]);
+    assert(res == 0);
     
-    return res;
+    fs[1] = (struct file_system) {.type = FILE_SYSTEM_US_TAR};
+    res = tar_init(&fs[1]);
+    assert(res == 0);
+
+    // mount hda (IDE master drive) to be the root dir (assumed to be US-TAR formated)
+	block_storage* storage = get_block_storage(IDE_MASTER_DRIVE);
+    tar_mount_option tar_opt = (tar_mount_option) {.starting_LBA = BOOTLOADER_SECTORS};
+    fs_mount_option mount_option = {0};
+    fs_mount_point* mp = NULL;
+    int32_t mount_res = fs_mount(storage, "/", FILE_SYSTEM_US_TAR, mount_option, &tar_opt, &mp);
+    assert(mount_res == 0);
+
+	// mount hdb (IDE slave drive) to be the home dir (assumed to be FAT-32 formated)
+	storage = get_block_storage(IDE_SLAVE_DRIVE);
+	if(storage != NULL) {
+		mount_res = fs_mount(storage, "/home", FILE_SYSTEM_FAT_32, mount_option, NULL, &mp);
+		assert(mount_res == 0);
+	}
+
+    
+    return 0;
 }

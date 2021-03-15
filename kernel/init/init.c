@@ -64,7 +64,7 @@ int user_main(int argc, char* argv[]) {
     free(buf);
 
     char buf1[100] = {0};
-    int fd = sys_open("/hdb/RAND.OM", 0);
+    int fd = sys_open("/home/RAND.OM", 0);
     if(fd >= 0) {
         int read = sys_read(fd, buf1, 10);
         int close = sys_close(fd);
@@ -76,7 +76,7 @@ int user_main(int argc, char* argv[]) {
 
 
     const char* to_write = "Hello User I/O World!";
-    fd = sys_open("/hdb/RAND.OM", 0);
+    fd = sys_open("/home/RAND.OM", 0);
     if(fd >= 0) {
         int written = sys_write(fd, to_write, strlen(to_write) + 1);
         int lseek_res = sys_seek(fd, -(strlen(to_write) + 1), SEEK_WHENCE_CUR);

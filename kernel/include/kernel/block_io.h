@@ -2,6 +2,11 @@
 #define _KERNEL_BLOCK_IO_H
 
 #include <stdint.h>
+#include <assert.h>
+
+// device_id for IDE master/slave drives
+#define IDE_MASTER_DRIVE 1
+#define IDE_SLAVE_DRIVE 2
 
 typedef enum block_storage_type {
     BLK_STORAGE_TYP_ATA_HARD_DRIVE

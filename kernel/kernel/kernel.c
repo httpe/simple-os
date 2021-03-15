@@ -83,15 +83,6 @@ void init()
 {
 	initialize_block_storage();
 	init_vfs();
-
-	// mount hdb (IDE slave drive)
-	block_storage* storage = get_block_storage(2);
-	if(storage != NULL) {
-		fs_mount_option mount_option = {0};
-		fs_mount_point* mp = NULL;
-		int32_t mount_res = fs_mount(storage, "/hdb", FILE_SYSTEM_FAT_32, mount_option, NULL, &mp);
-		PANIC_ASSERT(mount_res == 0);
-	}
 }
 
 void kernel_main(uint32_t mbt_physical_addr) {

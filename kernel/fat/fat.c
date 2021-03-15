@@ -1793,9 +1793,10 @@ static int fat32_release(struct fs_mount_point* mount_point, const char * path, 
 	return 0;
 }
 
-static int fat32_mount(fs_mount_point* mount_point)
+static int fat32_mount(fs_mount_point* mount_point, void* option)
 {
-
+    UNUSED_ARG(option);
+    
     fat32_meta* meta = malloc(sizeof(fat32_meta));
     memset(meta, 0, sizeof(*meta));
     mount_point->fs_meta = meta;

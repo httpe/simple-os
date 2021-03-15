@@ -14,9 +14,10 @@
 ////////////////////////////////////////
 
 
-#define N_FILE_SYSTEM_TYPES 1
+#define N_FILE_SYSTEM_TYPES 2
 enum file_system_type {
-    FILE_SYSTEM_FAT_32
+    FILE_SYSTEM_FAT_32,
+    FILE_SYSTEM_US_TAR
 };
 
 enum file_system_status {
@@ -29,7 +30,7 @@ typedef struct file_system {
     enum file_system_status status;
     enum file_system_type type;
     void* fs_global_meta;
-    int (*mount) (struct fs_mount_point* mount_point);
+    int (*mount) (struct fs_mount_point* mount_point, void* fs_option);
     int (*unmount) (struct fs_mount_point* mount_point);
 } file_system;
 
@@ -90,7 +91,6 @@ typedef struct fs_mount_point {
     struct file_system* fs;
     block_storage* storage;
     char* mount_target;
-    void* fs_option; 
     struct fs_mount_option mount_option;
 
     void* fs_meta; // File system internal data structure

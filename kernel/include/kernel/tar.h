@@ -4,6 +4,19 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <common.h>
+#include <kernel/file_system.h>
+
+// Copied from bootloader
+// The whole bootloader binary is assumed to take the first 16 sectors
+// must be in sync of BOOTLOADER_MAX_SIZE in Makefile (of bootloader)
+#define BOOTLOADER_SECTORS 16
+
+#define TAR_SECTOR_SIZE 512
+
+typedef struct tar_mount_option {
+    uint starting_LBA;
+} tar_mount_option;
 
 enum tar_error_code {
 	TAR_ERR_GENERAL = -1,
@@ -16,5 +29,7 @@ int tar_lookup(unsigned char* archive, const char* filename, char** out);
 bool is_tar_header(unsigned char* archive);
 int tar_match_filename(unsigned char* archive, const char* filename);
 int tar_get_filesize(unsigned char* archive);
+
+int tar_init(struct file_system* fs);
 
 #endif

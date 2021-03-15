@@ -38,13 +38,13 @@ static int64_t write_blocks_ata(block_storage* storage, uint32_t LBA, uint32_t b
     return 512 * block_count;
 }
 
-static void add_block_storage(block_storage storage)
+static void add_block_storage(block_storage* storage)
 {
-    storage.device_id = next_block_dev_id++;
+    storage->device_id = next_block_dev_id++;
     for(uint32_t i=0; i<MAX_STORAGE_DEV_COUNT; i++) {
         if(storage_list[i].device_id == 0) {
             //id == 0 means unused slot
-            storage_list[i] = storage;
+            storage_list[i] = *storage;
             return;
         }
     }
@@ -78,7 +78,8 @@ void initialize_block_storage()
         .write_blocks=write_blocks_ata,
         .internal_info=master_info
     };
-    add_block_storage(master_storage);
+    add_block_storage(&master_storage);
+    assert(master_storage.device_id == IDE_MASTER_DRIVE);
 
     int32_t slave_total_block_count = get_total_28bit_sectors(true);
     if(slave_total_block_count > 0) {
@@ -93,7 +94,8 @@ void initialize_block_storage()
             .write_blocks=write_blocks_ata,
             .internal_info=slave_info
         };
-        add_block_storage(slave_storage);
+        add_block_storage(&slave_storage);
+        assert(slave_storage.device_id == IDE_SLAVE_DRIVE);
     }
 
 }
