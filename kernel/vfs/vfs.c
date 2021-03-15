@@ -398,17 +398,17 @@ int fs_close(int fd)
         return -EBADF;
     }
 
-    struct fs_file_info fi = {.flags = f->open_flags, .fh=f->inum};
-    if(f->mount_point->operations.release != NULL) {
-        // if file system does support closing/release files internally
-        int res = f->mount_point->operations.release(f->mount_point, f->path, &fi);
-        if(res < 0) {
-            return res;
-        }
-    }
-
     p->files[fd]->ref--;
     if(p->files[fd]->ref == 0) {
+        struct fs_file_info fi = {.flags = f->open_flags, .fh=f->inum};
+        if(f->mount_point->operations.release != NULL) {
+            // if file system does support closing/release files internally
+            int res = f->mount_point->operations.release(f->mount_point, f->path, &fi);
+            if(res < 0) {
+                return res;
+            }
+        }
+
         free(p->files[fd]->path);
         memset(f, 0, sizeof(*f));
     }
