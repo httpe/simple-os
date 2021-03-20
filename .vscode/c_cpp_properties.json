@@ -16,6 +16,22 @@
             "cStandard": "c17",
             "cppStandard": "c++17",
             "intelliSenseMode": "msvc-x64"
+        },
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/kernel/include/**",
+                "${workspaceFolder}/libc/include/**"
+            ],
+            "defines": [],
+            "compilerPath": "/home/arce/opt/cross/bin/i686-elf-gcc",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "linux-gcc-x86",
+            "compilerArgs": [
+                "--sysroot=${workspaceFolder}/sysroot",
+                "-ffreestanding"
+            ]
         }
     ],
     "version": 4
