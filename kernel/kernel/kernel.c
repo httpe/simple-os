@@ -55,14 +55,13 @@ void test_ata()
 	if(storage != NULL) {
 		storage->read_blocks(storage, mbr, 0, 1);
 		printf("(Block IO slave) Disk MBR last four bytes: 0x%x\n", *(uint32_t*) &mbr[508]);
-
-		int i = 0;
-		fs_dirent* dirent_buf = malloc(sizeof(fs_dirent));
-		while(fs_readdir("/hdb", i++, dirent_buf, sizeof(fs_dirent)) > 0) {
-			printf("Enum root dir: %s\n", dirent_buf->name);
-		}
-		free(dirent_buf);
 	}
+	int i = 0;
+	fs_dirent* dirent_buf = malloc(sizeof(fs_dirent));
+	while(fs_readdir("/", i++, dirent_buf, sizeof(fs_dirent)) > 0) {
+		printf("Enum root dir: %s\n", dirent_buf->name);
+	}
+	free(dirent_buf);
 
 	kfree(mbr);
 

@@ -17,7 +17,7 @@ jmp $                       ; enter infinite loop, hang
 
 
 align 4
-init_prog_path: db "/usr/bin/init", 0
+init_prog_path: db "/boot/usr/bin/init", 0
 
 argv:
 dd init_prog_path

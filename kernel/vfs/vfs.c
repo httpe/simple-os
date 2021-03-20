@@ -35,14 +35,18 @@ static struct {
 
 fs_mount_point* find_mount_point(const char* path, const char**remaining_path)
 {
-    // Return the longest prefix matched mount point to allow mount point inside of mounted folder
-    int max_match_mount_point_id = -1;
-    int max_match_len = 0;
     *remaining_path = NULL;
-    if(*path != '/') {
+    if(*path != '/' || strlen(path)==0) {
         // Do not support relative path, yet
+        // also we assume there is no mount point attaching to root dir itself
+        // all mount points should goes under it
         return NULL;
     }
+
+    // Return the longest prefix matched mount point to allow mount point inside of mounted folder
+    // Since we only allow mounting immediately under root dir, this degenrate into a simple match
+    int max_match_mount_point_id = -1;
+    int max_match_len = 0;
     for(int i=0;i<N_MOUNT_POINT;i++) {
         if(mount_points[i].mount_target != NULL) {
             int match_len = 0;
@@ -89,6 +93,17 @@ fs_mount_point* find_mount_point(const char* path, const char**remaining_path)
 int fs_mount(block_storage* storage, const char* target, enum file_system_type file_system_type, 
             fs_mount_option option, void* fs_option, fs_mount_point** mount_point)
 {
+    size_t idx, last_slash = -1;
+    for(idx=0;idx<strlen(target);idx++) {
+        if(target[idx] == '/') {
+            last_slash = idx;
+        }
+    }
+    if(last_slash != 0 || idx<=1) {
+        // target must be in the form of '/NAME', i.e. has and only has one slash, at the beginning
+        // i.e. only allow mounting at a folder under root dir, and also not allowing mounting at root dir itself
+        return -1;
+    }
     int i;
     for(i=0; i<N_FILE_SYSTEM_TYPES; i++) {
         if(fs[i].type == file_system_type && fs[i].status == FS_STATUS_READY) {
@@ -108,6 +123,7 @@ int fs_mount(block_storage* storage, const char* target, enum file_system_type f
             }
         }
     }
+    // TODO: make sure the mount point already exist in the parent folder
     for(j=0;j<N_MOUNT_POINT;j++) {
         if(mount_points[j].mount_target == NULL) {
             mount_points[j] = (fs_mount_point) {
@@ -360,8 +376,27 @@ static int dir_filler(fs_dir_filler_info* filler_info, const char *name, const s
     }
 }
 
+// return: number of entries read into buf
 int fs_readdir(const char * path, uint entry_offset, fs_dirent* buf, uint buf_size) 
 {
+    struct fs_dir_filler_info filler_info = {.buf = buf, .buf_size = buf_size, .entry_written = 0};
+    if(strcmp(path,"/") == 0) {
+        // if is reading root dir
+        // return the mount points
+        uint entry_read = 0;
+        for(uint i=entry_offset; i<N_MOUNT_POINT; i++) {
+            if(mount_points[i].mount_target != NULL) {
+                assert(mount_points[i].mount_target[0] == '/');
+                // target+1 to skip the first slash
+                if(dir_filler(&filler_info, mount_points[i].mount_target+1, NULL) != 0) {
+                    // if filler's internal buffer is full, stop
+                    break;
+                }
+                entry_read++;
+            }
+        }
+        return entry_read;
+    }
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(path, &remaining_path);
     if(mp == NULL) {
@@ -371,7 +406,7 @@ int fs_readdir(const char * path, uint entry_offset, fs_dirent* buf, uint buf_si
         // if file system does not support this operation
         return -EPERM;
     }
-    struct fs_dir_filler_info filler_info = {.buf = buf, .buf_size = buf_size, .entry_written = 0};
+    
     int res = mp->operations.readdir(mp, remaining_path, entry_offset, &filler_info, dir_filler);
     if(res < 0) {
         return res;
@@ -506,7 +541,7 @@ int init_vfs()
     tar_mount_option tar_opt = (tar_mount_option) {.starting_LBA = BOOTLOADER_SECTORS};
     fs_mount_option mount_option = {0};
     fs_mount_point* mp = NULL;
-    int32_t mount_res = fs_mount(storage, "/", FILE_SYSTEM_US_TAR, mount_option, &tar_opt, &mp);
+    int32_t mount_res = fs_mount(storage, "/boot", FILE_SYSTEM_US_TAR, mount_option, &tar_opt, &mp);
     assert(mount_res == 0);
 
 	// mount hdb (IDE slave drive) to be the home dir (assumed to be FAT-32 formated)
