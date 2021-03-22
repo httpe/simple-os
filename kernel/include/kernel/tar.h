@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <common.h>
 #include <kernel/file_system.h>
+#include <kernel/block_io.h>
 
 // Copied from bootloader
 // The whole bootloader binary is assumed to take the first 16 sectors
@@ -15,6 +16,7 @@
 #define TAR_SECTOR_SIZE 512
 
 typedef struct tar_mount_option {
+	block_storage* storage;
     uint starting_LBA;
 } tar_mount_option;
 

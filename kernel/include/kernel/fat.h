@@ -173,6 +173,11 @@ enum fat32_rm_type {
     FAT32_RM_ANY
 };
 
+typedef struct fat_mount_option {
+	block_storage* storage;
+} fat_mount_option;
+
+
 int fat32_init(struct file_system* fs);
 
 // Used by make_fs

@@ -6,7 +6,7 @@
 #include <fs.h>
 #include <common.h>
 
-int fs_mount(block_storage* storage, const char* target, enum file_system_type file_system_type, 
+int fs_mount(const char* target, enum file_system_type file_system_type, 
             fs_mount_option option, void* fs_option, fs_mount_point** mount_point);
 int fs_unmount(const char* mount_root);
 int fs_getattr(const char * path, struct fs_stat * stat);

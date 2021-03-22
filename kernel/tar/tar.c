@@ -76,11 +76,11 @@ int tar_loopup_lazy(fs_mount_point *mp, const char* filename, uint* content_LBA)
 
     uint LBA = opt->starting_LBA;
     while(1) {
-        if (LBA >= (uint32_t) mp->storage->block_count) {
+        if (LBA >= (uint32_t) opt->storage->block_count) {
             free(sector_buffer);
             return TAR_ERR_LBA_GT_MAX_SECTOR;
         }
-        mp->storage->read_blocks(mp->storage, sector_buffer, LBA, 1);
+        opt->storage->read_blocks(opt->storage, sector_buffer, LBA, 1);
         int match = tar_match_filename(sector_buffer, filename);
         if (match == TAR_ERR_NOT_USTAR) {
             free(sector_buffer);
@@ -101,12 +101,14 @@ int tar_loopup_lazy(fs_mount_point *mp, const char* filename, uint* content_LBA)
 }
 
 
-int tar_read(struct fs_mount_point* mount_point, const char * path, char *buf, uint size, uint offset, struct fs_file_info *fi)
+int tar_read(struct fs_mount_point* mp, const char * path, char *buf, uint size, uint offset, struct fs_file_info *fi)
 {
     UNUSED_ARG(fi);
 
+    tar_mount_option* opt = (tar_mount_option*) mp->fs_meta;
+
     uint content_LBA;
-    int filesize = tar_loopup_lazy(mount_point, path, &content_LBA);
+    int filesize = tar_loopup_lazy(mp, path, &content_LBA);
     if(filesize < 0) {
         return -1;
     }
@@ -125,7 +127,7 @@ int tar_read(struct fs_mount_point* mount_point, const char * path, char *buf, u
     int LBA = content_LBA + offset / TAR_SECTOR_SIZE;
     char* full_buf = malloc(size_in_sector*TAR_SECTOR_SIZE);
     memset(full_buf, 0, size_in_sector*TAR_SECTOR_SIZE);
-    int res = mount_point->storage->read_blocks(mount_point->storage, full_buf, LBA, size_in_sector);
+    int res = opt->storage->read_blocks(opt->storage, full_buf, LBA, size_in_sector);
     if(res != size_in_sector*TAR_SECTOR_SIZE) {
         return -1;
     }
@@ -156,12 +158,13 @@ int tar_getattr(struct fs_mount_point* mount_point, const char * path, struct fs
 
 int tar_mount(struct fs_mount_point* mount_point, void* option)
 {
-    if(mount_point->storage->block_size != 512) {
+    tar_mount_option* opt_in = (tar_mount_option*) option;
+    if(opt_in->storage->block_size != 512) {
         return -1;
     }
 
     // internalize the mounting option
-    tar_mount_option* opt = malloc(sizeof(tar_mount_option));
+    tar_mount_option* opt = malloc(sizeof(*opt_in));
     memmove(opt, option, sizeof(tar_mount_option));
     mount_point->fs_meta = opt;
     

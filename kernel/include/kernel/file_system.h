@@ -89,7 +89,6 @@ struct file_system_operations;
 typedef struct fs_mount_point {
     uint id;
     struct file_system* fs;
-    block_storage* storage;
     char* mount_target;
     struct fs_mount_option mount_option;
 
