@@ -14,10 +14,11 @@
 ////////////////////////////////////////
 
 
-#define N_FILE_SYSTEM_TYPES 2
+#define N_FILE_SYSTEM_TYPES 3
 enum file_system_type {
     FILE_SYSTEM_FAT_32,
-    FILE_SYSTEM_US_TAR
+    FILE_SYSTEM_US_TAR,
+    FILE_SYSTEM_CONSOLE
 };
 
 enum file_system_status {

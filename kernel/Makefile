@@ -45,6 +45,7 @@ elf/elf.o \
 block_io/block_io.o \
 vfs/vfs.o \
 fat/fat.o \
+console/console.o \
 kernel/kernel.o \
 
 USER_SPACE_BINARIES=\

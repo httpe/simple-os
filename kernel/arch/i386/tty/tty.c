@@ -77,6 +77,8 @@ void terminal_putchar(char c) {
     if (is_serial_port_initialized()) {
         write_serial(c);
     }
+
+    update_cursor();
 }
 
 

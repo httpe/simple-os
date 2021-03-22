@@ -12,7 +12,7 @@
 #include <kernel/fat.h>
 #include <kernel/tar.h>
 #include <kernel/process.h>
-
+#include <kernel/console.h>
 
 #define N_MOUNT_POINT 16
 #define N_FILE_STRUCTURE 12
@@ -535,6 +535,10 @@ int init_vfs()
     res = tar_init(&fs[1]);
     assert(res == 0);
 
+    fs[2] = (struct file_system) {.type = FILE_SYSTEM_CONSOLE};
+    res = console_init(&fs[2]);
+    assert(res == 0);
+
     // mount hda (IDE master drive) to be the root dir (assumed to be US-TAR formated)
 	block_storage* storage = get_block_storage(IDE_MASTER_DRIVE);
     tar_mount_option tar_opt = (tar_mount_option) {
@@ -554,6 +558,9 @@ int init_vfs()
 		assert(mount_res == 0);
 	}
 
+    // mount console
+    mount_res = fs_mount("/console", FILE_SYSTEM_CONSOLE, mount_option, NULL, &mp);
+    assert(mount_res == 0);
     
     return 0;
 }

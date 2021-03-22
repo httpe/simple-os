@@ -89,6 +89,17 @@ int user_main(int argc, char* argv[]) {
         printf("OPEN error\n");
     }
 
+    int fd_console = sys_open("/console", 0);
+    if(fd_console < 0) {
+        printf("OPEN error\n");
+    }
 
-    while(1);
+    char c;
+    sys_write(fd_console, "Input:\n", 7);
+    while(1) {
+        int read = sys_read(fd_console, &c, 1);
+        if(read == 1) {
+            sys_write(fd_console, &c, 1);
+        }
+    }
 }

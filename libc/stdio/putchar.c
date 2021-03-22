@@ -4,18 +4,19 @@
 #include <kernel/tty.h>
 #else
 #include <syscall.h>
-static inline _syscall1(SYS_PRINT, int, sys_print, char*, str)
+#include <common.h>
+static inline _syscall3(SYS_WRITE, int, sys_write, int, fd, const void*, buf, uint, size)
 #endif
 
 int putchar(int ic) {
 #if defined(__is_libk)
-	char c = (char) ic;
-	terminal_write(&c, sizeof(c));
-	update_cursor();
+	terminal_putchar((char) ic);
+	// update_cursor();
 #else
-	// TODO: Implement stdio and the write system call.
-	char c[2] = {ic, 0};
-	sys_print(c);
+	char c = (char) ic;
+	sys_write(0, &c, 1);
+	// char c[2] = {ic, 0};
+	// sys_print(c);
 #endif
 	return ic;
 }

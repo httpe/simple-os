@@ -221,7 +221,7 @@ static void keyboard_callback(trapframe* regs) {
     /* The PIC leaves us the scancode in port 0x60 */
     uint8_t scan_code = inb(KDB_DATA_PORT);
     uchar c = map_scan_code(scan_code);
-    printf("KDB[s=0x%x]: (code=0x%x) ascii[0x%x]='%c'\n", kdb_state, (uint) scan_code, (uint)c, c);
+    // printf("KDB[s=0x%x]: (code=0x%x) ascii[0x%x]='%c'\n", kdb_state, (uint) scan_code, (uint)c, c);
     key_buffer_append(c);
 }
 
