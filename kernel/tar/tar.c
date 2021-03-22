@@ -25,7 +25,7 @@ static int oct2bin(unsigned char* str, int size) {
 // out: will point to a pointer of the matched file in the tarball
 //
 // return: file size 
-int tar_lookup(unsigned char* archive, const char* filename, char** out) {
+static int tar_lookup(unsigned char* archive, const char* filename, char** out) {
     unsigned char* ptr = archive;
 
     while (!memcmp(ptr + 257, "ustar", 5)) {
@@ -40,12 +40,12 @@ int tar_lookup(unsigned char* archive, const char* filename, char** out) {
 }
 
 // Check if archive is pointing to the start of a tarball meta sector
-bool is_tar_header(unsigned char* archive) {
+static bool is_tar_header(unsigned char* archive) {
     return !memcmp(archive + 257, "ustar", 5);
 }
 
 // Check if archive is pointing to the start of a tarball meta sector for file named filename
-int tar_match_filename(unsigned char* archive, const char* filename) {
+static int tar_match_filename(unsigned char* archive, const char* filename) {
     if (is_tar_header(archive)) {
         if (!memcmp(archive, filename, strlen(filename) + 1)) {
             return 0;
@@ -60,7 +60,7 @@ int tar_match_filename(unsigned char* archive, const char* filename) {
 // Get the actual content size of a file in a tarball
 //
 // archive: pointer to the start of a tarball meta sector
-int tar_get_filesize(unsigned char* archive) {
+static int tar_get_filesize(unsigned char* archive) {
     if (is_tar_header(archive)) {
         return oct2bin(archive + 0x7c, 11);
     } else {
@@ -69,7 +69,7 @@ int tar_get_filesize(unsigned char* archive) {
 }
 
 
-int tar_loopup_lazy(fs_mount_point *mp, const char* filename, uint* content_LBA) {
+static int tar_loopup_lazy(fs_mount_point *mp, const char* filename, uint* content_LBA) {
     tar_mount_option* opt = (tar_mount_option*) mp->fs_meta;
 
     unsigned char* sector_buffer = malloc(TAR_SECTOR_SIZE);
@@ -101,7 +101,7 @@ int tar_loopup_lazy(fs_mount_point *mp, const char* filename, uint* content_LBA)
 }
 
 
-int tar_read(struct fs_mount_point* mp, const char * path, char *buf, uint size, uint offset, struct fs_file_info *fi)
+static int tar_read(struct fs_mount_point* mp, const char * path, char *buf, uint size, uint offset, struct fs_file_info *fi)
 {
     UNUSED_ARG(fi);
 
@@ -138,7 +138,7 @@ int tar_read(struct fs_mount_point* mp, const char * path, char *buf, uint size,
 }
 
 
-int tar_getattr(struct fs_mount_point* mount_point, const char * path, struct fs_stat *st, struct fs_file_info *fi)
+static int tar_getattr(struct fs_mount_point* mount_point, const char * path, struct fs_stat *st, struct fs_file_info *fi)
 {
     UNUSED_ARG(fi);
 
@@ -156,7 +156,7 @@ int tar_getattr(struct fs_mount_point* mount_point, const char * path, struct fs
 }
 
 
-int tar_mount(struct fs_mount_point* mount_point, void* option)
+static int tar_mount(struct fs_mount_point* mount_point, void* option)
 {
     tar_mount_option* opt_in = (tar_mount_option*) option;
     if(opt_in->storage->block_size != 512) {
@@ -176,7 +176,7 @@ int tar_mount(struct fs_mount_point* mount_point, void* option)
     return 0;
 }
 
-int tar_unmount(struct fs_mount_point* mount_point)
+static int tar_unmount(struct fs_mount_point* mount_point)
 {
     free(mount_point->fs_meta);
     return 0;
