@@ -45,7 +45,6 @@ int fork();
 void exit(int exit_code);
 int wait();
 void switch_process_memory_mapping(proc* p);
-extern struct context* kernel_boot_context;
 
 // defined in switch_kernel_context.asm
 extern void switch_kernel_context(struct context **old_context, struct context *new_context);

@@ -8,7 +8,7 @@
 
 #include <arch/i386/kernel/isr.h>
 #include <arch/i386/kernel/segmentation.h>
-
+#include <arch/i386/kernel/cpu.h>
 
 // Ref: https://blog.inlow.online/2019/01/21/Paging/
 // Ref: http://www.jamesmolloy.co.uk/tutorial_html/6.-Paging.html
@@ -42,7 +42,7 @@ typedef struct page_directory_entry
    uint32_t zero            : 1;   // Always zero
    uint32_t page_size       : 1;   // If the bit is set, then pages are 4 MiB in size. Otherwise, they are 4 KiB. Please note that 4-MiB pages require PSE to be enabled.
    uint32_t ignored         : 1;   // Ignored bit
-   uint32_t avaible         : 3;   // Available to OS
+   uint32_t available       : 3;   // Available to OS
    uint32_t page_table_frame : 20; // Physical address to the page table (shifted right 12 bits)
 } pde;
 
@@ -58,9 +58,6 @@ typedef struct page_directory_entry
 
 
 extern char MAP_MEM_PA_ZERO_TO[], KERNEL_VIRTUAL_END[];
-
-static segdesc gdt[NSEGS];
-static task_state tss;
 
 // Declare internal utility functions
 static uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, bool is_kernel);
@@ -89,13 +86,14 @@ static inline void ltr(uint16_t sel)
 // Initialize GDT with user space entries and a slot for TSS
 static void init_gdt()
 {
-    gdt[SEG_NULL] = (segdesc) {0};
-    gdt[SEG_KCODE] = SEG(STA_X|STA_R, 0, 0xffffffff, 0);
-    gdt[SEG_KDATA] = SEG(STA_W, 0, 0xffffffff, 0);
-    gdt[SEG_UCODE] = SEG(STA_X|STA_R, 0, 0xffffffff, DPL_USER);
-    gdt[SEG_UDATA] = SEG(STA_W, 0, 0xffffffff, DPL_USER);
+    cpu* cpu = curr_cpu();
+    cpu->gdt[SEG_NULL] = (segdesc) {0};
+    cpu->gdt[SEG_KCODE] = SEG(STA_X|STA_R, 0, 0xffffffff, 0);
+    cpu->gdt[SEG_KDATA] = SEG(STA_W, 0, 0xffffffff, 0);
+    cpu->gdt[SEG_UCODE] = SEG(STA_X|STA_R, 0, 0xffffffff, DPL_USER);
+    cpu->gdt[SEG_UDATA] = SEG(STA_W, 0, 0xffffffff, DPL_USER);
     // TSS will be setup later, but we tell CPU there will one through size argument of lgdt (NSEGS)
-    lgdt(gdt, sizeof(gdt));
+    lgdt(cpu->gdt, sizeof(cpu->gdt));
 }
 
 // Flush TLB (translation lookaside buffer) for a single page
@@ -386,12 +384,13 @@ bool is_vaddr_accessible(pde* page_dir, uint32_t vaddr, bool is_from_kernel_code
 // Set current TSS segment
 void set_tss(uint32_t kernel_stack_esp)
 {
-    gdt[SEG_TSS] = TSS_SEG(STS_T32A, &tss, sizeof(tss)-1, DPL_KERNEL);
-    tss.ss0 = SEG_SELECTOR(SEG_KDATA, DPL_KERNEL);
-    tss.esp0 = kernel_stack_esp;
+    cpu* cpu = curr_cpu();
+    cpu->gdt[SEG_TSS] = TSS_SEG(STS_T32A, &cpu->ts, sizeof(cpu->ts)-1, DPL_KERNEL);
+    cpu->ts.ss0 = SEG_SELECTOR(SEG_KDATA, DPL_KERNEL);
+    cpu->ts.esp0 = kernel_stack_esp;
     // setting IOPL=0 in eflags *and* iomb beyond the tss segment limit
     // forbids I/O instructions (e.g., inb and outb) from user space
-    tss.iomb = (uint16_t) 0xFFFF;
+    cpu->ts.iomb = (uint16_t) 0xFFFF;
     ltr(SEG_SELECTOR(SEG_TSS, DPL_KERNEL));
 }
 

@@ -8,6 +8,7 @@
 #include <kernel/memory_bitmap.h>
 #include <kernel/vfs.h>
 #include <arch/i386/kernel/segmentation.h>
+#include <arch/i386/kernel/cpu.h>
 
 // Source: xv6/proc.h
 
@@ -44,9 +45,7 @@ struct {
 } process_table;
 
 static uint32_t next_pid = 1;
-proc* current_process = NULL;
 proc* init_process = NULL;
-context* kernel_boot_context = NULL;
 
 void initialize_process() 
 {
@@ -149,21 +148,21 @@ void scheduler()
                 continue;
 
             // printf("Scheduling to process %u\n", p->pid);
-
-            current_process = p;
+            cpu* cpu = curr_cpu();
+            cpu->current_process = p;
             switch_process_memory_mapping(p);
             p->state = PROC_STATE_RUNNING;
-            switch_kernel_context(&kernel_boot_context, p->context);
+            switch_kernel_context(&cpu->scheduler_context, p->context);
 
             // printf("Switched back from process %u\n", p->pid);
-            current_process = NULL;
+            cpu->current_process = NULL;
         }
     }
 }
 
 proc* curr_proc()
 {
-    return current_process;
+    return curr_cpu()->current_process;
 }
 
 void exit(int exit_code)
@@ -183,11 +182,12 @@ void exit(int exit_code)
             process_table.proc[i].parent = init_process;
         }
     }
-
     p->state = PROC_STATE_ZOMBIE;
     p->exit_code = exit_code;
     
-    switch_kernel_context(&p->context, kernel_boot_context);
+    switch_kernel_context(&p->context, curr_cpu()->scheduler_context);
+
+    PANIC("Return from scheduler after exiting");
 }
 
 void yield()
@@ -196,7 +196,7 @@ void yield()
     // printf("PID %u yield\n", p->pid);
 
     p->state = PROC_STATE_RUNNABLE;
-    switch_kernel_context(&p->context, kernel_boot_context);
+    switch_kernel_context(&p->context, curr_cpu()->scheduler_context);
 
     // printf("PID %u back from yield\n", p->pid);
 }

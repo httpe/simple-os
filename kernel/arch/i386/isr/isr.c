@@ -80,7 +80,8 @@ void isr_install() {
     set_idt_gate(IRQ_TO_INTERRUPT(14), (uint32_t)irq14, IDT_GATE_TYPE_INT, DPL_KERNEL);
     set_idt_gate(IRQ_TO_INTERRUPT(15), (uint32_t)irq15, IDT_GATE_TYPE_INT, DPL_KERNEL);
 
-    // System call
+    // System call, IDT_GATE_TYPE_TRAP means interrupt is enabled during the execution of syscall
+    // Need to protect cirtical kernel code with locks in such case
     set_idt_gate(INT_SYSCALL, (uint32_t)int88, IDT_GATE_TYPE_TRAP, DPL_USER);
 
     set_idt(); // Load with ASM

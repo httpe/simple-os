@@ -10,11 +10,10 @@
 #include <kernel/tar.h>
 #include <kernel/vfs.h>
 #include <kernel/file_system.h>
-
-#include <arch/i386/kernel/isr.h>
 #include <kernel/process.h>
 #include <kernel/paging.h>
-
+#include <arch/i386/kernel/isr.h>
+#include <arch/i386/kernel/cpu.h>
 
 extern char MAP_MEM_PA_ZERO_TO[];
 
@@ -217,6 +216,9 @@ int sys_seek(trapframe* r)
 
 void syscall_handler(trapframe* r)
 {
+    // Avoid scheduling when in syscall/kernel space
+    disable_interrupt();
+
     // trapframe r will be pop when returning to user space
     // so r->eax will be the return value of the syscall  
     switch (r->eax)
