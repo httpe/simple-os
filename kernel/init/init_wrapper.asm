@@ -12,7 +12,7 @@ call user_main
 ; with eax being the return value from the user_main C function
 int 88
 
-; test running a priviledged instruction
+; test running a privileged instruction
 ; shall generate a General Protection Fault
 cli
 
