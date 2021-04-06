@@ -4,9 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <stat.h>
-#include <errno.h>
-
+#include <kernel/errno.h>
+#include <kernel/stat.h>
 #include <kernel/block_io.h>
 #include <kernel/vfs.h>
 #include <kernel/fat.h>
@@ -523,6 +522,23 @@ int fs_seek(int fd, int offset, int whence)
     return 0;
     
 }
+
+int fs_fstat(int fd, struct fs_stat * stat)
+{
+    file* f = fd2file(fd);
+    if(f == NULL) {
+        return -EBADF;
+    }
+    if(f->mount_point->operations.getattr == NULL) {
+        // if file system does not support this operation
+        return -EPERM;
+    }
+
+    int res = f->mount_point->operations.getattr(f->mount_point, f->path, stat, NULL);
+    
+    return res;
+}
+
 
 int init_vfs()
 {

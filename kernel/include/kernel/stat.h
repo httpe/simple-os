@@ -2,7 +2,7 @@
 #define _STAT_H
 
 #include <stdint.h>
-#include <time.h>
+#include <kernel/time.h>
 
 // Mimic Linux stat.h
 

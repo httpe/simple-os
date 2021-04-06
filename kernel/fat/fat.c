@@ -2,11 +2,10 @@
 #include <string.h>
 #include <common.h>
 #include <assert.h>
-
 #include <stddef.h>
-#include <errno.h>
-#include <stat.h>
 
+#include <kernel/errno.h>
+#include <kernel/stat.h>
 #include <kernel/fat.h>
 
 #define HAS_ATTR(file,attr) (((file)&(attr)) == (attr))

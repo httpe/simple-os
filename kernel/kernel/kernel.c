@@ -1,11 +1,11 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <common.h>
-#include <time.h>
+#include <kernel/time.h>
 #include <kernel/tty.h>
 #include <kernel/arch_init.h>
-#include <stdint.h>
 #include <kernel/heap.h>
 #include <kernel/ata.h>
 #include <kernel/panic.h>

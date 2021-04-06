@@ -1,5 +1,5 @@
 #include <stddef.h>
-#include <errno.h>
+#include <kernel/errno.h>
 #include <kernel/console.h>
 #include <kernel/keyboard.h>
 #include <kernel/tty.h>

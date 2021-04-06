@@ -1,7 +1,7 @@
-#include <time.h>
 #include <string.h>
 #include <common.h>
 #include <kernel/timer.h>
+#include <kernel/time.h>
 #include <arch/i386/kernel/port_io.h>
 
 // sourced from https://wiki.osdev.org/CMOS#Getting_Current_Date_and_Time_from_RTC

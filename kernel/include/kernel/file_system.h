@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include <kernel/block_io.h>
-#include <stat.h>
+#include <kernel/stat.h>
 #include <common.h>
 
 ////////////////////////////////////////
