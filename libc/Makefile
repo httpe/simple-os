@@ -53,7 +53,7 @@ $(HOSTEDOBJS) \
 
 LIBK_OBJS=$(FREEOBJS:.o=.libk.o)
 
-BINARIES=libc.a libk.a
+BINARIES=libu.a libk.a
 # BINARIES=libk.a
 
 .PHONY: all clean install install-headers install-libs
@@ -61,7 +61,7 @@ BINARIES=libc.a libk.a
 
 all: $(BINARIES)
 
-libc.a: $(OBJS)
+libu.a: $(OBJS)
 	$(AR) rcs $@ $(OBJS)
 
 libk.a: $(LIBK_OBJS)

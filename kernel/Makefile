@@ -17,7 +17,7 @@ USER_SPACE_BINDIR?=$(PREFIX)/bin
 USER_CFLAGS:= $(CFLAGS) -ffreestanding -Wall -Wextra
 USER_CPPFLAGS:=$(CPPFLAGS) -Iinclude
 USER_LDFLAGS:=$(LDFLAGS)
-USER_LIBS:=$(LIBS) -nostdlib -lc -lgcc
+USER_LIBS:=$(LIBS) -nostdlib -lu -lgcc
 
 
 CFLAGS:=$(CFLAGS) -ffreestanding -Wall -Wextra
