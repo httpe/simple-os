@@ -132,9 +132,9 @@ int sys_sbrk(trapframe* r)
     if(new_size < p->orig_size || new_size < p->orig_size) {
         return -1;
     } 
-    p->size = p->size + delta;
+    p->size = new_size;
     uint32_t orig_last_pg_idx = PAGE_INDEX_FROM_VADDR(orig_size - 1);
-    uint32_t new_last_pg_idx =  PAGE_INDEX_FROM_VADDR(p->size - 1);
+    uint32_t new_last_pg_idx =  PAGE_INDEX_FROM_VADDR(new_size - 1);
     if(new_last_pg_idx > orig_last_pg_idx) {
         alloc_pages_at(p->page_dir, orig_last_pg_idx + 1, new_last_pg_idx - orig_last_pg_idx, false, true);
     } else if(new_last_pg_idx < orig_last_pg_idx) {
