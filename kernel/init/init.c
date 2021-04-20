@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <fs.h>
+#include <kernel/stat.h>
 
 static inline _syscall0(SYS_YIELD, int, sys_yield)
 // static inline _syscall0(SYS_FORK, int, sys_fork)
@@ -22,11 +23,11 @@ int main(int argc, char* argv[]) {
     (void) argc;
     (void) argv;
 
-    int fd_stdin = open("/console", 0);
+    int fd_stdin = open("/console", O_RDONLY);
     if(fd_stdin < 0) {
         printf("OPEN error\n");
     }
-    int fd_stdout = open("/console", 0);
+    int fd_stdout = open("/console", O_WRONLY);
     if(fd_stdout < 0) {
         printf("OPEN error\n");
     }

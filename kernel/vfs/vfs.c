@@ -461,6 +461,9 @@ int fs_read(int fd, void *buf, uint size)
         // if file system does not support this operation
         return -EPERM;
     }
+    if(!f->readable) {
+        return -EPERM;
+    }
 
     struct fs_file_info fi = {.flags = f->open_flags, .fh=f->inum};
     int res = f->mount_point->operations.read(f->mount_point, f->path, buf, size, f->offset, &fi);
@@ -480,6 +483,9 @@ int fs_write(int fd, void *buf, uint size)
     }
     if(f->mount_point->operations.write == NULL) {
         // if file system does not support this operation
+        return -EPERM;
+    }
+    if(!f->writable) {
         return -EPERM;
     }
 
