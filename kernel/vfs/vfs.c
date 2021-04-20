@@ -423,6 +423,30 @@ static file* fd2file(int fd)
     return f;
 }
 
+int fs_dup(int fd)
+{
+    proc* p = curr_proc();
+    file* f = fd2file(fd);
+    if(f == NULL) {
+        return -EBADF;
+    }
+
+    // file descriptor is the index into (one process's) file_table
+    int new_fd;
+    for(new_fd=0; new_fd<N_FILE_DESCRIPTOR_PER_PROCESS;new_fd++) {
+        if(p->files[new_fd] == NULL) {
+            break;
+        }
+    }
+    if(new_fd == N_FILE_DESCRIPTOR_PER_PROCESS) {
+        // too many opended files
+        return -EMFILE;
+    }
+    p->files[new_fd] = f;
+
+    return new_fd;
+}
+
 int fs_close(int fd)
 {
     proc* p = curr_proc();

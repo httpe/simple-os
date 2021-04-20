@@ -214,6 +214,12 @@ int sys_seek(trapframe* r)
     return fs_seek(fd, offset, whence);
 }
 
+int sys_dup(trapframe* r)
+{
+    int32_t fd = *(int*) (r->esp + 4);
+    return fs_dup(fd);
+}
+
 void syscall_handler(trapframe* r)
 {
     // Avoid scheduling when in syscall/kernel space
@@ -259,6 +265,9 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_SEEK:
         r->eax = sys_seek(r);
+        break;
+    case SYS_DUP:
+        r->eax = sys_dup(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);

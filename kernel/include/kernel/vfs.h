@@ -22,6 +22,7 @@ int fs_close(int fd);
 int fs_read(int fd, void *buf, uint size);
 int fs_seek(int fd, int offset, int whence);
 int fs_write(int fd, void *buf, uint size);
+int fs_dup(int fd);
 
 fs_mount_point* find_mount_point(const char* path, const char**remaining_path);
 int init_vfs();

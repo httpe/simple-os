@@ -10,27 +10,17 @@
 #include <kernel/stat.h>
 
 static inline _syscall0(SYS_YIELD, int, sys_yield)
-// static inline _syscall0(SYS_FORK, int, sys_fork)
+static inline _syscall1(SYS_DUP, int, sys_dup, int, fd)
 static inline _syscall1(SYS_WAIT, int, sys_wait, int*, exit_code)
-// static inline _syscall1(SYS_SBRK, int, sys_sbrk, int, size_delta)
-// static inline _syscall2(SYS_OPEN, int, sys_open, char*, path, int, flags)
-// static inline _syscall1(SYS_CLOSE, int, sys_close, int, fd)
-// static inline _syscall3(SYS_READ, int, sys_read, int, fd, void*, buf, uint, size)
-// static inline _syscall3(SYS_WRITE, int, sys_write, int, fd, const void*, buf, uint, size)
 static inline _syscall3(SYS_SEEK, int, sys_seek, int, fd, int, offset, int, whence)
 
 int main(int argc, char* argv[]) {
     (void) argc;
     (void) argv;
 
-    int fd_stdin = open("/console", O_RDONLY);
-    if(fd_stdin < 0) {
-        printf("OPEN error\n");
-    }
-    int fd_stdout = open("/console", O_WRONLY);
-    if(fd_stdout < 0) {
-        printf("OPEN error\n");
-    }
+    int fd_stdin = open("/console", O_RDWR);
+    int fd_stdout = sys_dup(0);
+    int fd_stderr = sys_dup(0);
 
     int ret = printf("Hello User World!\n");
     ret = sys_yield();

@@ -16,6 +16,7 @@
 #define SYS_READ 10
 #define SYS_WRITE 11
 #define SYS_SEEK 12
+#define SYS_DUP 13
 
 // defined in interrupt.asm
 extern void int88();
