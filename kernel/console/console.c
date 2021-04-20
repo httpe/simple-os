@@ -34,7 +34,7 @@ static int console_write(struct fs_mount_point* mount_point, const char * path, 
     for(uint i=0; i<size; i++) {
         terminal_putchar(buf[i]);
     }
-    return 0;
+    return size;
 }
 
 static int console_mount(struct fs_mount_point* mount_point, void* option)
