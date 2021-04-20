@@ -30,7 +30,7 @@ KERNEL_BOOT_IMG!=realpath $(KERNEL_BOOT_IMG)
 # Detecting Linux vs macOS
 UNAME := $(shell uname)
 
-.PHONY: all clean install
+.PHONY: all clean install kernel.tar
 
 all: bootable_kernel.bin bootloader.elf
 
@@ -65,7 +65,7 @@ endif
 	dd if=/dev/zero of=$@ bs=1 count=0 seek=$(BOOTLOADER_MAX_SIZE)
 
 # Hardcoded path /kernel.bin to be loaded by bootloader
-kernel.tar: $(KERNEL_BOOT_IMG) $(KERNEL_ROOT)
+kernel.tar:
 	# Use KERNEL_ROOT as file name root, i.e. $(KERNEL_ROOT)/kernel.bin -> /kernel.bin in the tar ball
 	$(TAR) -P -cvf $@ --transform="s,^$(KERNEL_ROOT)/,/," $(KERNEL_ROOT)/*
 
