@@ -14,10 +14,10 @@ BOOTDIR?=$(EXEC_PREFIX)/boot
 INCLUDEDIR?=$(PREFIX)/include
 USER_SPACE_BINDIR?=$(PREFIX)/bin
 
-USER_CFLAGS:= $(CFLAGS) -ffreestanding -Wall -Wextra
+USER_CFLAGS:= $(CFLAGS) -Wall -Wextra
 USER_CPPFLAGS:=$(CPPFLAGS) -Iinclude
 USER_LDFLAGS:=$(LDFLAGS)
-USER_LIBS:=$(LIBS) -nostdlib -lu -lgcc
+USER_LIBS:=$(LIBS)
 
 
 CFLAGS:=$(CFLAGS) -ffreestanding -Wall -Wextra
@@ -92,11 +92,15 @@ simple_os.kernel: $(OBJS) $(ARCHDIR)/linker.ld
 
 user_space_programs: $(USER_SPACE_BINARIES)
 
-init/init: $(INIT_OBJS) init/init.ld
-	$(CC) -MD -T init/init.ld -o $@ $(USER_CFLAGS) $(INIT_OBJS) $(USER_LIBS)
+# init/init: $(INIT_OBJS) init/init.ld
+# 	$(CC) -MD -T init/init.ld -o $@ $(USER_CFLAGS) $(INIT_OBJS) $(USER_LIBS)
 
-init/init.o: init/init.c
-	$(CC) -MD -c $< -o $@ -std=gnu11 $(USER_CFLAGS) $(USER_CPPFLAGS)
+# init/init.o: init/init.c
+# 	$(CC) -MD -c $< -o $@ -std=gnu11 $(USER_CFLAGS) $(USER_CPPFLAGS)
+
+init/init: init/init.c
+	# cp -R kernel/include /home/arce/src/os-specific-toolchain/sysroot/usr/include
+	$(TOOLCHAINROOT)/usr/bin/i686-simpleos-gcc -MD -o $@ $< -std=gnu11 $(USER_CFLAGS) $(USER_CPPFLAGS) $(USER_LIBS)
 
 $(ARCHDIR)/crt/crtbegin.o $(ARCHDIR)/crt/crtend.o:
 	OBJ=`$(CC) $(CFLAGS) $(LDFLAGS) -print-file-name=$(@F)` && cp "$$OBJ" $@
@@ -121,6 +125,7 @@ install: install-headers install-kernel install-user-space
 install-headers:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
 	cp -Rp include/. $(DESTDIR)$(INCLUDEDIR)/.
+	cp -Rp include/. $(TOOLCHAINROOT)$(INCLUDEDIR)/.
 	
 install-kernel: simple_os.kernel 
 	mkdir -p $(DESTDIR)$(BOOTDIR)

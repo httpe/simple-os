@@ -32,6 +32,19 @@
                 "--sysroot=${workspaceFolder}/sysroot",
                 "-ffreestanding"
             ]
+        },
+        {
+            "name": "SimpleOS",
+            "includePath": [
+                "${workspaceFolder}/toolchain/usr/include"
+            ],
+            "defines": [],
+            "compilerPath": "${workspaceFolder}/toolchain/usr/bin/i686-simpleos-gcc",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "linux-gcc-x86",
+            "compilerArgs": [
+            ]
         }
     ],
     "version": 4

@@ -11,3 +11,4 @@ init
 !init/
 serial_port_output.txt
 *.fat
+toolchain/

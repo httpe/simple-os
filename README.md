@@ -268,16 +268,19 @@ Although the final goal is to make the system self-hosting, we planned for sever
     - Implement `fork`, `exec` and `yield` system calls on a simple read-only file system (potentially reuse the USTAR code from the bootloader)
     - **Finished**: Implemented Kernel heap, ELF loader, cooperative and preemptive multi-tasking and exec system call based on the USTAR read-only file system
 
-1. **Milestone Four: System calls, Filesystem and Shell**
-    - Provide a readable & writable file system (FAT/Ext) and corresponding system calls/libc functions
+1. **Milestone Four: Filesystem, System calls, and Shell**
+    - Provide a readable & writable file system (FAT or Ext) and corresponding system calls
+    - Build user space standard C library with system calls, e.g. printf, malloc and open/read/write. Potentially port [Newlib](https://wiki.osdev.org/Porting_Newlib) as our standard C library.
+    - Build our [OS specific/hosted compiling tool chain](https://wiki.osdev.org/OS_Specific_Toolchain) (Binutils and GCC)
     - Provide locking mechanism in multi-tasking environment
-    - Build user space standard C library with system calls, e.g. printf, malloc and open/read/write
+    - **In progress**:
+      - File system ported from our sub-project [Simple-FS](https://github.com/httpe/simple-fs)
+      - [Newlib ported](https://github.com/httpe/simple-newlib) (Adding more syscalls)
+      - Hosted Binutils/GCC tool chain established (See HostedToolchain.md)
+
+1. **Milestone Five: User Space Applications and Compiler**
     - Write a shell to allow navigating through the file system
     - Write a editor to show file content, allowing editing and saving to disk
-    - **In progress**: File system ported from our sub-project [Simple-FS](https://github.com/httpe/simple-fs)
-
-1. **Milestone Five: User Space Compiler**
-    - Build our OS specific compiling tool chain
     - Port a simplified C compiler to the system
     - Compile and run the text editor inside the system
 
