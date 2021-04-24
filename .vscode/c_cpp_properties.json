@@ -35,15 +35,14 @@
         },
         {
             "name": "SimpleOS",
-            "includePath": [
-                "${workspaceFolder}/toolchain/usr/include"
-            ],
+            "includePath": [],
             "defines": [],
             "compilerPath": "${workspaceFolder}/toolchain/usr/bin/i686-simpleos-gcc",
             "cStandard": "gnu17",
             "cppStandard": "gnu++14",
             "intelliSenseMode": "linux-gcc-x86",
             "compilerArgs": [
+                "-isystem ${workspaceFolder}/kernel/include"
             ]
         }
     ],
