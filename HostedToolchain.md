@@ -11,8 +11,9 @@ Reference:
 ## Prepare environment variables
 
 ```bash
-# $SIMPLE_OS_SRC is the root folder of simple-os source code
-export SIMPLE_OS_SRC=`pwd`
+
+# Change to your own path to simple-os source code
+export SIMPLE_OS_SRC=$HOME/src/simple-os
 
 mkdir simpleos-toolchain
 cd simpleos-toolchain
@@ -95,6 +96,10 @@ cd $CURR_DIR
 mkdir build-newlib
 cd build-newlib
 
+# Ask GCC to search  kernel include dir for syscall headers
+# No need to do this once we have our os-specific GCC
+export CFLAGS_FOR_TARGET="-g -O2 -isystem $SIMPLE_OS_SRC/kernel/include"
+
 ../simple-newlib/configure --prefix=/usr --target=i686-simpleos
 make -j4 all
 
@@ -150,14 +155,18 @@ rm i686-simpleos*
 
 ## Rebuild Newlib with hosted Binutils and GCC
 
+Start another shell and run:
+
 ```bash
 
-cd $CURR_DIR
+# Change to your own path to simple-os source code
+export SIMPLE_OS_SRC=$HOME/src/simple-os
+export TOOL_CHAIN_ROOT=$SIMPLE_OS_SRC/toolchain
+export PATH=$TOOL_CHAIN_ROOT/usr/bin:$PATH
 
 # Confirm the environment variables have been set up
 which i686-simpleos-gcc
 echo $TOOL_CHAIN_ROOT
-
 
 cd build-newlib
 rm -rf *
