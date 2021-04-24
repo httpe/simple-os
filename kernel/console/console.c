@@ -3,6 +3,7 @@
 #include <kernel/console.h>
 #include <kernel/keyboard.h>
 #include <kernel/tty.h>
+#include <kernel/stat.h>
 
 static int console_read(struct fs_mount_point* mount_point, const char * path, char *buf, uint size, uint offset, struct fs_file_info *fi)
 {
@@ -37,12 +38,23 @@ static int console_write(struct fs_mount_point* mount_point, const char * path, 
     return size;
 }
 
+static int console_getattr(struct fs_mount_point* mount_point, const char * path, struct fs_stat * st, struct fs_file_info *fi)
+{
+    UNUSED_ARG(mount_point);
+    UNUSED_ARG(path);
+    UNUSED_ARG(fi);
+    
+    st->mode = S_IRWXU | S_IRWXG | S_IRWXO | S_IFCHR;
+    return 0;
+}
+
 static int console_mount(struct fs_mount_point* mount_point, void* option)
 {
     UNUSED_ARG(option);
     mount_point->operations = (struct file_system_operations) {
         .read = console_read,
         .write = console_write,
+        .getattr = console_getattr
     };
 
     return 0;

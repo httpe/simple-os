@@ -25,7 +25,7 @@ typedef struct fs_stat {
 
 /* File types.  */
 #define	__S_IFDIR	0040000	/* Directory.  */
-// #define	__S_IFCHR	0020000	/* Character device.  */
+#define	__S_IFCHR	0020000	/* Character device.  */
 // #define	__S_IFBLK	0060000	/* Block device.  */
 #define	__S_IFREG	0100000	/* Regular file.  */
 // #define	__S_IFIFO	0010000	/* FIFO.  */
@@ -34,7 +34,7 @@ typedef struct fs_stat {
 
 # define S_IFMT		__S_IFMT
 # define S_IFDIR	__S_IFDIR
-// # define S_IFCHR	__S_IFCHR
+# define S_IFCHR	__S_IFCHR
 // # define S_IFBLK	__S_IFBLK
 # define S_IFREG	__S_IFREG
 // # define S_IFIFO	__S_IFIFO
