@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <fs.h>
-#include <kernel/stat.h>
 
 static inline _syscall0(SYS_YIELD, int, sys_yield)
 static inline _syscall1(SYS_DUP, int, sys_dup, int, fd)
@@ -21,8 +20,10 @@ int main(int argc, char* argv[]) {
     int fd_stdin = open("/console", O_RDWR);
     int fd_stdout = sys_dup(0);
     int fd_stderr = sys_dup(0);
+    UNUSED_ARG(fd_stderr);
 
     int ret = printf("Hello User World!\n");
+
     ret = sys_yield();
     ret = printf("Welcome Back User World!\n");
     (void) ret;
@@ -65,31 +66,35 @@ int main(int argc, char* argv[]) {
     printf("%s", buf);
     free(buf);
 
-    // char buf1[100] = {0};
-    // int fd = open("/home/RAND.OM", 0);
-    // if(fd >= 0) {
-    //     int read_in = read(fd, buf1, 10);
-    //     int closed = close(fd);
-    //     printf("FD(%d), READ(%d), CLOSE(%d)\n", fd, read_in, closed);
-    //     printf("READ content: \n %s \n", buf1);
-    // } else {
-    //     printf("OPEN error\n");
-    // }
+    struct stat st = {0};
+    char buf1[100] = {0};
+    int fd = open("/home/RAND.OM", O_RDWR);
+    if(fd >= 0) {
+        int read_in = read(fd, buf1, 10);
+        fstat(fd, &st);
+        int closed = close(fd);
+        printf("FD(%d), READ(%d), CLOSE(%d), MODTIME(%lld)\n", fd, read_in, closed, st.st_mtim.tv_sec);
+        printf("READ content: \n %s \n", buf1);
+    } else {
+        printf("OPEN error\n");
+    }
 
 
-    // const char* to_write = "Hello User I/O World!";
-    // fd = open("/home/RAND.OM", 0);
-    // if(fd >= 0) {
-    //     int written = write(fd, to_write, strlen(to_write) + 1);
-    //     int lseek_res = sys_seek(fd, -(strlen(to_write) + 1), SEEK_WHENCE_CUR);
-    //     memset(buf1, 0, 100);
-    //     int read_in = read(fd, buf1, strlen(to_write) + 1);
-    //     int closed = close(fd);
-    //     printf("FD(%d), WRITE(%d), SEEK(%d), READ(%d), CLOSE(%d)\n", fd, written, lseek_res, read_in, closed);
-    //     printf("READ content: \n %s \n", buf1);
-    // } else {
-    //     printf("OPEN error\n");
-    // }
+
+    const char* to_write = "Hello User I/O World!";
+    fd = open("/home/RAND.OM", O_RDWR);
+    if(fd >= 0) {
+        int written = write(fd, to_write, strlen(to_write) + 1);
+        int lseek_res = sys_seek(fd, -(strlen(to_write) + 1), SEEK_WHENCE_CUR);
+        memset(buf1, 0, 100);
+        int read_in = read(fd, buf1, strlen(to_write) + 1);
+        fstat(fd, &st);
+        int closed = close(fd);
+        printf("FD(%d), WRITE(%d), SEEK(%d), READ(%d), CLOSE(%d), MODTIME(%lld)\n", fd, written, lseek_res, read_in, closed, st.st_mtim.tv_sec);
+        printf("READ content: \n %s \n", buf1);
+    } else {
+        printf("OPEN error\n");
+    }
 
     char c;
     write(fd_stdin, "Input:\n", 7);
