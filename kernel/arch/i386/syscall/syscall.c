@@ -12,6 +12,7 @@
 #include <kernel/file_system.h>
 #include <kernel/process.h>
 #include <kernel/paging.h>
+#include <kernel/stat.h>
 #include <arch/i386/kernel/isr.h>
 #include <arch/i386/kernel/cpu.h>
 
@@ -33,7 +34,7 @@ int sys_exec(trapframe* r)
     // Load executable from file system
 
     fs_stat st = {0};
-    int fs_res = fs_getattr(path, &st);
+    int fs_res = fs_getattr_path(path, &st);
     if(fs_res < 0) {
         printf("SYS_EXEC: Cannot open the file\n");
         return -1;
@@ -220,6 +221,20 @@ int sys_dup(trapframe* r)
     return fs_dup(fd);
 }
 
+int sys_getattr_path(trapframe* r)
+{
+    char* path = *(char**) (r->esp + 4);
+    struct fs_stat* st = *(struct fs_stat**) (r->esp + 8);
+    return fs_getattr_path(path, st);
+}
+
+int sys_getattr_fd(trapframe* r)
+{
+    int fd = *(int*) (r->esp + 4);
+    struct fs_stat* st = *(struct fs_stat**) (r->esp + 8);
+    return fs_getattr_fd(fd, st);
+}
+
 void syscall_handler(trapframe* r)
 {
     // Avoid scheduling when in syscall/kernel space
@@ -268,6 +283,12 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_DUP:
         r->eax = sys_dup(r);
+        break;
+    case SYS_GETATTR_PATH:
+        r->eax = sys_getattr_path(r);
+        break;
+    case SYS_GETATTR_FD:
+        r->eax = sys_getattr_fd(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);

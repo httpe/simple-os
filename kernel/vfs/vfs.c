@@ -161,23 +161,6 @@ int fs_unmount(const char* mount_root)
     return 0;
 }
 
-int fs_getattr(const char * path, struct fs_stat * stat)
-{
-    const char* remaining_path = NULL;
-    fs_mount_point* mp = find_mount_point(path, &remaining_path);
-    if(mp == NULL) {
-        return -ENXIO;
-    }
-    if(mp->operations.getattr == NULL) {
-        // if file system does not support this operation
-        return -EPERM;
-    }
-
-    int res = mp->operations.getattr(mp, remaining_path, stat, NULL);
-    
-    return res;
-}
-
 int fs_mknod(const char * path, uint mode)
 {
     const char* remaining_path = NULL;
@@ -421,6 +404,40 @@ static file* fd2file(int fd)
     }
     file* f = p->files[fd];
     return f;
+}
+
+int fs_getattr_path(const char * path, struct fs_stat * stat)
+{
+    const char* remaining_path = NULL;
+    fs_mount_point* mp = find_mount_point(path, &remaining_path);
+    if(mp == NULL) {
+        return -ENXIO;
+    }
+    if(mp->operations.getattr == NULL) {
+        // if file system does not support this operation
+        return -EPERM;
+    }
+
+    int res = mp->operations.getattr(mp, remaining_path, stat, NULL);
+    
+    return res;
+}
+
+int fs_getattr_fd(int fd, struct fs_stat * stat)
+{
+    file* f = fd2file(fd);
+    if(f == NULL) {
+        return -EBADF;
+    }
+
+    if(f->mount_point->operations.getattr == NULL) {
+        // if file system does not support this operation
+        return -EPERM;
+    }
+
+    int res = f->mount_point->operations.getattr(f->mount_point, f->path, stat, NULL);
+    
+    return res;
 }
 
 int fs_dup(int fd)

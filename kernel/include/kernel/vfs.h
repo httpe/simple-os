@@ -9,7 +9,8 @@
 int fs_mount(const char* target, enum file_system_type file_system_type, 
             fs_mount_option option, void* fs_option, fs_mount_point** mount_point);
 int fs_unmount(const char* mount_root);
-int fs_getattr(const char * path, struct fs_stat * stat);
+int fs_getattr_path(const char * path, struct fs_stat * stat);
+int fs_getattr_fd(int fd, struct fs_stat * stat);
 int fs_mknod(const char * path, uint mode);
 int fs_mkdir(const char * path, uint mode);
 int fs_rmdir(const char * path);
