@@ -443,6 +443,7 @@ int fs_dup(int fd)
         return -EMFILE;
     }
     p->files[new_fd] = f;
+    f->ref++;
 
     return new_fd;
 }
