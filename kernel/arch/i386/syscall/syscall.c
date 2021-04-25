@@ -71,13 +71,15 @@ int sys_exec(trapframe* r)
     uint32_t entry_point = load_elf(page_dir, file_buffer, &vaddr_ub);
 
     // allocate stack to just below the higher half kernel mapping
-    uint32_t ustack_end = (uint32_t) MAP_MEM_PA_ZERO_TO;
-    alloc_pages_at(page_dir, PAGE_INDEX_FROM_VADDR(ustack_end) - 1, USER_STACK_PAGE_SIZE, false, true);
-    
-    // user stack, mimic a normal function call
+    uint32_t esp = (uint32_t) MAP_MEM_PA_ZERO_TO;
+    uint32_t ustack_start = alloc_pages_at(page_dir, PAGE_INDEX_FROM_VADDR(esp) - USER_STACK_PAGE_SIZE, USER_STACK_PAGE_SIZE, false, true);
+    // allocate one read-only page below the user stack to catch stack overflow or heap over growth
+    alloc_pages_at(page_dir, PAGE_INDEX_FROM_VADDR(ustack_start) - 1, 1, false, false);
+
+    // copy argv strings to the high end of the stack area
+    char* ustack_dst = (char*) link_pages(page_dir, ustack_start, PAGE_SIZE*USER_STACK_PAGE_SIZE, curr_page_dir(), false);
+
     uint32_t ustack[3+MAX_ARGC+1]; // +1: add a termination zero
-    ustack[0] = 0x0; // fake return PC
-    ustack[2] = vaddr_ub;
     int argc;
     for(argc=0; argc<MAX_ARGC; argc++) {
         if(argv[argc] == 0) {
@@ -86,22 +88,30 @@ int sys_exec(trapframe* r)
         }
         // copy the argv content to memory right above any mapped memory specified by the ELF binary
         uint32_t size = strlen(argv[argc]) + 1;
-        char* dst = (char*) link_pages(page_dir, vaddr_ub, size, curr_page_dir(), false);
-        memmove(dst, argv, size);
-        unmap_pages(curr_page_dir(), (uint32_t) dst, size);
-        ustack[3 + argc] = vaddr_ub;
-        vaddr_ub += size;
+        // & ~3 to maintain 4 bytes alignment
+        esp = (esp - size) & ~3;
+        if(esp < ustack_start + sizeof(void*)*(3 + argc + 1 + 1)) {
+            // stack overflow, no room to store 3 (fake return PC, argc, argv) + argc+1 (pointer to previous arguments plus pointer to this arg)  + 1 (a terminating zero)
+            unmap_pages(curr_page_dir(), ustack_start, PAGE_SIZE*USER_STACK_PAGE_SIZE);
+            free_user_space(page_dir);
+            return -1;
+        }
+        memmove(ustack_dst + (esp - ustack_start), argv[argc], size);
+        ustack[3 + argc] = esp;
     }
+    
+    // user stack, mimic a normal function call
+    ustack[0] = 0xFFFFFFFF; // fake return PC
     ustack[1] = argc;
-    uint32_t stack_content_size = sizeof(void*)*(3 + argc + 1);
-    uint32_t ustack_esp = ustack_end - stack_content_size;
-    char* dst = (char*) link_pages(page_dir, ustack_esp, stack_content_size, curr_page_dir(), true);
-    memmove(dst, ustack, stack_content_size);
-    unmap_pages(curr_page_dir(), (uint32_t) dst, stack_content_size);
+    ustack[2] = esp - sizeof(void*)*(argc + 1);
+
+    uint32_t rem_stack_size = sizeof(void*)*(3 + argc + 1);
+    esp -= rem_stack_size;
+    memmove(ustack_dst + (esp - ustack_start), ustack, rem_stack_size);
 
     // maintain trapframe
     proc* p = curr_proc();
-    p->tf->esp = ustack_esp;
+    p->tf->esp = esp;
     p->tf->eip = entry_point;
 
     p->size = (vaddr_ub + (PAGE_SIZE - 1))/PAGE_SIZE * PAGE_SIZE;
@@ -111,7 +121,7 @@ int sys_exec(trapframe* r)
     pde* old_page_dir = p->page_dir;
     p->page_dir = page_dir;
     switch_process_memory_mapping(p);
-    // free_user_space(old_page_dir); // free frames occupied by the old page dir
+    free_user_space(old_page_dir); // free frames occupied by the old page dir
 
     PANIC_ASSERT(p->page_dir != old_page_dir);
     PANIC_ASSERT((uint32_t) vaddr2paddr(curr_page_dir(), (uint32_t) curr_page_dir()) != vaddr2paddr(curr_page_dir(), (uint32_t) old_page_dir));
