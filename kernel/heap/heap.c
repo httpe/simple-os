@@ -156,7 +156,7 @@ heap_header_t* unify_free_space(heap_t* heap, heap_header_t* free_header) {
                 heap_header_t* left_header = left_footer->header;
                 ASSERT_VALID_HEAP_HEADER(left_header);
                 if (left_header->next != NULL) {
-                    printf("Heap unify left\n");
+                    // printf("Heap unify left\n");
                     // if on the left there is a free block, merge free_header into it
                     // [left_header | left_header->size | left_footer | free_header | free_header->size | free_footer]
                     // =>
@@ -177,7 +177,7 @@ heap_header_t* unify_free_space(heap_t* heap, heap_header_t* free_header) {
         heap_header_t* right_header = (heap_header_t*)((uint32_t)free_footer + sizeof(heap_footer_t));
         if (is_vaddr_accessible(curr_page_dir(), (uint32_t)right_header, heap->is_kernel, true)) {
             if ((right_header->magic == HEAP_HEADER_MAGIC_MID || right_header->magic == HEAP_HEADER_MAGIC_LEFT) && right_header->next != NULL) {
-                printf("Heap unify right\n");
+                // printf("Heap unify right\n");
                 // if on the right there is a free block, merge it into free_header
                 // [free_header | free_header->size|free_footer|right_header|right_header->size|right_footer]
                 // =>
