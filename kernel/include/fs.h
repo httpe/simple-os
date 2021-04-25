@@ -1,9 +1,10 @@
 #ifndef _FS_H
 #define _FS_H
 
-#define SEEK_WHENCE_SET 1
-#define SEEK_WHENCE_CUR 2
-#define SEEK_WHENCE_END 3
+// In line with newlib's unistd.h
+#define SEEK_WHENCE_SET 0
+#define SEEK_WHENCE_CUR 1
+#define SEEK_WHENCE_END 2
 
 #define FS_MAX_FILENAME_LEN 260
 typedef struct fs_dirent {

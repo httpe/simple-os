@@ -11,7 +11,6 @@
 static inline _syscall0(SYS_YIELD, int, sys_yield)
 static inline _syscall1(SYS_DUP, int, sys_dup, int, fd)
 static inline _syscall1(SYS_WAIT, int, sys_wait, int*, exit_code)
-static inline _syscall3(SYS_SEEK, int, sys_seek, int, fd, int, offset, int, whence)
 
 int main(int argc, char* argv[]) {
     (void) argc;
@@ -75,7 +74,7 @@ int main(int argc, char* argv[]) {
     fd = open("/home/RAND.OM", O_RDWR);
     if(fd >= 0) {
         int written = write(fd, to_write, strlen(to_write) + 1);
-        int lseek_res = sys_seek(fd, -(strlen(to_write) + 1), SEEK_WHENCE_CUR);
+        int lseek_res = lseek(fd, -(strlen(to_write) + 1), SEEK_CUR);
         memset(buf1, 0, 100);
         int read_in = read(fd, buf1, strlen(to_write) + 1);
         fstat(fd, &st);
