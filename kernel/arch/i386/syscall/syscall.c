@@ -245,6 +245,13 @@ int sys_getattr_fd(trapframe* r)
     return fs_getattr_fd(fd, st);
 }
 
+int sys_get_pid(trapframe* r)
+{
+    UNUSED_ARG(r);
+    proc* p = curr_proc();
+    return p->pid;
+}
+
 void syscall_handler(trapframe* r)
 {
     // Avoid scheduling when in syscall/kernel space
@@ -299,6 +306,9 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_GETATTR_FD:
         r->eax = sys_getattr_fd(r);
+        break;
+    case SYS_GET_PID:
+        r->eax = sys_get_pid(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);

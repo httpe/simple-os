@@ -19,6 +19,7 @@
 #define SYS_DUP 13
 #define SYS_GETATTR_PATH 14
 #define SYS_GETATTR_FD 15
+#define SYS_GET_PID 16
 
 // defined in interrupt.asm
 extern void int88();
