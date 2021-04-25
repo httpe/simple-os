@@ -21,10 +21,12 @@ int main(int argc, char* argv[]) {
     int fd_stderr = sys_dup(0);
     UNUSED_ARG(fd_stderr);
 
-    int ret = printf("Hello User World!\n");
+    int ret;
+    printf("Hello User World!\n");
+    printf("Current Epoch: %lld\n", time(NULL));
 
     ret = sys_yield();
-    ret = printf("Welcome Back User World!\n");
+    printf("Welcome Back User World!\n");
     (void) ret;
 
     printf("Welcome to %s!\n", "libc");

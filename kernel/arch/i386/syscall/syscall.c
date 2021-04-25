@@ -13,6 +13,7 @@
 #include <kernel/process.h>
 #include <kernel/paging.h>
 #include <kernel/stat.h>
+#include <kernel/time.h>
 #include <arch/i386/kernel/isr.h>
 #include <arch/i386/kernel/cpu.h>
 
@@ -252,6 +253,13 @@ int sys_get_pid(trapframe* r)
     return p->pid;
 }
 
+int sys_curr_date_time(trapframe* r)
+{
+    date_time* dt = *(date_time**) (r->esp + 4);
+    *dt = current_datetime();
+    return 0;
+}
+
 void syscall_handler(trapframe* r)
 {
     // Avoid scheduling when in syscall/kernel space
@@ -309,6 +317,9 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_GET_PID:
         r->eax = sys_get_pid(r);
+        break;
+    case SYS_CURR_DATE_TIME:
+        r->eax = sys_curr_date_time(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);
