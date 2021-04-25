@@ -420,7 +420,7 @@ uint32_t link_pages(pde* from_page_dir, uint32_t vaddr, uint32_t size, pde* to_p
     uint32_t offset = vaddr - VADDR_FROM_PAGE_INDEX(page_idx_foreign);
     
     uint32_t n_page = PAGE_COUNT_FROM_BYTES(offset + size);
-    uint32_t page_idx_curr = find_contiguous_free_pages(curr_page_dir(), n_page, true);
+    uint32_t page_idx_curr = find_contiguous_free_pages(to_page_dir, n_page, true);
     for(uint32_t i=0; i<n_page;i++) {
         uint32_t frame_idx;
         uint32_t page_idx = page_idx_foreign + i;
