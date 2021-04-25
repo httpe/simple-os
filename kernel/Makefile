@@ -50,10 +50,8 @@ kernel/kernel.o \
 
 USER_SPACE_BINARIES=\
 init/init \
+shell/shell \
 
-INIT_OBJS=\
-init/init_wrapper.o \
-init/init.o \
 
 # USER_SPACE_LINK_LIST=\
 # $(LDFLAGS) \
@@ -99,7 +97,9 @@ user_space_programs: $(USER_SPACE_BINARIES)
 # 	$(CC) -MD -c $< -o $@ -std=gnu11 $(USER_CFLAGS) $(USER_CPPFLAGS)
 
 init/init: init/init.c
-	# cp -R kernel/include /home/arce/src/os-specific-toolchain/sysroot/usr/include
+	$(TOOLCHAINROOT)/usr/bin/i686-simpleos-gcc -MD -o $@ $< -std=gnu11 $(USER_CFLAGS) $(USER_CPPFLAGS) $(USER_LIBS)
+
+shell/shell: shell/shell.c
 	$(TOOLCHAINROOT)/usr/bin/i686-simpleos-gcc -MD -o $@ $< -std=gnu11 $(USER_CFLAGS) $(USER_CPPFLAGS) $(USER_LIBS)
 
 $(ARCHDIR)/crt/crtbegin.o $(ARCHDIR)/crt/crtend.o:

@@ -8,7 +8,9 @@ sysroot
 *.d
 simple_os.kernel
 init
+shell
 !init/
+!shell/
 serial_port_output.txt
 *.fat
 toolchain/

@@ -32,33 +32,23 @@ int main(int argc, char* argv[]) {
 
     int fork_ret = fork();
     int child_exit_code;
-    for(int i=0; i<3; i++) {
-        if(fork_ret) {
-            // parent
-            printf("This is parent, child PID: %u\n", fork_ret);
-            // sys_yield();
-            int wait_ret = sys_wait(&child_exit_code);
-            if(wait_ret < 0) {
-                printf("No child exited\n");
-            } else {
-                printf("Child %u exited, exit code = %d\n", wait_ret, child_exit_code);
-            }
-        } else {
-            // child
-            printf("This is child\n");
-            // sys_yield();
-        }
-    }
 
-    if(!fork_ret) {
-        // exit child process
-        exit(0);
+    if(fork_ret) {
+        // parent
+        printf("This is parent, child PID: %u\n", fork_ret);
+        // sys_yield();
+        int wait_ret = sys_wait(&child_exit_code);
+        if(wait_ret < 0) {
+            printf("No child exited\n");
+        } else {
+            printf("Child %u exited, exit code = %d\n", wait_ret, child_exit_code);
+        }
+    } else {
+        // child
+        char* argv[] = {"/boot/usr/bin/shell", NULL};
+        printf("This is child, testing EXEC\n");
+        execve("/boot/usr/bin/shell", argv, NULL);
     }
-    
-    // ret = sys_sbrk(100);
-    // const char* str1 = "Test SBRK!\n";
-    // memmove((char*) ret, str1, strlen(str1)+1);
-    // printf("%s", (char*) ret);
 
     const char* str2 = "Test malloc/free!\n";
     char* buf = malloc(100);

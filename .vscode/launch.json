@@ -20,6 +20,7 @@
             "autorun": [
                 "add-symbol-file-auto bootloader/bootloader.elf",
                 "add-symbol-file-auto kernel/init/init",
+                "add-symbok-file-auto kernel/shell/shell",
                 "dir bootloader",
                 "dir kernel",
                 
