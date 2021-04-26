@@ -14,6 +14,7 @@ int fs_getattr_fd(int fd, struct fs_stat * stat);
 int fs_mknod(const char * path, uint mode);
 int fs_mkdir(const char * path, uint mode);
 int fs_rmdir(const char * path);
+int fs_link(const char* old_path, const char* new_path);
 int fs_unlink(const char * path);
 int fs_truncate(const char * path, uint size);
 int fs_rename(const char * from, const char* to, uint flags);

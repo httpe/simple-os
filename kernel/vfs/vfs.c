@@ -246,6 +246,33 @@ int fs_truncate(const char * path, uint size)
     return res;
 }
 
+int fs_link(const char* old_path, const char* new_path)
+{
+    const char* remaining_path_old = NULL;
+    fs_mount_point* mp_old = find_mount_point(old_path, &remaining_path_old);
+    if(mp_old == NULL) {
+        return -ENXIO;
+    }
+    if(mp_old->operations.link == NULL) {
+        // if file system does not support this operation
+        return -EPERM;
+    }
+
+    const char* remaining_path_new = NULL;
+    fs_mount_point* mp_new = find_mount_point(new_path, &remaining_path_new);
+    if(new_path == NULL) {
+        return -ENXIO;
+    }
+    if(mp_old != mp_new) {
+        // cannot link (move) between different mount points
+        return -EPERM;
+    }
+
+    int res = mp_old->operations.link(mp_old, remaining_path_old, remaining_path_new);
+    
+    return res;
+}
+
 int fs_rename(const char * from, const char* to, uint flags)
 {
     const char* remaining_path_from = NULL;

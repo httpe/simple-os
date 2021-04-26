@@ -22,6 +22,8 @@
 #define SYS_GET_PID 16
 #define SYS_CURR_DATE_TIME 17
 #define SYS_UNLINK 18
+#define SYS_LINK 19
+#define SYS_RENAME 20
 
 // defined in interrupt.asm
 extern void int88();

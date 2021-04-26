@@ -266,6 +266,21 @@ int sys_unlink(trapframe* r)
     return fs_unlink(path);
 }
 
+int sys_link(trapframe* r)
+{
+    char* old_path = *(char**) (r->esp + 4);
+    char* new_path = *(char**) (r->esp + 8);
+    return fs_link(old_path, new_path);
+}
+
+int sys_rename(trapframe* r)
+{
+    char* old_path = *(char**) (r->esp + 4);
+    char* new_path = *(char**) (r->esp + 8);
+    uint flags = *(uint*) (r->esp + 12);
+    return fs_rename(old_path, new_path, flags);
+}
+
 void syscall_handler(trapframe* r)
 {
     // Avoid scheduling when in syscall/kernel space
@@ -329,6 +344,12 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_UNLINK:
         r->eax = sys_unlink(r);
+        break;
+    case SYS_LINK:
+        r->eax = sys_link(r);
+        break;
+    case SYS_RENAME:
+        r->eax = sys_rename(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);

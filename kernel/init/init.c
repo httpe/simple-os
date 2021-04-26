@@ -90,7 +90,11 @@ int main(int argc, char* argv[]) {
     // Test file creation and deletion
     fd = open("/home/newfile", O_CREAT|O_RDWR);
     close(fd);
-    int res_unlink = unlink("/home/newfile");
+    int res_link = link("/home/newfil", "/home/newfil.1");
+    printf("Link(%d)\n", res_link);
+    int res_rename = rename("/home/newfile", "/home/newfile.2");
+    printf("Rename(%d)\n", res_rename);
+    int res_unlink = unlink("/home/newfile.2");
     printf("Unlink(%d)\n", res_unlink);
     res_unlink = unlink("/home/newfile");
     printf("Unlink(%d)\n", res_unlink);
