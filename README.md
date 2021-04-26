@@ -34,7 +34,7 @@ To compile this project, you need to install the following dependencies:
 
 ### Configure
 
-Firstly, you need to change the `CROSSCOMPILERBIN` variable in `config.sh` to point it to the folder containing the cross-compiling GCC/Binutils binaries (see *Dependencies* section). Note that the env variable `AS` is assumed to be the system wide NASM assembler, if not set, `nasm` is used. Also, you need to make sure the hosted tool-chain and Newlib is compiled and installed to the location indicated by `TOOL_CHAIN_ROOT` variable in `config.sh` for the user space programs to be compiled successfully.
+Firstly, you need to change the `CROSSCOMPILERBIN` variable in `config.sh` to point it to the folder containing the cross-compiling GCC/Binutils binaries (see *Dependencies* section). Note that the env variable `AS` is assumed to be the system wide NASM assembler, if not set, `nasm` is used. Also, you need to make sure the hosted tool-chain and Newlib is compiled and installed to the location indicated by `TOOL_CHAIN_ROOT` variable in `config.sh` for the user space programs (those under `applications`) to be compiled successfully.
 
 Here we assume a Windows + [WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10) environment. We install QEMU in Windows, because QEMU needs GTK and WSL graphical support is limited.
 
@@ -178,8 +178,6 @@ The `kernel/` and `libc/` folders are build upon a clone from the [Meaty Skeleto
     - `arch/i386/`: Architecture specific headers
   - `kernel/`
     - `kernel.c`: Kernel main function
-  - `init/`
-    - The first user space program to be ran, under development
   - `heap/`
     - [Heap]((http://www.jamesmolloy.co.uk/tutorial_html/7.-The%20Heap.html)) manager, allowing dynamic memory allocation and [virtual memory manager](https://wiki.osdev.org/Writing_a_memory_manager), implemented as a sorted linked list of free memory blocks with memory header and footer inspired by [INWOX](https://github.com/qvjp/INWOX/wiki/010-malloc()-&-free())
   - `memory_bitmap/`
@@ -209,11 +207,21 @@ The `kernel/` and `libc/` folders are build upon a clone from the [Meaty Skeleto
     - `serial/`: [Serial port I/O](https://wiki.osdev.org/Serial_ports) utilities. We output all printing though serial port so QEMU can export the printed content to a file `serial_port_output.txt`.
     - `process/`:
       - `process.c`: Process management (Ref: [xv6/proc](https://github.com/mit-pdos/xv6-public/blob/master/proc.c))
-      - `start_init.asm`: First usage mode program to run, will call SYS_EXEC to replace itself with `init`
+      - `start_init.asm`: First usage mode program to run, will call SYS_EXEC to replace itself with `init.elf`
       - `switch_kernel_context.asm`: Used to switch between CPU context between scheduler (context which we initially boot into) and individual process's kernel code (e.g. system call handler)
 
 - `libc/`: Progressive implementation of the standard C library
   - Mostly from Meaty Skeleton, and some are from Xv6.
+
+### Applications
+
+User space applications to be compiled by os specific tool-chain and use Newlib as their standard C library.
+
+- `applications`:
+  - `init/`
+    - Compile to the first user space program to be ran (`init.elf`), perform user space initialization (like preparing for stdin/stdout/stderr) and then fork-exec shell. Currently also be used to test several user space features.
+  - `shell/`
+    - Shell, under development.
 
 ## Reference
 
