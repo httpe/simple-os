@@ -43,7 +43,7 @@ proc* curr_proc();
 void yield();
 int fork();
 void exit(int exit_code);
-int wait();
+int wait(int* wait_status);
 void switch_process_memory_mapping(proc* p);
 
 // defined in switch_kernel_context.asm

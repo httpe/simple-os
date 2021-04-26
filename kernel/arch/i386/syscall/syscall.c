@@ -185,8 +185,8 @@ void sys_exit(trapframe* r)
 
 int sys_wait(trapframe* r)
 {
-    int32_t* exit_code =  (int32_t*) *(uint32_t*) (r->esp + 4);
-    return wait(exit_code);
+    int* wait_status =  *(int**) (r->esp + 4);
+    return wait(wait_status);
 }
 
 int sys_open(trapframe* r)

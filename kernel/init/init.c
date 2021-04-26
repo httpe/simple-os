@@ -7,10 +7,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <fs.h>
+#include <sys/wait.h>
 
 static inline _syscall0(SYS_YIELD, int, sys_yield)
 static inline _syscall1(SYS_DUP, int, sys_dup, int, fd)
-static inline _syscall1(SYS_WAIT, int, sys_wait, int*, exit_code)
 
 int main(int argc, char* argv[]) {
     (void) argc;
@@ -32,17 +32,17 @@ int main(int argc, char* argv[]) {
     printf("Welcome to %s!\n", "libc");
 
     int fork_ret = fork();
-    int child_exit_code;
+    int child_exit_status;
 
     if(fork_ret) {
         // parent
         printf("This is parent, child PID: %u\n", fork_ret);
         // sys_yield();
-        int wait_ret = sys_wait(&child_exit_code);
+        int wait_ret = wait(&child_exit_status);
         if(wait_ret < 0) {
             printf("No child exited\n");
         } else {
-            printf("Child %u exited, exit code = %d\n", wait_ret, child_exit_code);
+            printf("Child %u exited, exit code = %d\n", wait_ret, WEXITSTATUS(child_exit_status));
         }
     } else {
         // child

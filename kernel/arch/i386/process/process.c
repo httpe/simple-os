@@ -201,7 +201,16 @@ void yield()
     // printf("PID %u back from yield\n", p->pid);
 }
 
-int wait(int* exit_code)
+// From Newlib sys/wait.h
+/* A status looks like:
+    <1 byte info> <1 byte code>
+
+    <code> == 0, child has exited, info is the exit value
+    <code> == 1..7e, child has exited, info is the signal number.
+    <code> == 7f, child has stopped, info was the signal number.
+    <code> == 80, there was a core dump.
+*/
+int wait(int* wait_status)
 {
     proc* p = curr_proc();
     printf("PID %u waiting\n", curr_proc()->pid);
@@ -213,7 +222,10 @@ int wait(int* exit_code)
                 no_child = false;
                 if(child->state == PROC_STATE_ZOMBIE) {
                     uint32_t child_pid = child->pid;
-                    *exit_code = child->exit_code;
+                    if(wait_status != NULL) {
+                        // currently only support normal exit with exit code given
+                        *wait_status = (0xFF & child->exit_code) << 8;
+                    }
                     dealloc_pages(curr_page_dir(), PAGE_INDEX_FROM_VADDR((uint32_t) child->kernel_stack), 1);
                     free_user_space(child->page_dir);
                     *child = (proc) {0};
