@@ -266,25 +266,33 @@ Although the final goal is to make the system self-hosting, we planned for sever
     - Allow switch to user space and run ELF program under user/ring3 privilege
     - Enable multi-processing with independent kernel stack and page directory, starting with [Cooperative Scheduling](https://littleosbook.github.io/#cooperative-scheduling-with-yielding) and then [Preemptive Scheduling](https://littleosbook.github.io/#preemptive-scheduling-with-interrupts)
     - Implement `fork`, `exec` and `yield` system calls on a simple read-only file system (potentially reuse the USTAR code from the bootloader)
-    - **Finished**: Implemented Kernel heap, ELF loader, cooperative and preemptive multi-tasking and exec system call based on the USTAR read-only file system
+    - **Finished**:
+      - Kernel heap
+      - ELF loader
+      - Cooperative and preemptive multi-tasking (single CPU, synchronized by disabling interrupt when doing system call)
+      - Exec system call based on the USTAR read-only file system
 
-1. **Milestone Four: Filesystem, System calls, and Shell**
+1. **Milestone Four: Filesystem,  Libc and Hosted Tool-chain**
     - Provide a readable & writable file system (FAT or Ext) and corresponding system calls
     - Build user space standard C library with system calls, e.g. printf, malloc and open/read/write. Potentially port [Newlib](https://wiki.osdev.org/Porting_Newlib) as our standard C library.
-    - Build our [OS specific/hosted compiling tool chain](https://wiki.osdev.org/OS_Specific_Toolchain) (Binutils and GCC)
-    - Provide locking mechanism in multi-tasking environment
-    - **In progress**:
-      - File system ported from our sub-project [Simple-FS](https://github.com/httpe/simple-fs)
-      - [Newlib ported](https://github.com/httpe/simple-newlib) (Adding more syscalls)
-      - Hosted Binutils/GCC tool chain established (See HostedToolchain.md)
+    - Build our [OS specific/hosted compiling tool-chain](https://wiki.osdev.org/OS_Specific_Toolchain) (Binutils and GCC)
+    - **Finished**:
+      - [Simple-FS](https://github.com/httpe/simple-fs): A fully functional FAT32 file system
+      - [Simple-newlib](https://github.com/httpe/simple-newlib): Ported Newlib 4.1.0 with all system calls implemented
+      - [Simple-gcc](https://github.com/httpe/simple-gcc) and [Simple-binutils](https://github.com/httpe/simple-binutils): Hosted Binutils 2.35.1 / GCC 10.2.0 tool-chain established (See HostedToolchain.md)
 
-1. **Milestone Five: User Space Applications and Compiler**
-    - Write a shell to allow navigating through the file system
-    - Write a editor to show file content, allowing editing and saving to disk
+1. **Milestone Five: Shell, User Space Applications and Compiler**
+    - Write a shell to allow navigating through the file system and execute applications
+    - Write an editor to show file content, allowing editing and saving to disk
     - Port a simplified C compiler to the system
     - Compile and run the text editor inside the system
 
-1. **Milestone Six: Networking**
+1. **Milestone Six: Mutli-core CPU support and IPC**
+    - Support multi-core CPU through [APCI](https://wiki.osdev.org/APIC)
+    - Provide [synchronization mechanism](https://wiki.osdev.org/Synchronization_Primitives) for multi-tasking environment, like locks
+    - Provide inter process communication ([IPC](https://wiki.osdev.org/Category:IPC)) mechanism like pipe and signal
+
+1. **Milestone Seven: Networking**
     - Allow connecting to the Internet
     - Implement DNS query and ping command
 
