@@ -1,5 +1,5 @@
 SYSTEM_HEADER_PROJECTS="libc kernel"
-PROJECTS="libc kernel bootloader"
+PROJECTS="libc kernel applications bootloader"
 
 export MAKE=${MAKE:-make}
 export HOST=${HOST:-$(./default-host.sh)}

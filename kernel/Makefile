@@ -12,13 +12,6 @@ PREFIX?=/usr/local
 EXEC_PREFIX?=$(PREFIX)
 BOOTDIR?=$(EXEC_PREFIX)/boot
 INCLUDEDIR?=$(PREFIX)/include
-USER_SPACE_BINDIR?=$(PREFIX)/bin
-
-USER_CFLAGS:= $(CFLAGS) -Wall -Wextra
-USER_CPPFLAGS:=$(CPPFLAGS) -Iinclude
-USER_LDFLAGS:=$(LDFLAGS)
-USER_LIBS:=$(LIBS)
-
 
 CFLAGS:=$(CFLAGS) -ffreestanding -Wall -Wextra
 CPPFLAGS:=$(CPPFLAGS) -D__is_kernel -Iinclude
@@ -48,21 +41,6 @@ fat/fat.o \
 console/console.o \
 kernel/kernel.o \
 
-USER_SPACE_BINARIES=\
-init/init \
-shell/shell \
-
-
-# USER_SPACE_LINK_LIST=\
-# $(LDFLAGS) \
-# $(ARCHDIR)/crti.o \
-# $(ARCHDIR)/crtbegin.o \
-# $(USER_SPACE_OBJS) \
-# $(LIBS) \
-# $(ARCHDIR)/crtend.o \
-# $(ARCHDIR)/crtn.o \
-
-
 OBJS=\
 $(ARCHDIR)/crt/crti.o \
 $(ARCHDIR)/crt/crtbegin.o \
@@ -82,25 +60,11 @@ $(ARCHDIR)/crt/crtn.o \
 .PHONY: all clean install install-headers install-kernel
 .SUFFIXES: .o .c .S
 
-all: simple_os.kernel user_space_programs
+all: simple_os.kernel
 
 simple_os.kernel: $(OBJS) $(ARCHDIR)/linker.ld
 	$(CC) -T $(ARCHDIR)/linker.ld -o $@ $(CFLAGS) $(LINK_LIST)
 	# grub-file --is-x86-multiboot simple_os.kernel
-
-user_space_programs: $(USER_SPACE_BINARIES)
-
-# init/init: $(INIT_OBJS) init/init.ld
-# 	$(CC) -MD -T init/init.ld -o $@ $(USER_CFLAGS) $(INIT_OBJS) $(USER_LIBS)
-
-# init/init.o: init/init.c
-# 	$(CC) -MD -c $< -o $@ -std=gnu11 $(USER_CFLAGS) $(USER_CPPFLAGS)
-
-init/init: init/init.c
-	$(TOOL_CHAIN_ROOT)/usr/bin/i686-simpleos-gcc -MD -o $@ $< -std=gnu11 $(USER_CFLAGS) $(USER_CPPFLAGS) $(USER_LIBS)
-
-shell/shell: shell/shell.c
-	$(TOOL_CHAIN_ROOT)/usr/bin/i686-simpleos-gcc -MD -o $@ $< -std=gnu11 $(USER_CFLAGS) $(USER_CPPFLAGS) $(USER_LIBS)
 
 $(ARCHDIR)/crt/crtbegin.o $(ARCHDIR)/crt/crtend.o:
 	OBJ=`$(CC) $(CFLAGS) $(LDFLAGS) -print-file-name=$(@F)` && cp "$$OBJ" $@
@@ -120,7 +84,7 @@ clean:
 	rm -f $(OBJS) *.o */*.o */*/*.o
 	rm -f $(OBJS:.o=.d) *.d */*.d */*/*.d
 
-install: install-headers install-kernel install-user-space
+install: install-headers install-kernel
 
 install-headers:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
@@ -130,9 +94,5 @@ install-headers:
 install-kernel: simple_os.kernel 
 	mkdir -p $(DESTDIR)$(BOOTDIR)
 	cp -p simple_os.kernel $(DESTDIR)$(BOOTDIR)
-
-install-user-space: $(USER_SPACE_BINARIES)
-	mkdir -p $(DESTDIR)$(USER_SPACE_BINDIR)
-	cp -p $(USER_SPACE_BINARIES) $(DESTDIR)$(USER_SPACE_BINDIR)
 
 -include $(OBJS:.o=.d)

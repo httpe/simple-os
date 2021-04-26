@@ -46,9 +46,9 @@ int main(int argc, char* argv[]) {
         }
     } else {
         // child
-        char* argv[] = {"/boot/usr/bin/shell", NULL};
+        char* argv[] = {"/boot/usr/bin/shell.elf", NULL};
         printf("This is child, testing EXEC\n");
-        execve("/boot/usr/bin/shell", argv, NULL);
+        execve("/boot/usr/bin/shell.elf", argv, NULL);
     }
 
     const char* str2 = "Test malloc/free!\n";
