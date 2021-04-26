@@ -36,9 +36,6 @@ all: $(BINARIES)
 %.elf: %.c
 	$(TOOL_CHAIN_ROOT)/usr/bin/i686-simpleos-gcc -MD -o $@ $< -std=gnu11 $(CFLAGS) $(CPPFLAGS) $(LIBS)
 
-# shell: shell/shell.c
-# 	$(TOOL_CHAIN_ROOT)/usr/bin/i686-simpleos-gcc -MD -o $@ $< -std=gnu11 $(CFLAGS) $(CPPFLAGS) $(LIBS)
-
 # .c.o:
 # 	$(CC) -MD -MP -c $< -o $@ -std=gnu11 $(CFLAGS) $(CPPFLAGS)
 
