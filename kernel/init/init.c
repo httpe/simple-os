@@ -87,6 +87,14 @@ int main(int argc, char* argv[]) {
         printf("OPEN error\n");
     }
 
+    // Test file creation and deletion
+    fd = open("/home/newfile", O_CREAT|O_RDWR);
+    close(fd);
+    int res_unlink = unlink("/home/newfile");
+    printf("Unlink(%d)\n", res_unlink);
+    res_unlink = unlink("/home/newfile");
+    printf("Unlink(%d)\n", res_unlink);
+
     char c;
     write(fd_stdin, "Input:\n", 7);
     while(1) {

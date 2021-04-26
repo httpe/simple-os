@@ -260,6 +260,12 @@ int sys_curr_date_time(trapframe* r)
     return 0;
 }
 
+int sys_unlink(trapframe* r)
+{
+    char* path = *(char**) (r->esp + 4);
+    return fs_unlink(path);
+}
+
 void syscall_handler(trapframe* r)
 {
     // Avoid scheduling when in syscall/kernel space
@@ -320,6 +326,9 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_CURR_DATE_TIME:
         r->eax = sys_curr_date_time(r);
+        break;
+    case SYS_UNLINK:
+        r->eax = sys_unlink(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);
