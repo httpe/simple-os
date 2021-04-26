@@ -24,7 +24,7 @@ export CPPFLAGS=''
 # Configure the cross-compiler to use the desired system root.
 export SYSROOT="$(pwd)/sysroot"
 # Root of hosted tool chain
-export TOOLCHAINROOT="$(pwd)/toolchain"
+export TOOL_CHAIN_ROOT="$(pwd)/toolchain"
 export CC="$CC --sysroot=$SYSROOT"
 
 # Work around that the -elf gcc targets doesn't have a system include directory

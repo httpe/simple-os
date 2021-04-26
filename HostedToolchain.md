@@ -12,7 +12,7 @@ Reference:
 
 ```bash
 
-# Change to your own path to simple-os source code
+# Change this to your own path to simple-os source code
 export SIMPLE_OS_SRC=$HOME/src/simple-os
 
 mkdir simpleos-toolchain
@@ -25,7 +25,7 @@ export CROSS_COMPILER_BIN=$HOME/opt/cross/bin
 # folder contains the cc1 / cc1plus binary of your cross compiler
 # GCC needs cc1plus under this folder
 export CROSS_COMPILER_LIBEXEC_BIN=$HOME/opt/cross/libexec/gcc/i686-elf/10.2.0
-# Simple-OS toolchain folder
+# Simple-OS tool-chain folder
 export TOOL_CHAIN_ROOT=$SIMPLE_OS_SRC/toolchain
 
 export PATH=$CROSS_COMPILER_LIBEXEC_BIN:$CROSS_COMPILER_BIN:$PATH

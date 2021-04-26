@@ -97,10 +97,10 @@ user_space_programs: $(USER_SPACE_BINARIES)
 # 	$(CC) -MD -c $< -o $@ -std=gnu11 $(USER_CFLAGS) $(USER_CPPFLAGS)
 
 init/init: init/init.c
-	$(TOOLCHAINROOT)/usr/bin/i686-simpleos-gcc -MD -o $@ $< -std=gnu11 $(USER_CFLAGS) $(USER_CPPFLAGS) $(USER_LIBS)
+	$(TOOL_CHAIN_ROOT)/usr/bin/i686-simpleos-gcc -MD -o $@ $< -std=gnu11 $(USER_CFLAGS) $(USER_CPPFLAGS) $(USER_LIBS)
 
 shell/shell: shell/shell.c
-	$(TOOLCHAINROOT)/usr/bin/i686-simpleos-gcc -MD -o $@ $< -std=gnu11 $(USER_CFLAGS) $(USER_CPPFLAGS) $(USER_LIBS)
+	$(TOOL_CHAIN_ROOT)/usr/bin/i686-simpleos-gcc -MD -o $@ $< -std=gnu11 $(USER_CFLAGS) $(USER_CPPFLAGS) $(USER_LIBS)
 
 $(ARCHDIR)/crt/crtbegin.o $(ARCHDIR)/crt/crtend.o:
 	OBJ=`$(CC) $(CFLAGS) $(LDFLAGS) -print-file-name=$(@F)` && cp "$$OBJ" $@
@@ -125,7 +125,7 @@ install: install-headers install-kernel install-user-space
 install-headers:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
 	cp -Rp include/. $(DESTDIR)$(INCLUDEDIR)/.
-	cp -Rp include/. $(TOOLCHAINROOT)$(INCLUDEDIR)/.
+	cp -Rp include/. $(TOOL_CHAIN_ROOT)$(INCLUDEDIR)/.
 	
 install-kernel: simple_os.kernel 
 	mkdir -p $(DESTDIR)$(BOOTDIR)
