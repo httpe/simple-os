@@ -215,7 +215,7 @@ void heap_free(heap_t* heap, uint32_t vaddr) {
         // if the unified free block is the whole block allocated when doing expansion:
         //   free it in whole to revert the expansion
         if (heap->size_in_pages - page_count >= heap->min_size_in_pages) {
-            printf("Contract heap: Reverse an expansion of %d pages\n", page_count);
+            // printf("Contract heap: Reverse an expansion of %d pages\n", page_count);
             claim_free_space(heap, unified_free_header);
             memset(unified_free_header, 0, sizeof(heap_header_t));
             memset(unified_free_footer, 0, sizeof(heap_footer_t));
@@ -233,7 +233,7 @@ void heap_free(heap_t* heap, uint32_t vaddr) {
         new_heap_size = new_heap_size * 2;
         uint32_t page_to_shrink = heap->size_in_pages - new_heap_size;
         if (page_to_shrink > 0) {
-            printf("Shrink heap: shrink %d pages\n", page_to_shrink);
+            // printf("Shrink heap: shrink %d pages\n", page_to_shrink);
             claim_free_space(heap, unified_free_header);
             memset(unified_free_footer, 0, sizeof(heap_footer_t));
             unified_free_header->size = unified_free_header->size - PAGE_SIZE * page_to_shrink;
@@ -255,7 +255,7 @@ void kfree(void* vaddr) {
 
 
 heap_header_t* expand_heap(heap_t* heap, heap_header_t* largest_free_header, size_t requested_size) {
-    printf("Expand_heap: largest block %d bytes, requested: %d bytes\n", largest_free_header->size, requested_size);
+    // printf("Expand_heap: largest block %d bytes, requested: %d bytes\n", largest_free_header->size, requested_size);
 
     PANIC_ASSERT(requested_size > 0);
     if (largest_free_header) {
