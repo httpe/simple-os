@@ -31,8 +31,17 @@
             }
         },
         {
+            "label": "Build Applications",
+            "type": "shell",
+            "command": "${workspaceFolder}/build.sh applications",
+            "problemMatcher": {
+                "base": "$gcc",
+                "fileLocation": ["relative", "${workspaceFolder}/applications"]
+            }
+        },
+        {
             "label": "Build",
-            "dependsOn": ["Build Libc", "Build Kernel", "Build Bootloader"],
+            "dependsOn": ["Build Libc", "Build Kernel", "Build Applications", "Build Bootloader"],
             "dependsOrder": "sequence",
             "problemMatcher": []
         },
