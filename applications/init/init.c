@@ -12,24 +12,11 @@
 static inline _syscall0(SYS_YIELD, int, sys_yield)
 static inline _syscall1(SYS_DUP, int, sys_dup, int, fd)
 
-int main(int argc, char* argv[]) {
-    (void) argc;
-    (void) argv;
-
-    int fd_stdin = open("/console", O_RDWR);
-    int fd_stdout = sys_dup(0);
-    int fd_stderr = sys_dup(0);
-    UNUSED_ARG(fd_stderr);
-
-    int ret;
-    printf("Hello User World!\n");
-    printf("Current Epoch: %lld\n", time(NULL));
-
-    ret = sys_yield();
+static void test_multi_process()
+{
+    printf("Test yielding\n");
+    sys_yield();
     printf("Welcome Back User World!\n");
-    (void) ret;
-
-    printf("Welcome to %s!\n", "libc");
 
     int fork_ret = fork();
     int child_exit_status;
@@ -46,17 +33,23 @@ int main(int argc, char* argv[]) {
         }
     } else {
         // child
-        char* argv[] = {"/boot/usr/bin/shell.elf", NULL};
-        printf("This is child, testing EXEC\n");
-        execve("/boot/usr/bin/shell.elf", argv, NULL);
+        printf("This is child, exiting with code 123\n");
+        exit(123);
     }
+}
+
+static void test_libc() {
+    printf("Welcome to %s!\n", "Newlib");
+    printf("Current Epoch: %lld\n", time(NULL));
 
     const char* str2 = "Test malloc/free!\n";
     char* buf = malloc(100);
     memmove(buf, str2, strlen(str2)+1);
     printf("%s", buf);
     free(buf);
+}
 
+static void test_file_system() {
     struct stat st = {0};
     char buf1[100] = {0};
     int fd = open("/home/RAND.OM", O_RDWR);
@@ -69,8 +62,6 @@ int main(int argc, char* argv[]) {
     } else {
         printf("OPEN error\n");
     }
-
-
 
     const char* to_write = "Hello User I/O World!";
     fd = open("/home/RAND.OM", O_RDWR);
@@ -98,13 +89,29 @@ int main(int argc, char* argv[]) {
     printf("Unlink(%d)\n", res_unlink);
     res_unlink = unlink("/home/newfile");
     printf("Unlink(%d)\n", res_unlink);
+}
 
-    char c;
-    write(fd_stdin, "Input:\n", 7);
-    while(1) {
-        int read_in = read(fd_stdin, &c, 1);
-        if(read_in == 1) {
-            write(fd_stdout, &c, 1);
-        }
-    }
+
+int main(int argc, char* argv[]) {
+    (void) argc;
+    (void) argv;
+
+    // file descriptor 0: stdin, console
+    open("/console", O_RDWR);
+    // file descriptor 1: stdout, console
+    sys_dup(0);
+    // file descriptor 2: stderr, console
+    sys_dup(0);
+
+    printf("Hello User World!\n");
+
+    // Perform tests of user space features
+    test_multi_process();
+    test_libc();
+    test_file_system();
+
+    // Execute the shell
+    char* shell_argv[] = {"/boot/usr/bin/shell.elf", NULL};
+    printf("This is child, testing EXEC\n");
+    execve("/boot/usr/bin/shell.elf", shell_argv, NULL);
 }
