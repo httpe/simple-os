@@ -281,6 +281,15 @@ int sys_rename(trapframe* r)
     return fs_rename(old_path, new_path, flags);
 }
 
+int sys_readdir(trapframe* r)
+{
+    const char * path = *(const char**) (r->esp + 4);
+    uint entry_offset = *(uint*) (r->esp + 8);
+    fs_dirent* buf = *(fs_dirent**) (r->esp + 12);
+    uint buf_size = *(uint *) (r->esp + 16);
+    return fs_readdir(path, entry_offset, buf, buf_size);
+}
+
 void syscall_handler(trapframe* r)
 {
     // Avoid scheduling when in syscall/kernel space
@@ -350,6 +359,9 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_RENAME:
         r->eax = sys_rename(r);
+        break;
+    case SYS_READDIR:
+        r->eax = sys_readdir(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);

@@ -24,6 +24,7 @@
 #define SYS_UNLINK 18
 #define SYS_LINK 19
 #define SYS_RENAME 20
+#define SYS_READDIR 21
 
 // defined in interrupt.asm
 extern void int88();
