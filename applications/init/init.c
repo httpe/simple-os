@@ -112,6 +112,6 @@ int main(int argc, char* argv[]) {
 
     // Execute the shell
     char* shell_argv[] = {"/boot/usr/bin/shell.elf", NULL};
-    printf("This is child, testing EXEC\n");
+    printf("EXEC Shell\n");
     execve("/boot/usr/bin/shell.elf", shell_argv, NULL);
 }
