@@ -16,6 +16,46 @@ static int oct2bin(unsigned char* str, int size) {
     return n;
 }
 
+// Get file name for a path under dir
+// If dir is not the prefix of path, return NULL
+// If path is a file in a subfolder of dir, return NULL
+// If path is the same as dir, return NULL
+// Otherwise return the file name
+static const char* get_filename(const char* dir, const char* path)
+{
+    size_t lendir = strlen(dir),
+           lenpath = strlen(path);
+
+    if(lendir >= lenpath) {
+        return NULL;
+    }
+
+    if(memcmp(dir, path, lendir) != 0) {
+        return NULL;
+    }
+
+    // Support dir ending with or without '/'
+    int offset = 1;
+    if(dir[lendir-1]=='/') {
+        offset = 0;
+    }
+ 
+    for(uint i=lendir + offset; i<lenpath; i++) {
+        // filter out files in sub-folders
+        // offset: for case dir="/d", path="/d/a", skip the second '/'
+        if(path[i] == '/' && i!=lenpath-1) {
+            return NULL;
+        }
+    }
+
+    if(strlen(&path[lendir+offset]) == 0) {
+        return NULL;
+    }
+
+    return &path[lendir+offset];
+}
+
+
 // Check if archive is pointing to the start of a tarball meta sector
 static bool is_tar_header(unsigned char* archive) {
     return !memcmp(archive + 257, "ustar", 5);
@@ -133,6 +173,40 @@ static int tar_getattr(struct fs_mount_point* mount_point, const char * path, st
 }
 
 
+static int tar_readdir(struct fs_mount_point* mp, const char * path, uint offset, struct fs_dir_filler_info* info, fs_dir_filler filler)
+{
+    tar_mount_option* opt = (tar_mount_option*) mp->fs_meta;
+
+    unsigned char* sector_buffer = malloc(TAR_SECTOR_SIZE);
+
+    uint LBA = opt->starting_LBA;
+    uint file_idx = 0;
+    uint dir_ent_read = 0;
+    while(1) {
+        if (LBA >= (uint32_t) opt->storage->block_count) {
+            free(sector_buffer);
+            return dir_ent_read;
+        }
+        opt->storage->read_blocks(opt->storage, sector_buffer, LBA, 1);
+        if (!is_tar_header(sector_buffer)) {
+            free(sector_buffer);
+            return dir_ent_read;
+        } else {
+            const char* filename = get_filename(path, (char*) sector_buffer);
+            int filesize = tar_get_filesize(sector_buffer);
+            int size_in_sector = ((filesize + (TAR_SECTOR_SIZE-1)) / TAR_SECTOR_SIZE) + 1; // plus one for the meta sector
+            if (filename != NULL) {
+                if(file_idx >= offset ) {
+                    filler(info, filename, NULL);
+                    dir_ent_read++;
+                }
+                file_idx++;
+            }
+            LBA += size_in_sector;
+        }
+    }
+}
+
 static int tar_mount(struct fs_mount_point* mount_point, void* option)
 {
     tar_mount_option* opt_in = (tar_mount_option*) option;
@@ -148,6 +222,7 @@ static int tar_mount(struct fs_mount_point* mount_point, void* option)
     mount_point->operations = (struct file_system_operations) {
         .read = tar_read,
         .getattr = tar_getattr,
+        .readdir = tar_readdir
     };
 
     return 0;
