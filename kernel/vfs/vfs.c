@@ -13,8 +13,11 @@
 #include <kernel/process.h>
 #include <kernel/console.h>
 
+// maximum number of mount points
 #define N_MOUNT_POINT 16
-#define N_FILE_STRUCTURE 12
+
+// maximum number of files opened
+#define N_FILE_STRUCTURE 64
 
 
 static uint next_mount_point_id = 1;
