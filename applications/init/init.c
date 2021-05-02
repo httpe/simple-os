@@ -96,11 +96,12 @@ int main(int argc, char* argv[]) {
     (void) argc;
     (void) argv;
 
-    // file descriptor 0: stdin, console
+    // Matching STDIN_FILENO/STDOUT_FILENO/STDERR_FILENO in Newlib unistd.h
+    // file descriptor 0: stdin, console, STDIN_FILENO
     open("/console", O_RDWR);
-    // file descriptor 1: stdout, console
+    // file descriptor 1: stdout, console, STDOUT_FILENO
     sys_dup(0);
-    // file descriptor 2: stderr, console
+    // file descriptor 2: stderr, console, STDERR_FILENO
     sys_dup(0);
 
     printf("Hello User World!\n");
