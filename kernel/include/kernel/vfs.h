@@ -6,6 +6,12 @@
 #include <fs.h>
 #include <common.h>
 
+// maximum number of mount points
+#define N_MOUNT_POINT 16
+
+// maximum number of files opened
+#define N_FILE_STRUCTURE 64
+
 int fs_mount(const char* target, enum file_system_type file_system_type, 
             fs_mount_option option, void* fs_option, fs_mount_point** mount_point);
 int fs_unmount(const char* mount_root);
