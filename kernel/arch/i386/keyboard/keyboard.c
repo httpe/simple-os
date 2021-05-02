@@ -37,7 +37,7 @@ struct circular_buffer {
 #define E1_ESCAPING1 256
 static uint kdb_state;
 
-static uchar scan_code_add_status[256] =
+static uint scan_code_add_status[256] =
 {
   [0x1D] CTRL,
   [0x2A] SHIFT,
@@ -47,7 +47,7 @@ static uchar scan_code_add_status[256] =
   [0xB8] ALT
 };
 
-static uchar scan_code_toggle_status[256] =
+static uint scan_code_toggle_status[256] =
 {
   [0x3A] CAPSLOCK,
   [0x45] NUMLOCK,
@@ -55,7 +55,7 @@ static uchar scan_code_toggle_status[256] =
 };
 
 // scan code to ASCII char map when no shift/ctrl/alt/capslock
-static uchar scan_code_map[256] =
+static char scan_code_map[256] =
 {
     NO  ,  KEY_ESC,  '1',  '2',   '3',    '4',   '5',  '6',         // 0x00,  error
     '7' ,  '8',      '9',  '0',   '-',    '=',   '\b', '\t',
@@ -83,7 +83,7 @@ static uchar scan_code_map[256] =
 };
 
 // scan code to ASCII char map when ctrl
-static uchar scan_code_alt_map[256] =
+static char scan_code_alt_map[256] =
 {
   NO,      NO,      A('1'),  A('2'),  A('3'),  A('4'),  A('5'),  A('6'),
   A('7'),  A('8'),  A('9'),  A('0'),    NO,      NO,      NO,      NO,
@@ -96,7 +96,7 @@ static uchar scan_code_alt_map[256] =
 
 
 // scan code to ASCII char map when ctrl
-static uchar scan_code_ctrl_map[256] =
+static char scan_code_ctrl_map[256] =
 {
   NO,      NO,      C('1'),      C('2'),    C('6'),    C('4'),    C('5'),    C('6'),
   C('7'),    C('8'),    C('9'),      C('0'),    NO,      NO,      NO,      NO,
@@ -108,7 +108,7 @@ static uchar scan_code_ctrl_map[256] =
 };
 
 // scan code to ASCII char map when shift or capslock
-static uchar scan_code_shift_map[256] =
+static char scan_code_shift_map[256] =
 {
     NO  ,   NO,  '!',  '@',  '#',  '$',  '%',  '^',  // 0x00
     '&' ,  '*',  '(',  ')',  '_',  '+', '\b', '\t',
@@ -124,9 +124,9 @@ static uchar scan_code_shift_map[256] =
                                                      // do not map shift + keypad keys or grey keys
 };
 
-static uchar map_scan_code(uint code)
+static char map_scan_code(uint code)
 {
-    uchar c;
+    uint s;
     if(kdb_state & E1_ESCAPING1) {
         // Pause/Break will generate scan code series 0x E1 1D 45 E1 9D C5
         assert(code == 0x45 || code == 0xC5);
@@ -154,28 +154,28 @@ static uchar map_scan_code(uint code)
         //releasing key
         kdb_state &= ~(E0_ESCAPING|E1_ESCAPING0|E1_ESCAPING1);
         code ^= 0x80;
-        c = scan_code_add_status[code];
-        if(c) {
+        s = scan_code_add_status[code];
+        if(s) {
             // remove status
-            kdb_state &= ~(uint)c;
+            kdb_state &= ~s;
         }
-        c = scan_code_toggle_status[code];
-        if(c) {
+        s = scan_code_toggle_status[code];
+        if(s) {
             // toggle status when released
-            kdb_state ^= c;
+            kdb_state ^= s;
             return NO;
         }
         return NO;
     }
-    c = scan_code_toggle_status[code];
-    if(c) {
+    s = scan_code_toggle_status[code];
+    if(s) {
         // do nothing when pressed status toggle keys
         return NO;
     }
-    c = scan_code_add_status[code];
-    if(c) {
+    s = scan_code_add_status[code];
+    if(s) {
         // add status
-        kdb_state |= c;
+        kdb_state |= s;
         return NO;
     }
     if(kdb_state & E0_ESCAPING) {
@@ -220,7 +220,7 @@ static void keyboard_callback(trapframe* regs) {
     UNUSED_ARG(regs);
     /* The PIC leaves us the scancode in port 0x60 */
     uint8_t scan_code = inb(KDB_DATA_PORT);
-    uchar c = map_scan_code(scan_code);
+    char c = map_scan_code(scan_code);
     // printf("KDB[s=0x%x]: (code=0x%x) ascii[0x%x]='%c'\n", kdb_state, (uint) scan_code, (uint)c, c);
     key_buffer_append(c);
 }
