@@ -433,10 +433,9 @@ static file* fd2file(int fd)
 
 int fs_getattr_path(const char * path, struct fs_stat * stat)
 {
-
+    memset(stat, 0, sizeof(*stat));
     if(strcmp(path, root_path) == 0) {
         // For root dir
-        memset(stat, 0, sizeof(*stat));
         stat->mode = S_IFDIR | S_IRWXU | S_IRWXG | S_IRWXO;
         stat->nlink = 2;
         stat->inum = 0;
@@ -445,6 +444,28 @@ int fs_getattr_path(const char * path, struct fs_stat * stat)
         return 0;
     }
 
+    int slash_count = 0;
+    for(int i = 0; path[i] != 0; i++) {
+        if(path[i] == '/') {
+            slash_count++;
+        }
+    }
+    if(slash_count == 1) {
+        // if querying mount points
+        for(uint i=0; i<N_MOUNT_POINT; i++) {
+            if(mount_points[i].mount_target != NULL) {
+                if(strcmp(path, mount_points[i].mount_target) == 0) {
+                    stat->mode = mount_points[i].mount_option.mode;
+                    stat->nlink = 2;
+                    stat->inum = 0;
+                    stat->size = 0;
+                    stat->blocks = 0;
+                    return 0;
+                }
+            }
+        }
+        return -ENOENT;
+    }
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(path, &remaining_path);
     if(mp == NULL) {
@@ -646,7 +667,7 @@ int init_vfs()
         .storage = storage,
         .starting_LBA = BOOTLOADER_SECTORS
     };
-    fs_mount_option mount_option = {0};
+    fs_mount_option mount_option = {.mode = S_IFDIR | S_IRWXU | S_IRWXG | S_IRWXO};
     fs_mount_point* mp = NULL;
     int32_t mount_res = fs_mount("/boot", FILE_SYSTEM_US_TAR, mount_option, &tar_opt, &mp);
     assert(mount_res == 0);
@@ -660,6 +681,7 @@ int init_vfs()
 	}
 
     // mount console
+    mount_option = (fs_mount_option) {.mode = S_IFREG | S_IRWXU | S_IRWXG | S_IRWXO};
     mount_res = fs_mount("/console", FILE_SYSTEM_CONSOLE, mount_option, NULL, &mp);
     assert(mount_res == 0);
     

@@ -2,15 +2,16 @@
 #include <unistd.h>
 #include <string.h>
 #include <syscall.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <fs.h>
 #include <kernel/keyboard.h>
 
 #define MAX_COMMAND_LEN 255
-#define MAX_PATH_LEN 255
+#define MAX_PATH_LEN 4096
 
 static inline _syscall4(SYS_READDIR, int, sys_readdir, const char *, path, uint, entry_offset, fs_dirent*, buf, uint, buf_size)
-static inline _syscall1(SYS_CHDIR, int, sys_chdir, const char *, path)
-static inline _syscall2(SYS_GETCWD, int, sys_getcwd, char *, buf, size_t, buf_size)
 
 int main(int argc, char* argv[]) {
     printf("Welcome to the Shell!\n");
@@ -26,11 +27,12 @@ int main(int argc, char* argv[]) {
     char prev_command[MAX_COMMAND_LEN + 1] = {0};
     int prev_n_command_read;
 
-    char cwd[MAX_PATH_LEN+1] = {0};
+    char* cwd = malloc(MAX_PATH_LEN+1);
+    char* path_buff = malloc(MAX_PATH_LEN+1);
 
     while(1) {
-        int r_getcwd = sys_getcwd(cwd, MAX_PATH_LEN+1);
-        if(r_getcwd < 0) {
+        char* r_cwd = getcwd(cwd, MAX_PATH_LEN+1);
+        if(r_cwd == NULL) {
             write(STDOUT_FILENO, "...", 3);
         } else {
             write(STDOUT_FILENO, cwd, strlen(cwd));
@@ -87,14 +89,39 @@ int main(int argc, char* argv[]) {
                 if(r <= 0) {
                     break;
                 }
-                printf("  File: %s\n", entry.name);
+                size_t path_len = strlen(ls_path);
+                size_t name_len = strlen(entry.name);
+                if(path_len + 1 + name_len > MAX_PATH_LEN) {
+                    printf("  File: %s\n", entry.name);
+                } else {
+                    memmove(path_buff, ls_path, path_len);
+                    if(path_len > 0 && ls_path[path_len-1] != '/') {
+                        path_buff[path_len++] = '/';
+                    }
+                    memmove(path_buff + path_len, entry.name, name_len);
+                    path_buff[path_len + name_len] = 0;
+                    struct stat st = {0};
+                    int r_stat = stat(path_buff, &st);
+                    if(r_stat < 0) {
+                        printf("ls: stat error %d: %s", r_stat, entry.name);
+                    } else {
+                        char* type;
+                        if(S_ISDIR(st.st_mode)) {
+                            type = "DIR";
+                        } else {
+                            type = "FILE";
+                        }
+                        char* datetime = ctime(&st.st_mtim.tv_sec);
+                        printf("  %s: %s %ld %s", entry.name, type, st.st_size, datetime);
+                    }
+                }
             }
         } else if(strcmp(part, "cd") == 0) {
             char* cd_path = strtok(NULL," ");
             if(cd_path == NULL) {
                 continue;
             }
-            int r = sys_chdir(cd_path);
+            int r = chdir(cd_path);
             if(r < 0) {
                 printf("cd: error %d\n", r);
             }

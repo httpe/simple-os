@@ -85,6 +85,7 @@ typedef struct file_system_operations {
 
 typedef struct fs_mount_option {
     uint flag; // not yet used
+    uint mode; // stat mode of the mount point
 } fs_mount_option;
 
 struct file_system_operations;
