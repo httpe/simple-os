@@ -2,7 +2,70 @@
 
 Simple-OS is targeted to be a self-hosting operating system, i.e. you can compile itself in itself.
 
-The currently supported CPU architecture is x86-32.
+Currently the only supported CPU architecture is x86-32.
+
+## Current Status & Goal
+
+Although the final goal is to make the system self-hosting, we have planned for several practical milestone:
+
+1. **Milestone One: Bootloader**
+    Many of the existing tutorials rely on GRUB to boot the system and do some initialize (like entering Protected Mode), which we don't like. For educational purpose, we want to have full control over everthing, starting from booting the system. Therefore, we choose to implement a standalone bootloader as our first step.
+    - Enter 32-bit protected mode and do various initialize before passing control to the kernel
+    - Provide disk I/O routines and a (read-only) file system to host the kernel
+    - Able to parse and load a ELF kernel written in C
+    - Provide basic printing utilities for debugging
+    - Code should be self-contained, i.e. no external dependency.
+    - **Finished**: Implemented under the folder `bootloader`
+
+1. **Milestone Two: Kernel with Input and Output**
+    - Write in C, compile to a [Multiboot](https://wiki.osdev.org/Multiboot) ELF kernel file
+    - Initialize [IDT](https://wiki.osdev.org/IDT) and [ISR](https://wiki.osdev.org/ISR)
+    - Enable [Paging](https://wiki.osdev.org/Paging) and [Higher Half Kernel](https://wiki.osdev.org/Higher_Half_x86_Bare_Bones)
+    - Support `printf` to write various type of data as string to the screen
+    - Support reading user input from keyboard
+    - After initialization, run a program that user can enter some text to the screen and edit/delete it
+    - **Finished**: Implemented under the folder `kernel`
+
+1. **Milestone Three: Memory Management, User Space and Multiprocessing**
+    - Implement a [heap](https://en.wikipedia.org/wiki/Memory_management#HEAP) to do [dynamic memory allocation](https://en.wikipedia.org/wiki/C_dynamic_memory_allocation)
+    - Allow switch to user space and run ELF program under user/ring3 privilege
+    - Enable multi-processing with independent kernel stack and page directory, starting with [Cooperative Scheduling](https://littleosbook.github.io/#cooperative-scheduling-with-yielding) and then [Preemptive Scheduling](https://littleosbook.github.io/#preemptive-scheduling-with-interrupts)
+    - Implement `fork`, `exec` and `yield` system calls on a simple read-only file system (potentially reuse the USTAR code from the bootloader)
+    - **Finished**:
+      - Kernel heap
+      - ELF loader
+      - Cooperative and preemptive multi-tasking (single CPU, synchronized by disabling interrupt when doing system call)
+      - Exec system call based on the USTAR read-only file system
+
+1. **Milestone Four: Filesystem,  Libc and Hosted Tool-chain**
+    - Provide a readable & writable file system (FAT or Ext) and corresponding system calls
+    - Build user space standard C library with system calls, e.g. printf, malloc and open/read/write. Potentially port [Newlib](https://wiki.osdev.org/Porting_Newlib) as our standard C library.
+    - Build our [OS specific/hosted compiling tool-chain](https://wiki.osdev.org/OS_Specific_Toolchain) (Binutils and GCC)
+    - **Finished**:
+      - [Simple-FS](https://github.com/httpe/simple-fs): A fully functional FAT32 file system
+      - [Simple-newlib](https://github.com/httpe/simple-newlib): Ported Newlib 4.1.0 with all system calls implemented
+      - [Simple-gcc](https://github.com/httpe/simple-gcc) and [Simple-binutils](https://github.com/httpe/simple-binutils): Hosted Binutils 2.35.1 / GCC 10.2.0 tool-chain established (See HostedToolchain.md)
+
+1. **Milestone Five: Shell, User Space Applications and Compiler**
+    - Write a shell to allow navigating through the file system and execute applications
+    - Write an editor to show file content, allowing editing and saving to disk
+    - Port a simplified C compiler to the system
+    - Compile and run the text editor inside the system
+    - **In Progress**
+
+1. **Milestone Six: Mutli-core CPU support and IPC**
+    - Support multi-core CPU through [APCI](https://wiki.osdev.org/APIC)
+    - Provide [synchronization mechanism](https://wiki.osdev.org/Synchronization_Primitives) for multi-tasking environment, like locks
+    - Provide inter process communication ([IPC](https://wiki.osdev.org/Category:IPC)) mechanism like pipe and signal
+
+1. **Milestone Seven: Networking**
+    - Allow connecting to the Internet
+    - Implement DNS query and ping command
+
+1. **Final Goal: Self-hosting**
+    - Port a sophisticate enough compiler to the system
+    - Compile the source code of the system inside the system
+    - The system is now self-hosting
 
 ## Prerequisite
 
@@ -248,65 +311,3 @@ Multiple tutorials have been referenced in the development of this project.
 1. [ELF Format](http://www.skyfree.org/linux/references/ELF_Format.pdf)
 1. [x86 Instuction Set Manual](https://www.felixcloutier.com/x86/)
 1. [GCC Inline Assembly](https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html)
-
-## Current Status & Goal
-
-Although the final goal is to make the system self-hosting, we planned for several practical milestone:
-
-1. **Milestone One: Bootloader**
-    Many of the existing tutorials rely on GRUB to boot the system and do some initialize (like entering Protected Mode), which we don't like. For educational purpose, we want to have full control over everthing, starting from booting the system. Therefore, we choose to implement a standalone bootloader as our first step.
-    - Enter 32-bit protected mode and do various initialize before passing control to the kernel
-    - Provide disk I/O routines and a (read-only) file system to host the kernel
-    - Able to parse and load a ELF kernel written in C
-    - Provide basic printing utilities for debugging
-    - Code should be self-contained, i.e. no external dependency.
-    - **Finished**: Implemented under the folder `bootloader`
-
-1. **Milestone Two: Kernel with Input and Output**
-    - Write in C, compile to a [Multiboot](https://wiki.osdev.org/Multiboot) ELF kernel file
-    - Initialize [IDT](https://wiki.osdev.org/IDT) and [ISR](https://wiki.osdev.org/ISR)
-    - Enable [Paging](https://wiki.osdev.org/Paging) and [Higher Half Kernel](https://wiki.osdev.org/Higher_Half_x86_Bare_Bones)
-    - Support `printf` to write various type of data as string to the screen
-    - Support reading user input from keyboard
-    - After initialization, run a program that user can enter some text to the screen and edit/delete it
-    - **Finished**: Implemented under the folder `kernel`
-
-1. **Milestone Three: Memory Management, User Space and Multiprocessing**
-    - Implement a [heap](https://en.wikipedia.org/wiki/Memory_management#HEAP) to do [dynamic memory allocation](https://en.wikipedia.org/wiki/C_dynamic_memory_allocation)
-    - Allow switch to user space and run ELF program under user/ring3 privilege
-    - Enable multi-processing with independent kernel stack and page directory, starting with [Cooperative Scheduling](https://littleosbook.github.io/#cooperative-scheduling-with-yielding) and then [Preemptive Scheduling](https://littleosbook.github.io/#preemptive-scheduling-with-interrupts)
-    - Implement `fork`, `exec` and `yield` system calls on a simple read-only file system (potentially reuse the USTAR code from the bootloader)
-    - **Finished**:
-      - Kernel heap
-      - ELF loader
-      - Cooperative and preemptive multi-tasking (single CPU, synchronized by disabling interrupt when doing system call)
-      - Exec system call based on the USTAR read-only file system
-
-1. **Milestone Four: Filesystem,  Libc and Hosted Tool-chain**
-    - Provide a readable & writable file system (FAT or Ext) and corresponding system calls
-    - Build user space standard C library with system calls, e.g. printf, malloc and open/read/write. Potentially port [Newlib](https://wiki.osdev.org/Porting_Newlib) as our standard C library.
-    - Build our [OS specific/hosted compiling tool-chain](https://wiki.osdev.org/OS_Specific_Toolchain) (Binutils and GCC)
-    - **Finished**:
-      - [Simple-FS](https://github.com/httpe/simple-fs): A fully functional FAT32 file system
-      - [Simple-newlib](https://github.com/httpe/simple-newlib): Ported Newlib 4.1.0 with all system calls implemented
-      - [Simple-gcc](https://github.com/httpe/simple-gcc) and [Simple-binutils](https://github.com/httpe/simple-binutils): Hosted Binutils 2.35.1 / GCC 10.2.0 tool-chain established (See HostedToolchain.md)
-
-1. **Milestone Five: Shell, User Space Applications and Compiler**
-    - Write a shell to allow navigating through the file system and execute applications
-    - Write an editor to show file content, allowing editing and saving to disk
-    - Port a simplified C compiler to the system
-    - Compile and run the text editor inside the system
-
-1. **Milestone Six: Mutli-core CPU support and IPC**
-    - Support multi-core CPU through [APCI](https://wiki.osdev.org/APIC)
-    - Provide [synchronization mechanism](https://wiki.osdev.org/Synchronization_Primitives) for multi-tasking environment, like locks
-    - Provide inter process communication ([IPC](https://wiki.osdev.org/Category:IPC)) mechanism like pipe and signal
-
-1. **Milestone Seven: Networking**
-    - Allow connecting to the Internet
-    - Implement DNS query and ping command
-
-1. **Final Goal: Self-hosting**
-    - Port a sophisticate enough compiler to the system
-    - Compile the source code of the system inside the system
-    - The system is now self-hosting
