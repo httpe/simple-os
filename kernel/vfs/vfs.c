@@ -89,7 +89,10 @@ int fs_mount(const char* target, enum file_system_type file_system_type,
             fs_mount_option option, void* fs_option, fs_mount_point** mount_point)
 {
     size_t idx, last_slash = -1;
-    for(idx=0;idx<strlen(target);idx++) {
+    for(idx=0;;idx++) {
+        if(target[idx] == 0) {
+            break;
+        }
         if(target[idx] == '/') {
             last_slash = idx;
         }
@@ -97,7 +100,7 @@ int fs_mount(const char* target, enum file_system_type file_system_type,
     if(last_slash != 0 || idx<=1) {
         // target must be in the form of '/NAME', i.e. has and only has one slash, at the beginning
         // i.e. only allow mounting at a folder under root dir, and also not allowing mounting at root dir itself
-        return -1;
+        return -EPERM;
     }
     int i;
     for(i=0; i<N_FILE_SYSTEM_TYPES; i++) {
@@ -107,14 +110,14 @@ int fs_mount(const char* target, enum file_system_type file_system_type,
     }
     if(i == N_FILE_SYSTEM_TYPES) {
         // file system not found
-        return -1;
+        return -EEXIST;
     }
     int j;
     for(j=0;j<N_MOUNT_POINT;j++) {
         if(mount_points[j].mount_target != NULL) {
             if(strcmp(mount_points[j].mount_target, target) == 0) {
                 // target already mounted
-                return -1;
+                return -EEXIST;
             }
         }
     }
@@ -131,7 +134,6 @@ int fs_mount(const char* target, enum file_system_type file_system_type,
             if(res < 0) {
                 free(mount_points[j].mount_target);
                 memset(&mount_points[j], 0, sizeof(mount_points[j]));
-                *mount_point = NULL;
                 return res;
             }
             *mount_point = &mount_points[j];
@@ -431,6 +433,18 @@ static file* fd2file(int fd)
 
 int fs_getattr_path(const char * path, struct fs_stat * stat)
 {
+
+    if(strcmp(path, root_path) == 0) {
+        // For root dir
+        memset(stat, 0, sizeof(*stat));
+        stat->mode = S_IFDIR | S_IRWXU | S_IRWXG | S_IRWXO;
+        stat->nlink = 2;
+        stat->inum = 0;
+        stat->size = 0;
+        stat->blocks = 0;
+        return 0;
+    }
+
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(path, &remaining_path);
     if(mp == NULL) {
