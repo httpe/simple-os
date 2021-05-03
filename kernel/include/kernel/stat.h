@@ -51,6 +51,14 @@ typedef struct fs_stat {
 #define		S_IWOTH	0000002	/* write permission, other */
 #define		S_IXOTH 0000001/* execute/search permission, other */
 
+#define	S_ISBLK(m)	(((m)&_IFMT) == _IFBLK)
+#define	S_ISCHR(m)	(((m)&_IFMT) == _IFCHR)
+#define	S_ISDIR(m)	(((m)&_IFMT) == _IFDIR)
+#define	S_ISFIFO(m)	(((m)&_IFMT) == _IFIFO)
+#define	S_ISREG(m)	(((m)&_IFMT) == _IFREG)
+#define	S_ISLNK(m)	(((m)&_IFMT) == _IFLNK)
+#define	S_ISSOCK(m)	(((m)&_IFMT) == _IFSOCK)
+
 // Copied from Newlib sys/_default_fcntl.h
 
 #define O_RDONLY 0  /* +1 == FREAD */

@@ -33,7 +33,8 @@ typedef struct proc {
   uint32_t size;                      // process size, a pointer to the end of the process memory
   uint32_t orig_size;                 // original size, size shall not shrink below this
   int32_t exit_code;                  // exit code for zombie process
-  file *files[N_FILE_DESCRIPTOR_PER_PROCESS];  // Opened files  
+  file *files[N_FILE_DESCRIPTOR_PER_PROCESS];  // Opened files
+  char* cwd;                          // Current working directory
 } proc;
 
 proc* create_process();
@@ -45,6 +46,9 @@ int fork();
 void exit(int exit_code);
 int wait(int* wait_status);
 void switch_process_memory_mapping(proc* p);
+char* get_abs_path(const char* path);
+int chdir(const char* path);
+int getcwd(char* buf, size_t buf_size);
 
 // defined in switch_kernel_context.asm
 extern void switch_kernel_context(struct context **old_context, struct context *new_context);

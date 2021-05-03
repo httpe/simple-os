@@ -2,11 +2,14 @@
 #include <string.h>
 #include <stdio.h>
 #include <common.h>
+#include <stdlib.h>
 #include <kernel/process.h>
 #include <kernel/paging.h>
 #include <kernel/panic.h>
 #include <kernel/memory_bitmap.h>
 #include <kernel/vfs.h>
+#include <kernel/stat.h>
+#include <kernel/errno.h>
 #include <arch/i386/kernel/segmentation.h>
 #include <arch/i386/kernel/cpu.h>
 
@@ -126,6 +129,8 @@ void init_first_process()
 
     p->size = p->tf->esp;
     p->orig_size = p->size;
+
+    p->cwd = strdup("/");
 
     p->state = PROC_STATE_RUNNABLE;
 }
@@ -261,9 +266,129 @@ int fork()
         }
     }
 
+    // child process uses the same working directory
+    p_new->cwd = strdup(p_curr->cwd);
+
     // child process will have return value zero from fork
     p_new->tf->eax = 0;
     p_new->state = PROC_STATE_RUNNABLE;
     // return to parent process with child's pid
     return p_new->pid;
+}
+
+// Get absolute path from (potentially) relative path
+// Also normalizing out consecutive slash and the trailing slash
+// return: malloced string containing the absolute path
+char* get_abs_path(const char* path)
+{
+    if(path == NULL) {
+        return NULL;
+    }
+
+    proc* p = curr_proc();
+    char* cwd;
+    if(p) {
+        cwd = p->cwd;
+    } else {
+        // default to root dir before entering the first process
+        cwd = "/";
+    }
+    size_t cwdlen = strlen(cwd);
+    assert(cwdlen > 0);
+
+    size_t seplen;
+    if(cwd[cwdlen-1] == '/') {
+        // if cwd has trailing slash already
+        seplen = 0;
+    } else {
+        seplen = 1;
+    }
+    
+    size_t pathlen = strlen(path);
+    if(path[0] == '/') {
+        // if is abs path already
+        cwdlen = 0;
+        seplen = 0;
+    }
+    if(pathlen > 1 && path[pathlen-1] == '/') {
+        //remove trailing slash
+        pathlen--;
+    }
+    size_t len = cwdlen + seplen + pathlen + 1; // {CWD}{SEP, i.e. '/'}{PATH}{TERM, i.e. '\0'}
+
+    char* normalized = malloc(len);
+    char* curr = normalized;
+    char next, prev = 0;
+    for(size_t i=0; i<len; i++) {
+        if(i < cwdlen) {
+            next = cwd[i];
+        } else if(seplen > 0 && i < cwdlen + seplen) {
+            next = '/';
+        } else if(i < cwdlen + seplen + pathlen) {
+            next = path[i - cwdlen - seplen];
+        } else {
+            next = 0;
+        }
+        if(next == '/' && prev == '/') {
+            // skip multiple '/'
+            continue;
+        }
+        prev = next;
+        *curr = next;
+
+        if(next == '/' || next == 0) {
+            if(curr - 2 >= normalized && memcmp(curr - 2, "/.", 2) == 0) {
+                // /abc/./a => /abc/a, skip over '.'
+                curr -= 2;
+            }
+            if(curr - 3 >= normalized && memcmp(curr - 3, "/..", 3) == 0) {
+                // /abc/../a => /a, handle '..'
+                curr -= 3;
+                while(curr > normalized && *--curr != '/');
+            }
+            // ensure zero termination
+            if(next == 0) {
+                if(curr > normalized) {
+                    *curr = 0;
+                } else {
+                    *++curr = 0;
+                }
+            }
+        }
+
+        curr++;
+    }
+
+    return normalized;
+
+}
+
+int chdir(const char* path)
+{
+    char* abs_path = get_abs_path(path);
+    proc* p = curr_proc();
+    fs_stat st = {0};
+    int r = fs_getattr_path(abs_path, &st);
+    if(r < 0) {
+        free(abs_path);
+        return r;
+    }
+    if(!S_ISDIR(st.mode)) {
+        free(abs_path);
+        return -ENOTDIR;
+    }
+    free(p->cwd);
+    p->cwd = abs_path;
+    return 0;
+}
+
+int getcwd(char* buf, size_t buf_size)
+{
+    proc* p = curr_proc();
+    size_t len = strlen(p->cwd);
+    if(buf_size < len + 1) {
+        return -1;
+    }
+    memcpy(buf, p->cwd, len + 1);
+    return 0;
 }

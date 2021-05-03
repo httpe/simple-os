@@ -25,6 +25,8 @@
 #define SYS_LINK 19
 #define SYS_RENAME 20
 #define SYS_READDIR 21
+#define SYS_CHDIR 22
+#define SYS_GETCWD 23
 
 // defined in interrupt.asm
 extern void int88();

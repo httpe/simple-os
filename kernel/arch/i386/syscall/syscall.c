@@ -2,6 +2,8 @@
 #include <string.h>
 #include <syscall.h>
 #include <common.h>
+#include <stdlib.h>
+#include <kernel/errno.h>
 #include <kernel/heap.h>
 #include <kernel/panic.h>
 #include <kernel/multiboot.h>
@@ -33,26 +35,33 @@ int sys_exec(trapframe* r)
     printf("SYS_EXEC: eip: %u, path: %s\n", num, path);
 
     // Load executable from file system
-
+    char* abs_path = get_abs_path(path);
+    if(abs_path == NULL) {
+        return -1;
+    }
     fs_stat st = {0};
-    int fs_res = fs_getattr_path(path, &st);
+    int fs_res = fs_getattr_path(abs_path, &st);
     if(fs_res < 0) {
         printf("SYS_EXEC: Cannot open the file\n");
+        free(abs_path);
         return -1;
     }
     if(st.size == 0) {
         printf("SYS_EXEC: File has size zero\n");
+        free(abs_path);
         return -1;
     }
     printf("SYS_EXEC: program size: %u\n", st.size);
 
-    int fd = fs_open(path, 0);
+    int fd = fs_open(abs_path, 0);
     if(fd < 0) {
+        free(abs_path);
         return -1;
     }
-    char* file_buffer = kmalloc(st.size);
+    char* file_buffer = malloc(st.size);
     fs_res = fs_read(fd, file_buffer, st.size);
     if(fs_res < 0) {
+        free(abs_path);
         return -1;
     }
     fs_close(fd);
@@ -60,7 +69,8 @@ int sys_exec(trapframe* r)
 
     if (!is_elf(file_buffer)) {
         printf("SYS_EXEC: Invalid program\n");
-        kfree(file_buffer);
+        free(file_buffer);
+        free(abs_path);
         return -1;
     }
 
@@ -95,6 +105,7 @@ int sys_exec(trapframe* r)
             // stack overflow, no room to store 3 (fake return PC, argc, argv) + argc+1 (pointer to previous arguments plus pointer to this arg)  + 1 (a terminating zero)
             unmap_pages(curr_page_dir(), ustack_start, PAGE_SIZE*USER_STACK_PAGE_SIZE);
             free_user_space(page_dir);
+            free(abs_path);
             return -1;
         }
         memmove(ustack_dst + (esp - ustack_start), argv[argc], size);
@@ -130,6 +141,7 @@ int sys_exec(trapframe* r)
     PANIC_ASSERT(is_vaddr_accessible(curr_page_dir(), p->tf->eip, false, false));
     PANIC_ASSERT(is_vaddr_accessible(curr_page_dir(), p->tf->esp, false, false));
     
+    free(abs_path);
     return 0;
 }
 
@@ -193,7 +205,13 @@ int sys_open(trapframe* r)
 {
     char* path = *(char**) (r->esp + 4);
     int32_t flags = *(int*) (r->esp + 8);
-    return fs_open(path, flags);
+    char* abs_path = get_abs_path(path);
+    if(abs_path == NULL) {
+        return -1;
+    }
+    int res = fs_open(abs_path, flags);
+    free(abs_path);
+    return res;
 }
 
 int sys_close(trapframe* r)
@@ -236,7 +254,13 @@ int sys_getattr_path(trapframe* r)
 {
     char* path = *(char**) (r->esp + 4);
     struct fs_stat* st = *(struct fs_stat**) (r->esp + 8);
-    return fs_getattr_path(path, st);
+    char* abs_path = get_abs_path(path);
+    if(abs_path == NULL) {
+        return -1;
+    }
+    int res = fs_getattr_path(abs_path, st);
+    free(abs_path);
+    return res;
 }
 
 int sys_getattr_fd(trapframe* r)
@@ -263,22 +287,58 @@ int sys_curr_date_time(trapframe* r)
 int sys_unlink(trapframe* r)
 {
     char* path = *(char**) (r->esp + 4);
-    return fs_unlink(path);
+    char* abs_path = get_abs_path(path);
+    if(abs_path == NULL) {
+        return -1;
+    }
+    int res = fs_unlink(abs_path);
+    free(abs_path);
+    return res;
 }
 
 int sys_link(trapframe* r)
 {
     char* old_path = *(char**) (r->esp + 4);
     char* new_path = *(char**) (r->esp + 8);
-    return fs_link(old_path, new_path);
+
+    char* old_abs_path = get_abs_path(old_path);
+    if(old_abs_path == NULL) {
+        return -1;
+    }
+    char* new_abs_path = get_abs_path(new_path);
+    if(new_abs_path == NULL) {
+        return -1;
+    }
+
+    int res = fs_link(old_abs_path, new_abs_path);
+
+    free(old_abs_path);
+    free(new_abs_path);
+
+    return res;
 }
 
 int sys_rename(trapframe* r)
 {
     char* old_path = *(char**) (r->esp + 4);
     char* new_path = *(char**) (r->esp + 8);
+
+    char* old_abs_path = get_abs_path(old_path);
+    if(old_abs_path == NULL) {
+        return -1;
+    }
+    char* new_abs_path = get_abs_path(new_path);
+    if(new_abs_path == NULL) {
+        return -1;
+    }
+
     uint flags = *(uint*) (r->esp + 12);
-    return fs_rename(old_path, new_path, flags);
+    int res = fs_rename(old_abs_path, new_abs_path, flags);
+
+    free(old_abs_path);
+    free(new_abs_path);
+
+    return res;
 }
 
 int sys_readdir(trapframe* r)
@@ -287,7 +347,29 @@ int sys_readdir(trapframe* r)
     uint entry_offset = *(uint*) (r->esp + 8);
     fs_dirent* buf = *(fs_dirent**) (r->esp + 12);
     uint buf_size = *(uint *) (r->esp + 16);
-    return fs_readdir(path, entry_offset, buf, buf_size);
+
+    char* abs_path = get_abs_path(path);
+    if(abs_path == NULL) {
+        return -1;
+    }
+    
+    int res = fs_readdir(abs_path, entry_offset, buf, buf_size);
+
+    free(abs_path);
+    return res;
+}
+
+int sys_chdir(trapframe* r)
+{
+    const char * path = *(const char**) (r->esp + 4);
+    return chdir(path);
+}
+
+int sys_getcwd(trapframe* r)
+{
+    char * buf = *(char**) (r->esp + 4);
+    size_t buf_size = *(size_t *) (r->esp + 8);
+    return getcwd(buf, buf_size);
 }
 
 void syscall_handler(trapframe* r)
@@ -362,6 +444,12 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_READDIR:
         r->eax = sys_readdir(r);
+        break;
+    case SYS_CHDIR:
+        r->eax = sys_chdir(r);
+        break;
+    case SYS_GETCWD:
+        r->eax = sys_getcwd(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);
