@@ -47,8 +47,9 @@ void terminal_putchar(char c) {
     unsigned char uc = c;
 
     if (c == '\n') {
-        terminal_column = 0;
         terminal_row += 1;
+    } else if(c == '\r') {
+        terminal_column = 0;
     } else if (c == '\b') {
         // Backspace
         if (terminal_column == 0) {

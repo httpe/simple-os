@@ -14,35 +14,35 @@ static inline _syscall1(SYS_DUP, int, sys_dup, int, fd)
 
 static void test_multi_process()
 {
-    printf("Test yielding\n");
+    printf("Test yielding\r\n");
     sys_yield();
-    printf("Welcome Back User World!\n");
+    printf("Welcome Back User World!\r\n");
 
     int fork_ret = fork();
     int child_exit_status;
 
     if(fork_ret) {
         // parent
-        printf("This is parent, child PID: %u\n", fork_ret);
+        printf("This is parent, child PID: %u\r\n", fork_ret);
         // sys_yield();
         int wait_ret = wait(&child_exit_status);
         if(wait_ret < 0) {
-            printf("No child exited\n");
+            printf("No child exited\r\n");
         } else {
-            printf("Child %u exited, exit code = %d\n", wait_ret, WEXITSTATUS(child_exit_status));
+            printf("Child %u exited, exit code = %d\r\n", wait_ret, WEXITSTATUS(child_exit_status));
         }
     } else {
         // child
-        printf("This is child, exiting with code 123\n");
+        printf("This is child, exiting with code 123\r\n");
         exit(123);
     }
 }
 
 static void test_libc() {
-    printf("Welcome to %s!\n", "Newlib");
-    printf("Current Epoch: %lld\n", time(NULL));
+    printf("Welcome to %s!\r\n", "Newlib");
+    printf("Current Epoch: %lld\r\n", time(NULL));
 
-    const char* str2 = "Test malloc/free!\n";
+    const char* str2 = "Test malloc/free!\r\n";
     char* buf = malloc(100);
     memmove(buf, str2, strlen(str2)+1);
     printf("%s", buf);
@@ -57,10 +57,10 @@ static void test_file_system() {
         int read_in = read(fd, buf1, 10);
         fstat(fd, &st);
         int closed = close(fd);
-        printf("FD(%d), READ(%d), CLOSE(%d), MODTIME(%lld)\n", fd, read_in, closed, st.st_mtim.tv_sec);
-        printf("READ content: \n %s \n", buf1);
+        printf("FD(%d), READ(%d), CLOSE(%d), MODTIME(%lld)\r\n", fd, read_in, closed, st.st_mtim.tv_sec);
+        printf("READ content: \r\n %s \r\n", buf1);
     } else {
-        printf("OPEN error\n");
+        printf("OPEN error\r\n");
     }
 
     const char* to_write = "Hello User I/O World!";
@@ -72,23 +72,23 @@ static void test_file_system() {
         int read_in = read(fd, buf1, strlen(to_write) + 1);
         fstat(fd, &st);
         int closed = close(fd);
-        printf("FD(%d), WRITE(%d), SEEK(%d), READ(%d), CLOSE(%d), MODTIME(%lld)\n", fd, written, lseek_res, read_in, closed, st.st_mtim.tv_sec);
-        printf("READ content: \n %s \n", buf1);
+        printf("FD(%d), WRITE(%d), SEEK(%d), READ(%d), CLOSE(%d), MODTIME(%lld)\r\n", fd, written, lseek_res, read_in, closed, st.st_mtim.tv_sec);
+        printf("READ content: \r\n %s \r\n", buf1);
     } else {
-        printf("OPEN error\n");
+        printf("OPEN error\r\n");
     }
 
     // Test file creation and deletion
     fd = open("/home/newfile", O_CREAT|O_RDWR);
     close(fd);
     int res_link = link("/home/newfil", "/home/newfil.1");
-    printf("Link(%d)\n", res_link);
+    printf("Link(%d)\r\n", res_link);
     int res_rename = rename("/home/newfile", "/home/newfile.2");
-    printf("Rename(%d)\n", res_rename);
+    printf("Rename(%d)\r\n", res_rename);
     int res_unlink = unlink("/home/newfile.2");
-    printf("Unlink(%d)\n", res_unlink);
+    printf("Unlink(%d)\r\n", res_unlink);
     res_unlink = unlink("/home/newfile");
-    printf("Unlink(%d)\n", res_unlink);
+    printf("Unlink(%d)\r\n", res_unlink);
 }
 
 
@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
     // file descriptor 2: stderr, console, STDERR_FILENO
     sys_dup(0);
 
-    printf("Hello User World!\n");
+    printf("Hello User World!\r\n");
 
     // Perform tests of user space features
     test_multi_process();
@@ -113,6 +113,6 @@ int main(int argc, char* argv[]) {
 
     // Execute the shell
     char* shell_argv[] = {"/boot/usr/bin/shell.elf", NULL};
-    printf("EXEC Shell\n");
+    printf("EXEC Shell\r\n");
     execve("/boot/usr/bin/shell.elf", shell_argv, NULL);
 }

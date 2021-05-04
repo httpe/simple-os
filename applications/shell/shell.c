@@ -14,18 +14,18 @@
 static inline _syscall4(SYS_READDIR, int, sys_readdir, const char *, path, uint, entry_offset, fs_dirent*, buf, uint, buf_size)
 
 int main(int argc, char* argv[]) {
-    printf("Welcome to the Shell!\n");
-    printf("Shell ARGC(%d)\n", argc);
+    printf("Welcome to the Shell!\r\n");
+    printf("Shell ARGC(%d)\r\n", argc);
     for(int i=0; i<argc; i++) {
-        printf("  %d: %s\n", i, argv[i]);
+        printf("  %d: %s\r\n", i, argv[i]);
     }
-    printf("Use 'help' command to show usage\n");
+    printf("Use 'help' command to show usage\r\n");
     
     char c;
     char command[MAX_COMMAND_LEN + 1] = {0};
-    int n_command_read;
+    int n_command_read = 0;
     char prev_command[MAX_COMMAND_LEN + 1] = {0};
-    int prev_n_command_read;
+    int prev_n_command_read = 0;
 
     char* cwd = malloc(MAX_PATH_LEN+1);
     char* path_buff = malloc(MAX_PATH_LEN+1);
@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
         while(1) {
             while(read(STDIN_FILENO, &c, 1) <= 0);
             if(c == '\n') {
-                write(STDOUT_FILENO, &c, 1);
+                write(STDOUT_FILENO, &"\r\n", 2);
                 break;
             } else if(c == '\b') {
                 if(n_command_read > 0) {
@@ -72,8 +72,8 @@ int main(int argc, char* argv[]) {
             continue;
         }
         if(strcmp(part, "help") == 0) {
-            printf("Supported commands\n");
-            printf("ls: listing dir\n");
+            printf("Supported commands\r\n");
+            printf("ls: listing dir\r\n");
         } else if(strcmp(part, "ls") == 0) {
             fs_dirent entry = {0};
             char* ls_path = strtok(NULL," ");
@@ -84,15 +84,16 @@ int main(int argc, char* argv[]) {
             while(1) {
                 int r = sys_readdir(ls_path, i++, &entry, sizeof(fs_dirent));
                 if(r < 0) {
-                    printf("ls: error %d\n", r);
+                    printf("ls: error %d\r\n", r);
                 }
                 if(r <= 0) {
+                    printf("\r\n");
                     break;
                 }
                 size_t path_len = strlen(ls_path);
                 size_t name_len = strlen(entry.name);
                 if(path_len + 1 + name_len > MAX_PATH_LEN) {
-                    printf("  File: %s\n", entry.name);
+                    printf("  File: %s\r\n", entry.name);
                 } else {
                     memmove(path_buff, ls_path, path_len);
                     if(path_len > 0 && ls_path[path_len-1] != '/') {
@@ -103,7 +104,7 @@ int main(int argc, char* argv[]) {
                     struct stat st = {0};
                     int r_stat = stat(path_buff, &st);
                     if(r_stat < 0) {
-                        printf("ls: stat error %d: %s", r_stat, entry.name);
+                        printf("ls: stat error %d: %s\r\n", r_stat, entry.name);
                     } else {
                         char* type;
                         if(S_ISDIR(st.st_mode)) {
@@ -112,7 +113,8 @@ int main(int argc, char* argv[]) {
                             type = "FILE";
                         }
                         char* datetime = ctime(&st.st_mtim.tv_sec);
-                        printf("  %s: %s %ld %s", entry.name, type, st.st_size, datetime);
+                        // ctime result includes a trailing '\n'
+                        printf("  %s: %s %ld %s\r", entry.name, type, st.st_size, datetime);
                     }
                 }
             }
@@ -123,10 +125,10 @@ int main(int argc, char* argv[]) {
             }
             int r = chdir(cd_path);
             if(r < 0) {
-                printf("cd: error %d\n", r);
+                printf("cd: error %d\r\n", r);
             }
         } else {
-            printf("Unknow command:\n%s\n", command);
+            printf("Unknow command:\r\n%s\r\n", command);
         }
 
     }
