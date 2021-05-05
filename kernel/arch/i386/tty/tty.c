@@ -150,13 +150,14 @@ void move_cursor(int row_delta, int col_delta)
     update_cursor();
 }
 
-// With this code, you get: pos = y * VGA_WIDTH + x
-// To obtain the coordinates, just calculate: y = pos / VGA_WIDTH; x = pos % VGA_WIDTH
-uint16_t get_cursor_position(void) {
+void get_cursor_position(size_t* row, size_t* col) {
     uint16_t pos = 0;
     outb(0x3D4, 0x0F);
     pos |= inb(0x3D5);
     outb(0x3D4, 0x0E);
     pos |= ((uint16_t)inb(0x3D5)) << 8;
-    return pos;
+
+    *row = pos / VGA_WIDTH;
+    *col = pos % VGA_WIDTH;
+
 }
