@@ -1,10 +1,40 @@
 #include <stddef.h>
 #include <string.h>
+#include <stdio.h>
 #include <kernel/errno.h>
 #include <kernel/console.h>
 #include <kernel/keyboard.h>
 #include <kernel/tty.h>
 #include <kernel/stat.h>
+
+
+static struct circular_buffer {
+    char buf[CONSOLE_BUF_SIZE];
+    uint r;
+    uint w;
+} console_buffer;
+
+static void console_buffer_append(char c) {
+    if(c == 0) {
+        return;
+    }
+    if(console_buffer.w == (console_buffer.r + CONSOLE_BUF_SIZE - 1) % CONSOLE_BUF_SIZE) {
+        // buffer is full, no more input allowed
+        return;
+    }
+    console_buffer.buf[console_buffer.w] = c;
+    console_buffer.w = (console_buffer.w + 1) % CONSOLE_BUF_SIZE;
+}
+
+static char read_console_buffer() {
+    char c;
+    if(console_buffer.w == console_buffer.r) {
+        return 0;
+    }
+    c =  console_buffer.buf[ console_buffer.r];
+    console_buffer.r = (console_buffer.r + 1) % CONSOLE_BUF_SIZE;
+    return c;
+}
 
 static int console_read(struct fs_mount_point* mount_point, const char * path, char *buf, uint size, uint offset, struct fs_file_info *fi)
 {
@@ -15,7 +45,13 @@ static int console_read(struct fs_mount_point* mount_point, const char * path, c
 
     uint char_read = 0;
     while(char_read < size) {
-        char c = read_key_buffer();
+        char c;
+        // first see if we want to return anything from console itself
+        c = read_console_buffer();
+        if(c == 0) {
+            // if not, see if there is any keyboard input ready
+            c = read_key_buffer();
+        }
         if(c == 0) {
             return char_read;
         }
@@ -44,6 +80,7 @@ static int str2int(char* arg, int default_val)
 }
 
 // Process a (VT-100) terminal escaped control sequence
+// Ref: https://vt100.net/docs/vt100-ug/chapter3.html
 // return how many characters had been consumed after '\x1b'
 static int process_escaped_sequence(const char* buf, size_t size)
 {
@@ -94,6 +131,18 @@ static int process_escaped_sequence(const char* buf, size_t size)
                     row_delta = 1;
                 }
                 move_cursor(row_delta, 0);
+            } else if(command == 'n') {
+                int report = str2int(arg1, 1);
+                if(report == 6) {
+                    size_t row = 0, col = 0;
+                    get_cursor_position(&row, &col);
+                    // report cursor position
+                    char buf[32] = {0};
+                    snprintf(buf, 32, "\x1b[%d;%dR", row+1, col+1);
+                    for(int i=0; i<32 && buf[i]; i++) {
+                        console_buffer_append(buf[i]);
+                    }
+                }
             } else {
                 // unsupported command
             }
