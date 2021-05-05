@@ -143,6 +143,20 @@ static int process_escaped_sequence(const char* buf, size_t size)
                         console_buffer_append(buf[i]);
                     }
                 }
+            } else if(command == 'l') {
+                if(arg1[0] == '?') {
+                    int mode = str2int(&arg1[1], 25);
+                    if(mode == 25) {
+                        disable_cursor();
+                    }
+                }
+            } else if(command == 'h') {
+                if(arg1[0] == '?') {
+                    int mode = str2int(&arg1[1], 25);
+                    if(mode == 25) {
+                        enable_cursor();
+                    }
+                }
             } else {
                 // unsupported command
             }

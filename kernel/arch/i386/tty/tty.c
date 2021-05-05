@@ -17,18 +17,24 @@ static uint8_t terminal_color;
 static uint16_t* terminal_buffer;
 
 // Enable blinking cursor
-// The two argument are scanline number, normally one text row will consist of scanline 0 - 15
-void enable_cursor(uint8_t cursor_start, uint8_t cursor_end)
+void enable_cursor()
 {
 	outb(0x3D4, 0x0A);
-	outb(0x3D5, (inb(0x3D5) & 0xC0) | cursor_start);
+	outb(0x3D5, (inb(0x3D5) & 0xC0) | TTY_CURSOR_SCANLINE_START);
  
 	outb(0x3D4, 0x0B);
-	outb(0x3D5, (inb(0x3D5) & 0xE0) | cursor_end);
+	outb(0x3D5, (inb(0x3D5) & 0xE0) | TTY_CURSOR_SCANLINE_END);
+}
+
+// Disable blinking cursor
+void disable_cursor()
+{
+	outb(0x3D4, 0x0A);
+	outb(0x3D5, 0x20);
 }
 
 void terminal_initialize(void) {
-    enable_cursor(14, 15); // a underscore '_' style cursor
+    enable_cursor();
     update_cursor();
     terminal_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
     terminal_buffer = VGA_MEMORY;
