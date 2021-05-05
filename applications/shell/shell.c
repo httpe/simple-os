@@ -14,6 +14,11 @@
 static inline _syscall4(SYS_READDIR, int, sys_readdir, const char *, path, uint, entry_offset, fs_dirent*, buf, uint, buf_size)
 
 int main(int argc, char* argv[]) {
+    // Clear screen
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    // Move cursor to top left
+    write(STDOUT_FILENO, "\x1b[H", 3);
+
     printf("Welcome to the Shell!\r\n");
     printf("Shell ARGC(%d)\r\n", argc);
     for(int i=0; i<argc; i++) {

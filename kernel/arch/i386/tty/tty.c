@@ -16,7 +16,19 @@ static size_t terminal_column;
 static uint8_t terminal_color;
 static uint16_t* terminal_buffer;
 
+// Enable blinking cursor
+// The two argument are scanline number, normally one text row will consist of scanline 0 - 15
+void enable_cursor(uint8_t cursor_start, uint8_t cursor_end)
+{
+	outb(0x3D4, 0x0A);
+	outb(0x3D5, (inb(0x3D5) & 0xC0) | cursor_start);
+ 
+	outb(0x3D4, 0x0B);
+	outb(0x3D5, (inb(0x3D5) & 0xE0) | cursor_end);
+}
+
 void terminal_initialize(void) {
+    enable_cursor(14, 15); // a underscore '_' style cursor
     update_cursor();
     terminal_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
     terminal_buffer = VGA_MEMORY;
@@ -93,7 +105,7 @@ void terminal_writestring(const char* data) {
 }
 
 // Ref: https://wiki.osdev.org/Text_Mode_Cursor
-void set_cursor(size_t row, size_t col) {
+void set_text_mode_cursor(size_t row, size_t col) {
     uint16_t pos = row * VGA_WIDTH + col;
     outb(0x3D4, 0x0F);
     outb(0x3D5, (uint8_t)(pos & 0xFF));
@@ -103,7 +115,39 @@ void set_cursor(size_t row, size_t col) {
 
 // Update text cursor to where the last char was printed
 void update_cursor(void) {
-    set_cursor(terminal_row, terminal_column);
+    set_text_mode_cursor(terminal_row, terminal_column);
+}
+
+void set_cursor(size_t row, size_t col)
+{
+    if(row >= VGA_HEIGHT) {
+        row = VGA_HEIGHT - 1;
+    }
+    if(col >= VGA_WIDTH) {
+        col = VGA_WIDTH - 1;
+    }
+    terminal_row = row;
+    terminal_column = col;
+    update_cursor();
+}
+
+void move_cursor(int row_delta, int col_delta)
+{
+    int row = (int) terminal_row + row_delta;
+    int col = (int) terminal_column + col_delta;
+    if(row < 0) {
+        row = 0;
+    } else if(row >= VGA_HEIGHT) {
+        row = VGA_HEIGHT - 1;
+    }
+    if(col < 0) {
+        col = 0;
+    } else if(col >= VGA_WIDTH) {
+        col = VGA_WIDTH - 1;
+    }
+    terminal_row = (size_t) row;
+    terminal_column = (size_t) col;
+    update_cursor();
 }
 
 // With this code, you get: pos = y * VGA_WIDTH + x
