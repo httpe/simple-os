@@ -4,14 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 
-static bool print(const char* data, size_t length) {
-	const unsigned char* bytes = (const unsigned char*) data;
-	for (size_t i = 0; i < length; i++)
-		if (putchar(bytes[i]) == EOF)
-			return false;
-	return true;
-}
-
 // Adapted from https://github.com/mit-pdos/xv6-public/blob/master/printf.c
 static int int2str(int xx, int base, int sgn, char* out)
 {
@@ -43,11 +35,14 @@ static int int2str(int xx, int base, int sgn, char* out)
 	return j;
 }
 
+struct printf_output {
+	char* buf;
+	size_t size;
+	int fd;
+	bool (*write)(struct printf_output*, const char* data, size_t length);
+};
 
-int printf(const char* restrict format, ...) {
-	va_list parameters;
-	va_start(parameters, format);
-
+static int vprintf0(struct printf_output* out, const char* restrict format, va_list parameters) {
 	int written = 0;
 
 	while (*format != '\0') {
@@ -63,7 +58,7 @@ int printf(const char* restrict format, ...) {
 				// TODO: Set errno to EOVERFLOW.
 				return -1;
 			}
-			if (!print(format, amount))
+			if (!out->write(out, format, amount))
 				return -1;
 			format += amount;
 			written += amount;
@@ -79,7 +74,7 @@ int printf(const char* restrict format, ...) {
 				// TODO: Set errno to EOVERFLOW.
 				return -1;
 			}
-			if (!print(&c, sizeof(c)))
+			if (!out->write(out, &c, sizeof(c)))
 				return -1;
 			written++;
 		} else if (*format == 's') {
@@ -90,7 +85,7 @@ int printf(const char* restrict format, ...) {
 				// TODO: Set errno to EOVERFLOW.
 				return -1;
 			}
-			if (!print(str, len))
+			if (!out->write(out, str, len))
 				return -1;
 			written += len;
 		} else if (*format == 'd' || *format == 'u') {
@@ -104,7 +99,7 @@ int printf(const char* restrict format, ...) {
 				// TODO: Set errno to EOVERFLOW.
 				return -1;
 			}
-			if (!print(str, len))
+			if (!out->write(out, str, len))
 				return -1;
 			written += len;
 		} else if (*format == 'x' || *format == 'p') {
@@ -117,7 +112,7 @@ int printf(const char* restrict format, ...) {
 				// TODO: Set errno to EOVERFLOW.
 				return -1;
 			}
-			if (!print(str, len))
+			if (!out->write(out, str, len))
 				return -1;
 			written += len;
 		} else {
@@ -127,13 +122,52 @@ int printf(const char* restrict format, ...) {
 				// TODO: Set errno to EOVERFLOW.
 				return -1;
 			}
-			if (!print(format, len))
+			if (!out->write(out, format, len))
 				return -1;
 			written += len;
 			format += len;
 		}
 	}
-
-	va_end(parameters);
 	return written;
+}
+
+
+static bool print2tty(struct printf_output* out, const char* data, size_t length) {
+	(void) out;
+	const unsigned char* bytes = (const unsigned char*) data;
+	for (size_t i = 0; i < length; i++)
+		if (putchar(bytes[i]) == EOF)
+			return false;
+	return true;
+}
+
+static bool print2str(struct printf_output* out, const char* data, size_t length) {
+	if(out->size < length) {
+		return false;
+	}
+	for (size_t i = 0; i < length; i++) {
+		out->buf[i] = data[i];
+	}
+	out->buf += length;
+	out->size -= length;
+	
+	return true;
+}
+
+int printf(const char* restrict format, ...) {
+	va_list parameters;
+	struct printf_output out = (struct printf_output) {.write = print2tty};
+	va_start(parameters, format);
+	int r = vprintf0(&out, format, parameters);
+	va_end(parameters);
+	return r;
+}
+
+int snprintf(char* buf, size_t size, const char* restrict format, ...) {
+	va_list parameters;
+	struct printf_output out = (struct printf_output) {.write = print2str, .buf = buf, .size = size};
+	va_start(parameters, format);
+	int r = vprintf0(&out, format, parameters);
+	va_end(parameters);
+	return r;
 }
