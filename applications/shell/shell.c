@@ -13,13 +13,36 @@
 
 static inline _syscall4(SYS_READDIR, int, sys_readdir, const char *, path, uint, entry_offset, fs_dirent*, buf, uint, buf_size)
 
+
+int getCursorPosition(int *rows, int *cols) {
+  char buf[32];
+  unsigned int i = 0;
+  if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4) return -1;
+  while (i < sizeof(buf) - 1) {
+    if (read(STDIN_FILENO, &buf[i], 1) != 1) break;
+    if (buf[i] == 'R') break;
+    i++;
+  }
+  buf[i] = '\0';
+  if (buf[0] != '\x1b' || buf[1] != '[') return -1;
+  if (sscanf(&buf[2], "%d;%d", rows, cols) != 2) return -1;
+  return 0;
+}
+
 int main(int argc, char* argv[]) {
     // Clear screen
     write(STDOUT_FILENO, "\x1b[2J", 4);
+
+    // Get Terminal Width/Height by first move cursor to the bottom right
+    //  and then read the cursor position 
+    write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12);
+    int row, col;
+    getCursorPosition(&row, &col);
+
     // Move cursor to top left
     write(STDOUT_FILENO, "\x1b[H", 3);
 
-    printf("Welcome to the Shell!\r\n");
+    printf("Welcome to the Shell (%d x %d)!\r\n", row, col);
     printf("Shell ARGC(%d)\r\n", argc);
     for(int i=0; i<argc; i++) {
         printf("  %d: %s\r\n", i, argv[i]);
