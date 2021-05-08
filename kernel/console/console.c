@@ -111,8 +111,12 @@ static int process_escaped_sequence(const char* buf, size_t size)
             if(command == 'J') {
                 // clear screen
                 int pos = str2int(arg1, 2);
-                if(pos == 2) {
-                    terminal_clear_screen();
+                if(pos == 0) {
+                    terminal_clear_screen(TTY_CLEAR_SCREEN_AFTER);
+                } else if(pos == 1) {
+                    terminal_clear_screen(TTY_CLEAR_SCREEN_BEFORE);
+                } else if(pos == 2) {
+                    terminal_clear_screen(TTY_CLEAR_ALL);
                 }
             } else if(command == 'H') {
                 // set cursor
@@ -120,12 +124,14 @@ static int process_escaped_sequence(const char* buf, size_t size)
                 int col = str2int(arg2, 1);
                 set_cursor(row - 1, col - 1);
             } else if(command == 'C') {
+                // move cursor right
                 int col_delta = str2int(arg1, 1);
                 if(col_delta < 1) {
                     col_delta = 1;
                 }
                 move_cursor(0, col_delta);
             } else if(command == 'B') {
+                // move cursor down
                 int row_delta = str2int(arg1, 1);
                 if(row_delta < 1) {
                     row_delta = 1;
@@ -134,9 +140,9 @@ static int process_escaped_sequence(const char* buf, size_t size)
             } else if(command == 'n') {
                 int report = str2int(arg1, 1);
                 if(report == 6) {
+                    // report cursor position
                     size_t row = 0, col = 0;
                     get_cursor_position(&row, &col);
-                    // report cursor position
                     char buf[32] = {0};
                     snprintf(buf, 32, "\x1b[%d;%dR", row+1, col+1);
                     for(int i=0; i<32 && buf[i]; i++) {
@@ -145,6 +151,7 @@ static int process_escaped_sequence(const char* buf, size_t size)
                 }
             } else if(command == 'l') {
                 if(arg1[0] == '?') {
+                    // hide cursor
                     int mode = str2int(&arg1[1], 25);
                     if(mode == 25) {
                         disable_cursor();
@@ -152,10 +159,21 @@ static int process_escaped_sequence(const char* buf, size_t size)
                 }
             } else if(command == 'h') {
                 if(arg1[0] == '?') {
+                    // show cursor
                     int mode = str2int(&arg1[1], 25);
                     if(mode == 25) {
                         enable_cursor();
                     }
+                }
+            } else if(command == 'K') {
+                // Clear one line
+                int pos = str2int(arg1, 0);
+                if(pos == 0) {
+                    terminal_clear_screen(TTY_CLEAR_LINE_AFTER);
+                } else if(pos == 1) {
+                    terminal_clear_screen(TTY_CLEAR_LINE_BEFORE);
+                } else if(pos == 2) {
+                    terminal_clear_screen(TTY_CLEAR_LINE);
                 }
             } else {
                 // unsupported command

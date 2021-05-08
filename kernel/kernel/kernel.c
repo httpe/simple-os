@@ -92,7 +92,8 @@ void kernel_main(uint32_t mbt_physical_addr) {
 	// Non-architecture specific initialization
 	init();
 	
-	terminal_clear_screen();
+	terminal_clear_screen(TTY_CLEAR_ALL);
+	set_cursor(0, 0);
 
 	printf("Welcome to Simple-OS!\n");
 	date_time dt = current_datetime();

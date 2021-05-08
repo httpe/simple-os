@@ -11,8 +11,18 @@
 #define TTY_CURSOR_SCANLINE_START 14
 #define TTY_CURSOR_SCANLINE_END 15
 
+// Clear screen mode
+enum tty_clear_screen_mode {
+    TTY_CLEAR_SCREEN_AFTER,
+    TTY_CLEAR_SCREEN_BEFORE,
+    TTY_CLEAR_ALL,
+    TTY_CLEAR_LINE_AFTER,
+    TTY_CLEAR_LINE_BEFORE,
+    TTY_CLEAR_LINE
+};
+
 void terminal_initialize(void);
-void terminal_clear_screen(void);
+void terminal_clear_screen(enum tty_clear_screen_mode mode);
 void terminal_putchar(char c);
 void terminal_write(const char* data, size_t size);
 void terminal_writestring(const char* data);

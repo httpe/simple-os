@@ -40,16 +40,46 @@ void terminal_initialize(void) {
     terminal_buffer = VGA_MEMORY;
 }
 
-void terminal_clear_screen(void) {
-    for (size_t y = 0; y < VGA_HEIGHT; y++) {
-        for (size_t x = 0; x < VGA_WIDTH; x++) {
+void terminal_clear_screen(enum tty_clear_screen_mode mode) {
+    size_t row_start, row_end, col_start, col_end;
+    if(mode == TTY_CLEAR_SCREEN_AFTER) {
+        row_start = terminal_row;
+        row_end = VGA_HEIGHT - 1;
+        col_start = terminal_column;
+        col_end = VGA_WIDTH - 1;
+    } else if(mode == TTY_CLEAR_SCREEN_BEFORE) {
+        row_start = 0;
+        row_end = terminal_row;
+        col_start = 0;
+        col_end = terminal_column;
+    } else if(mode == TTY_CLEAR_LINE_AFTER) {
+        row_start = terminal_row;
+        row_end = terminal_row;
+        col_start = terminal_column;
+        col_end = VGA_WIDTH - 1;
+    } else if(mode == TTY_CLEAR_LINE_BEFORE) {
+        row_start = terminal_row;
+        row_end = terminal_row;
+        col_start = 0;
+        col_end = terminal_column;
+    } else if(mode == TTY_CLEAR_LINE) {
+        row_start = terminal_row;
+        row_end = terminal_row;
+        col_start = 0;
+        col_end =  VGA_WIDTH - 1;
+    } else {
+        row_start = 0;
+        row_end = VGA_HEIGHT - 1;
+        col_start = 0;
+        col_end = VGA_WIDTH - 1;
+    }
+
+    for (size_t y = row_start; y <= row_end; y++) {
+        for (size_t x = col_start; x <= col_end; x++) {
             const size_t index = y * VGA_WIDTH + x;
             terminal_buffer[index] = vga_entry(' ', terminal_color);
         }
     }
-    terminal_row = 0;
-    terminal_column = 0;
-    update_cursor();
 }
 
 void terminal_setcolor(uint8_t color) {
