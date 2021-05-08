@@ -78,6 +78,15 @@ static void test_file_system() {
         printf("OPEN error\r\n");
     }
 
+    // Test FILE struct based file I/O
+    FILE *fp = fopen("/home/RAND.OM", "r");
+    char *line = NULL;
+    size_t linecap = 0;
+    ssize_t linelen;
+    linelen = __getline(&line, &linecap, fp);
+    printf("fopen+getline content(%ld/%ld): \r\n %s \r\n", linelen, linecap, line);
+    free(line);
+
     // Test file creation and deletion
     fd = open("/home/newfile", O_CREAT|O_RDWR);
     close(fd);
