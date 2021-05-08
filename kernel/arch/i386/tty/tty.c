@@ -8,12 +8,18 @@
 #include <arch/i386/kernel/vga.h>
 #include <arch/i386/kernel/port_io.h>
 
+// default foreground (FG) and background (BG) color
+#define TTY_DEFAULT_COLOR_FG VGA_COLOR_LIGHT_GREY
+#define TTY_DEFAULT_COLOR_BG VGA_COLOR_BLACK
+
 // It is assumed that the first 1MiB physical address space is mapped to virtual address starting at 0xC0000000
 static uint16_t* const VGA_MEMORY = (uint16_t*)(0xB8000 + 0xC0000000);
 
 static size_t terminal_row;
 static size_t terminal_column;
 static uint8_t terminal_color;
+static uint8_t terminal_color_fg;
+static uint8_t terminal_color_bg;
 static uint16_t* terminal_buffer;
 
 // Enable blinking cursor
@@ -36,7 +42,9 @@ void disable_cursor()
 void terminal_initialize(void) {
     enable_cursor();
     update_cursor();
-    terminal_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
+    terminal_color_fg = TTY_DEFAULT_COLOR_FG;
+    terminal_color_bg = TTY_DEFAULT_COLOR_BG;
+    terminal_set_font_attr(TTY_FONT_ATTR_CLEAR);
     terminal_buffer = VGA_MEMORY;
 }
 
@@ -84,6 +92,27 @@ void terminal_clear_screen(enum tty_clear_screen_mode mode) {
 
 void terminal_setcolor(uint8_t color) {
     terminal_color = color;
+}
+
+void terminal_set_font_attr(enum tty_font_attr attr) {
+    uint8_t color = vga_entry_color(terminal_color_fg, terminal_color_bg);
+    if(attr == TTY_FONT_ATTR_CLEAR) {
+        terminal_setcolor(color);
+    } else {
+        if(attr & TTY_FONT_ATTR_REVERSE_COLOR) {
+            color = vga_entry_color(terminal_color_bg, terminal_color_fg);
+        }
+        if(attr & TTY_FONT_ATTR_UNDER_SCORE) {
+            color |=  1;
+        }
+        if(attr & TTY_FONT_ATTR_BOLD) {
+            color |=  3 << 1;
+        }
+        if(attr & TTY_FONT_ATTR_BLINK) {
+            color |=  7 << 1;
+        }
+        terminal_setcolor(color);
+    }
 }
 
 void terminal_putentryat(unsigned char c, uint8_t color, size_t col, size_t row) {

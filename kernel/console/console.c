@@ -93,14 +93,18 @@ static int process_escaped_sequence(const char* buf, size_t size)
     }
     char arg1[16] = {0};
     char arg2[16] = {0};
-    char* args[2] = {arg1, arg2};
+    char arg3[16] = {0};
+    char arg4[16] = {0};
+    char arg5[16] = {0};
+    char arg6[16] = {0};
+    char* args[6] = {arg1, arg2, arg3, arg4, arg5, arg6};
     char command = 0;
     uint start = 2;
     uint argc = 0;
     for(uint i=start; i<size; i++) {
         if(buf[i] == ';' || (buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= 'A' && buf[i] <= 'Z')) {
             assert(i - start < 16);
-            if(start < i && argc < 2) {
+            if(start < i && argc < 6) {
                 memmove(args[argc++], &buf[start], i - start);
                 start = i+1;
             }
@@ -175,6 +179,29 @@ static int process_escaped_sequence(const char* buf, size_t size)
                 } else if(pos == 2) {
                     terminal_clear_screen(TTY_CLEAR_LINE);
                 }
+            } else if(command == 'm') {
+                // Changing font attributes
+                int attr = 0;
+                for(int i=0; i<4; i++) {
+                    int opt = str2int(args[i], -1);
+                    if(opt == 0) {
+                        // Clear all attr
+                        attr = TTY_FONT_ATTR_CLEAR;
+                    } else if(opt == 1) {
+                        // Bold or increased intensity
+                        attr |= TTY_FONT_ATTR_BOLD; 
+                    } else if(opt == 4) {
+                        // Underscore
+                        attr |= TTY_FONT_ATTR_UNDER_SCORE; 
+                    } else if(opt == 5) {
+                        // Blink
+                        attr |= TTY_FONT_ATTR_BLINK; 
+                    } else if(opt == 7) {
+                        // Negative (reverse) color
+                        attr |= TTY_FONT_ATTR_REVERSE_COLOR;
+                    }
+                }
+                terminal_set_font_attr(attr);
             } else {
                 // unsupported command
             }
