@@ -5,12 +5,7 @@
 
 #include <kernel/tty.h>
 #include <kernel/serial.h>
-#include <arch/i386/kernel/vga.h>
 #include <arch/i386/kernel/port_io.h>
-
-// default foreground (FG) and background (BG) color
-#define TTY_DEFAULT_COLOR_FG VGA_COLOR_LIGHT_GREY
-#define TTY_DEFAULT_COLOR_BG VGA_COLOR_BLACK
 
 // It is assumed that the first 1MiB physical address space is mapped to virtual address starting at 0xC0000000
 static uint16_t* const VGA_MEMORY = (uint16_t*)(0xB8000 + 0xC0000000);
@@ -90,14 +85,21 @@ void terminal_clear_screen(enum tty_clear_screen_mode mode) {
     }
 }
 
-void terminal_setcolor(uint8_t color) {
-    terminal_color = color;
+void terminal_get_color(enum vga_color *fg, enum vga_color *bg) {
+    *fg = terminal_color_fg;
+    *bg = terminal_color_bg;
+}
+
+void terminal_set_color(enum vga_color fg, enum vga_color bg) {
+    terminal_color_fg = fg;
+    terminal_color_bg = bg;
+    terminal_color =  vga_entry_color(terminal_color_fg, terminal_color_bg);
 }
 
 void terminal_set_font_attr(enum tty_font_attr attr) {
     uint8_t color = vga_entry_color(terminal_color_fg, terminal_color_bg);
     if(attr == TTY_FONT_ATTR_CLEAR) {
-        terminal_setcolor(color);
+        terminal_color = color;
     } else {
         if(attr & TTY_FONT_ATTR_REVERSE_COLOR) {
             color = vga_entry_color(terminal_color_bg, terminal_color_fg);
@@ -111,7 +113,7 @@ void terminal_set_font_attr(enum tty_font_attr attr) {
         if(attr & TTY_FONT_ATTR_BLINK) {
             color |=  7 << 1;
         }
-        terminal_setcolor(color);
+        terminal_color = color;
     }
 }
 

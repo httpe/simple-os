@@ -2,6 +2,7 @@
 #define _KERNEL_TTY_H
 
 #include <stddef.h>
+#include <kernel/vga.h>
 
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
@@ -10,6 +11,10 @@
 // We are defining an underscore '_' style cursor here
 #define TTY_CURSOR_SCANLINE_START 14
 #define TTY_CURSOR_SCANLINE_END 15
+
+// default foreground (FG) and background (BG) color
+#define TTY_DEFAULT_COLOR_FG VGA_COLOR_LIGHT_GREY
+#define TTY_DEFAULT_COLOR_BG VGA_COLOR_BLACK
 
 enum tty_font_attr {
     TTY_FONT_ATTR_CLEAR = 0,
@@ -37,6 +42,8 @@ void terminal_writestring(const char* data);
 void enable_cursor();
 void disable_cursor();
 void update_cursor(void);
+void terminal_get_color(enum vga_color *fg, enum vga_color *bg);
+void terminal_set_color(enum vga_color fg, enum vga_color bg);
 void terminal_set_font_attr(enum tty_font_attr);
 void set_cursor(size_t row, size_t col);
 void move_cursor(int row_delta, int col_delta);

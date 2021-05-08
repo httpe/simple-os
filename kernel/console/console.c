@@ -6,13 +6,32 @@
 #include <kernel/keyboard.h>
 #include <kernel/tty.h>
 #include <kernel/stat.h>
-
+#include <kernel/vga.h>
 
 static struct circular_buffer {
     char buf[CONSOLE_BUF_SIZE];
     uint r;
     uint w;
 } console_buffer;
+
+static enum vga_color console_color2vga_color[16] = {
+    VGA_COLOR_BLACK,
+    VGA_COLOR_RED,
+    VGA_COLOR_GREEN,
+    VGA_COLOR_BROWN,
+    VGA_COLOR_BLUE,
+    VGA_COLOR_MAGENTA,
+    VGA_COLOR_CYAN,
+    VGA_COLOR_DARK_GREY,
+    VGA_COLOR_LIGHT_GREY,
+    VGA_COLOR_LIGHT_RED,
+    VGA_COLOR_LIGHT_GREEN,
+    VGA_COLOR_LIGHT_BROWN,
+    VGA_COLOR_LIGHT_BLUE,
+    VGA_COLOR_LIGHT_MAGENTA,
+    VGA_COLOR_LIGHT_CYAN,
+    VGA_COLOR_WHITE
+};
 
 static void console_buffer_append(char c) {
     if(c == 0) {
@@ -182,8 +201,10 @@ static int process_escaped_sequence(const char* buf, size_t size)
             } else if(command == 'm') {
                 // Changing font attributes
                 int attr = 0;
-                for(int i=0; i<4; i++) {
-                    int opt = str2int(args[i], -1);
+                enum vga_color fg, bg;
+                terminal_get_color(&fg, &bg);
+                for(int i=0; i<6; i++) {
+                    int opt = str2int(args[i], 0);
                     if(opt == 0) {
                         // Clear all attr
                         attr = TTY_FONT_ATTR_CLEAR;
@@ -199,8 +220,20 @@ static int process_escaped_sequence(const char* buf, size_t size)
                     } else if(opt == 7) {
                         // Negative (reverse) color
                         attr |= TTY_FONT_ATTR_REVERSE_COLOR;
+                    } else if(opt == 7) {
+                        // Negative (reverse) color
+                        attr |= TTY_FONT_ATTR_REVERSE_COLOR;
+                    } else if(opt >= 30 && opt <= 37) {
+                        fg = console_color2vga_color[opt - 30];
+                    } else if(opt == 39) {
+                        fg = TTY_DEFAULT_COLOR_FG;
+                    } else if(opt >= 40 && opt <= 47) {
+                        bg =  console_color2vga_color[opt - 40 + 8];
+                    } else if(opt == 49) {
+                        bg = TTY_DEFAULT_COLOR_BG;
                     }
                 }
+                terminal_set_color(fg, bg);
                 terminal_set_font_attr(attr);
             } else {
                 // unsupported command

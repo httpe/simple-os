@@ -7,7 +7,6 @@
 #include <common.h>
 #include <kernel/keyboard.h>
 
-#include <arch/i386/kernel/vga.h>
 #include <arch/i386/kernel/port_io.h>
 #include <arch/i386/kernel/isr.h>
 
