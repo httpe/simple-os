@@ -6,13 +6,25 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <fs.h>
-#include <kernel/keyboard.h>
+#include <errno.h>
 
 #define MAX_COMMAND_LEN 255
 #define MAX_PATH_LEN 4096
 
 static inline _syscall4(SYS_READDIR, int, sys_readdir, const char *, path, uint, entry_offset, fs_dirent*, buf, uint, buf_size)
 
+enum specialKey {
+  BACKSPACE = 127,
+  ARROW_LEFT = 1000,
+  ARROW_RIGHT,
+  ARROW_UP,
+  ARROW_DOWN,
+  DEL_KEY,
+  HOME_KEY,
+  END_KEY,
+  PAGE_UP,
+  PAGE_DOWN
+};
 
 int getCursorPosition(int *rows, int *cols) {
   char buf[32];
@@ -27,6 +39,56 @@ int getCursorPosition(int *rows, int *cols) {
   if (buf[0] != '\x1b' || buf[1] != '[') return -1;
   if (sscanf(&buf[2], "%d;%d", rows, cols) != 2) return -1;
   return 0;
+}
+
+int readKey() {
+  int nread;
+  char c;
+  while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
+    if (nread == -1 && errno != EAGAIN) return 0;
+  }
+
+  if (c == '\x1b') {
+    char seq[3];
+
+    if (read(STDIN_FILENO, &seq[0], 1) != 1) return '\x1b';
+    if (read(STDIN_FILENO, &seq[1], 1) != 1) return '\x1b';
+
+    if (seq[0] == '[') {
+      if (seq[1] >= '0' && seq[1] <= '9') {
+        if (read(STDIN_FILENO, &seq[2], 1) != 1) return '\x1b';
+        if (seq[2] == '~') {
+          switch (seq[1]) {
+            case '1': return HOME_KEY;
+            case '3': return DEL_KEY;
+            case '4': return END_KEY;
+            case '5': return PAGE_UP;
+            case '6': return PAGE_DOWN;
+            case '7': return HOME_KEY;
+            case '8': return END_KEY;
+          }
+        }
+      } else {
+        switch (seq[1]) {
+          case 'A': return ARROW_UP;
+          case 'B': return ARROW_DOWN;
+          case 'C': return ARROW_RIGHT;
+          case 'D': return ARROW_LEFT;
+          case 'H': return HOME_KEY;
+          case 'F': return END_KEY;
+        }
+      }
+    } else if (seq[0] == 'O') {
+      switch (seq[1]) {
+        case 'H': return HOME_KEY;
+        case 'F': return END_KEY;
+      }
+    }
+
+    return '\x1b';
+  } else {
+    return c;
+  }
 }
 
 int main(int argc, char* argv[]) {
@@ -49,7 +111,7 @@ int main(int argc, char* argv[]) {
     }
     printf("Use 'help' command to show usage\r\n");
     
-    char c;
+    
     char command[MAX_COMMAND_LEN + 1] = {0};
     int n_command_read = 0;
     char prev_command[MAX_COMMAND_LEN + 1] = {0};
@@ -70,16 +132,17 @@ int main(int argc, char* argv[]) {
         memset(command, 0, MAX_COMMAND_LEN + 1);
         n_command_read = 0;
         while(1) {
-            while(read(STDIN_FILENO, &c, 1) <= 0);
-            if(c == '\n') {
+            int k;
+            while((k = readKey()) <= 0);
+            if(k == '\n') {
                 write(STDOUT_FILENO, &"\r\n", 2);
                 break;
-            } else if(c == '\b') {
+            } else if(k == '\x7F' || k == '\b') {
                 if(n_command_read > 0) {
-                    write(STDOUT_FILENO, &c, 1);
-                    n_command_read--;
+                    write(STDOUT_FILENO, "\b", 1);
+                    command[--n_command_read] = 0;
                 }
-            } else if(c == KEY_UP) {
+            } else if(k == ARROW_UP) {
                 // clear command entered
                 for(int i=0; i<n_command_read;i++) {
                     write(STDOUT_FILENO, &"\b", 1);
@@ -87,7 +150,8 @@ int main(int argc, char* argv[]) {
                 memmove(command, prev_command, MAX_COMMAND_LEN+1);
                 n_command_read = prev_n_command_read;
                 write(STDOUT_FILENO, command, n_command_read);
-            } else if(n_command_read < MAX_COMMAND_LEN) {
+            } else if(n_command_read < MAX_COMMAND_LEN && k >= ' ' && k <= '~') {
+                char c = (char) k;
                 write(STDOUT_FILENO, &c, 1);
                 command[n_command_read++] = c;
             }

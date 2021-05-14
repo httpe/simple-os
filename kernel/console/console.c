@@ -33,26 +33,113 @@ static enum vga_color console_color2vga_color[16] = {
     VGA_COLOR_WHITE
 };
 
-static void console_buffer_append(char c) {
-    if(c == 0) {
-        return;
-    }
+static int console_buffer_append(char c) {
     if(console_buffer.w == (console_buffer.r + CONSOLE_BUF_SIZE - 1) % CONSOLE_BUF_SIZE) {
         // buffer is full, no more input allowed
-        return;
+        return 0;
     }
     console_buffer.buf[console_buffer.w] = c;
     console_buffer.w = (console_buffer.w + 1) % CONSOLE_BUF_SIZE;
+    return 1;
 }
 
-static char read_console_buffer() {
-    char c;
+static int console_buffer_append_str(char* s) {
+    int n = 0;
+    while(*s) {
+        console_buffer_append(*s++);
+        n++;
+    }
+    return n;
+}
+
+static int read_console_buffer(char* c) {
     if(console_buffer.w == console_buffer.r) {
         return 0;
     }
-    c =  console_buffer.buf[ console_buffer.r];
+    *c =  console_buffer.buf[ console_buffer.r];
     console_buffer.r = (console_buffer.r + 1) % CONSOLE_BUF_SIZE;
-    return c;
+    return 1;
+}
+
+static char* vt_fn_sequence[12] = {
+    "\eOP", "\eOQ", "\eOR", "\eOS",
+    "\e[15", "\e[17", "\e[18", "\e[19", "\e[20", "\e[21",
+    "\e[23", "\e[24"
+};
+
+// read from key buffer and add to console buffer
+// convert special keys to ASCII escape sequence
+// Mimicing xterm output escape sequence
+// Ref: https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#input-sequences
+static int write_keypress_to_buffer() {
+    key k = read_key_buffer();
+    if(k == NO) {
+        return 0;
+    }
+
+    // do not distinguish normal key and key pad keys, e.g. key '9' and keypad '9'
+    k = k & ~KEY_KEYPAD_BIT;
+
+    if((KEY_ALT_BIT & k) == KEY_ALT_BIT) {
+        console_buffer_append('\e');
+        k = k ^ KEY_ALT_BIT;
+    }
+
+    if((KEY_CTRL_BIT & k) == KEY_CTRL_BIT) {
+        k = k ^ KEY_CTRL_BIT;
+        if(k == ' ') {
+            return console_buffer_append(0);
+        } else if(k == KEY_UP) {
+            return console_buffer_append_str("\e[1;5A");
+        } else if(k == KEY_DN) {
+            return console_buffer_append_str("\e[1;5B");
+        } else if(k == KEY_RT) {
+            return console_buffer_append_str("\e[1;5C");
+        } else if(k == KEY_LF) {
+            return console_buffer_append_str("\e[1;5D");
+        } else if(k >= '@' && k <= '_') {
+            k -= '@';
+        } else if(k >= '`' && k <= '~') {
+            k -= '`';
+        } else if(k == KEY_BACKSPACE) {
+            return console_buffer_append('\b');
+        } else {
+            // other ASCII/special key: CTRL has no effect
+        }
+    }
+
+    if(k == KEY_UP) {
+        return console_buffer_append_str("\e[A");
+    } else if(k == KEY_DN) {
+        return console_buffer_append_str("\e[B");
+    } else if(k == KEY_RT) {
+        return console_buffer_append_str("\e[C");
+    } else if(k == KEY_LF) {
+        return console_buffer_append_str("\e[D");
+    } else if(k == KEY_HOME) {
+        return console_buffer_append_str("\e[H");
+    } else if(k == KEY_END) {
+        return console_buffer_append_str("\e[F");
+    } else if(k == KEY_BACKSPACE) {
+        return console_buffer_append('\x7F'); // DEL
+    } else if(k == KEY_BRK) {
+        return console_buffer_append('\x1A'); // SUB
+    } else if(k == KEY_ESC) {
+        return console_buffer_append('\e'); // ESC
+    } else if(k == KEY_INS) {
+        return console_buffer_append_str("\e[2~");
+    } else if(k == KEY_DEL) {
+        return console_buffer_append_str("\e[3~");
+    } else if(k == KEY_PGUP) {
+        return console_buffer_append_str("\e[5~");
+    } else if(k == KEY_PGDN) {
+        return console_buffer_append_str("\e[6~");
+    } else if(k >= KEY_FN(1) && k <= KEY_FN(12)) {
+         return console_buffer_append_str(vt_fn_sequence[k - KEY_FN(1)]);
+    } else {
+        // return ASCII
+        return console_buffer_append((char) k);
+    }
 }
 
 static int console_read(struct fs_mount_point* mount_point, const char * path, char *buf, uint size, uint offset, struct fs_file_info *fi)
@@ -65,14 +152,14 @@ static int console_read(struct fs_mount_point* mount_point, const char * path, c
     uint char_read = 0;
     while(char_read < size) {
         char c;
-        // first see if we want to return anything from console itself
-        c = read_console_buffer();
-        if(c == 0) {
-            // if not, see if there is any keyboard input ready
-            c = read_key_buffer();
-        }
-        if(c == 0) {
-            return char_read;
+        int read = read_console_buffer(&c);
+        if(read == 0) {
+            // if console buffer is empty, check if key buffer has anything to read
+            int written = write_keypress_to_buffer();
+            if(written == 0) {
+                return char_read;
+            }
+            continue;
         }
         *buf = c;
         buf++;
