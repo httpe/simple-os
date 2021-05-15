@@ -8,9 +8,8 @@ LDFLAGS?=
 LIBS?=
 
 DESTDIR?=
-PREFIX?=/usr/local
-EXEC_PREFIX?=$(PREFIX)
-BOOTDIR?=$(EXEC_PREFIX)/boot
+BOOTDIR?=/boot
+PREFIX?=/usr
 INCLUDEDIR?=$(PREFIX)/include
 
 CFLAGS:=$(CFLAGS) -ffreestanding -Wall -Wextra
@@ -84,7 +83,7 @@ clean:
 	rm -f $(OBJS) *.o */*.o */*/*.o
 	rm -f $(OBJS:.o=.d) *.d */*.d */*/*.d
 
-install: install-headers install-kernel
+install: install-headers install-kernel install-reserved-path
 
 install-headers:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
@@ -94,5 +93,9 @@ install-headers:
 install-kernel: simple_os.kernel 
 	mkdir -p $(DESTDIR)$(BOOTDIR)
 	cp -p simple_os.kernel $(DESTDIR)$(BOOTDIR)
+
+install-reserved-path:
+	mkdir -p $(DESTDIR)/home
+	touch $(DESTDIR)/console
 
 -include $(OBJS:.o=.d)

@@ -11,11 +11,10 @@ export AR=${CROSSCOMPILERBIN}/${HOST}-ar
 export AS=${AS:-nasm}
 export CC=${CROSSCOMPILERBIN}/${HOST}-gcc
 
-export PREFIX=/usr
-export EXEC_PREFIX=$PREFIX
 export BOOTDIR=/boot
-export LIBDIR=$EXEC_PREFIX/lib
+export PREFIX=/usr
 export INCLUDEDIR=$PREFIX/include
+export LIBDIR=$PREFIX/lib
 
 export CFLAGS='-O0 -g'
 export ASMFLAGS='-f elf32 -g -F dwarf'

@@ -32,14 +32,11 @@ fs_mount_point* find_mount_point(const char* path, const char**remaining_path)
 {
     *remaining_path = NULL;
     if(*path != '/' || strlen(path)==0) {
-        // Do not support relative path, yet
-        // also we assume there is no mount point attaching to root dir itself
-        // all mount points should goes under it
+        // Relative path shall be converted to absolute path before passing in
         return NULL;
     }
 
     // Return the longest prefix matched mount point to allow mount point inside of mounted folder
-    // Since we only allow mounting immediately under root dir, this degenrate into a simple match
     int max_match_mount_point_id = -1;
     int max_match_len = 0;
     for(int i=0;i<N_MOUNT_POINT;i++) {
@@ -88,18 +85,8 @@ fs_mount_point* find_mount_point(const char* path, const char**remaining_path)
 int fs_mount(const char* target, enum file_system_type file_system_type, 
             fs_mount_option option, void* fs_option, fs_mount_point** mount_point)
 {
-    size_t idx, last_slash = -1;
-    for(idx=0;;idx++) {
-        if(target[idx] == 0) {
-            break;
-        }
-        if(target[idx] == '/') {
-            last_slash = idx;
-        }
-    }
-    if(last_slash != 0 || idx<=1) {
-        // target must be in the form of '/NAME', i.e. has and only has one slash, at the beginning
-        // i.e. only allow mounting at a folder under root dir, and also not allowing mounting at root dir itself
+    if(*target != '/') {
+        // Relative path shall be converted to absolute path before passing in
         return -EPERM;
     }
     int i;
@@ -121,7 +108,16 @@ int fs_mount(const char* target, enum file_system_type file_system_type,
             }
         }
     }
-    // TODO: make sure the mount point already exist in the parent folder
+
+    if(strcmp(target, "/") != 0) {
+        // Make sure the mount point already exist in the parent folder
+        fs_stat st = {0};
+        int res_getattr = fs_getattr_path(target, &st);
+        if(res_getattr < 0) {
+            return res_getattr;
+        }
+    }
+
     for(j=0;j<N_MOUNT_POINT;j++) {
         if(mount_points[j].mount_target == NULL) {
             mount_points[j] = (fs_mount_point) {
@@ -369,23 +365,6 @@ static int dir_filler(fs_dir_filler_info* filler_info, const char *name, const s
 int fs_readdir(const char * path, uint entry_offset, fs_dirent* buf, uint buf_size) 
 {
     struct fs_dir_filler_info filler_info = {.buf = buf, .buf_size = buf_size, .entry_written = 0};
-    if(strcmp(path,"/") == 0) {
-        // if is reading root dir
-        // return the mount points
-        uint entry_read = 0;
-        for(uint i=entry_offset; i<N_MOUNT_POINT; i++) {
-            if(mount_points[i].mount_target != NULL) {
-                assert(mount_points[i].mount_target[0] == '/');
-                // target+1 to skip the first slash
-                if(dir_filler(&filler_info, mount_points[i].mount_target+1, NULL) != 0) {
-                    // if filler's internal buffer is full, stop
-                    break;
-                }
-                entry_read++;
-            }
-        }
-        return entry_read;
-    }
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(path, &remaining_path);
     if(mp == NULL) {
@@ -417,38 +396,6 @@ static file* fd2file(int fd)
 int fs_getattr_path(const char * path, struct fs_stat * stat)
 {
     memset(stat, 0, sizeof(*stat));
-    if(strcmp(path, root_path) == 0) {
-        // For root dir
-        stat->mode = S_IFDIR | S_IRWXU | S_IRWXG | S_IRWXO;
-        stat->nlink = 2;
-        stat->inum = 0;
-        stat->size = 0;
-        stat->blocks = 0;
-        return 0;
-    }
-
-    int slash_count = 0;
-    for(int i = 0; path[i] != 0; i++) {
-        if(path[i] == '/') {
-            slash_count++;
-        }
-    }
-    if(slash_count == 1) {
-        // if querying mount points
-        for(uint i=0; i<N_MOUNT_POINT; i++) {
-            if(mount_points[i].mount_target != NULL) {
-                if(strcmp(path, mount_points[i].mount_target) == 0) {
-                    stat->mode = mount_points[i].mount_option.mode;
-                    stat->nlink = 2;
-                    stat->inum = 0;
-                    stat->size = 0;
-                    stat->blocks = 0;
-                    return 0;
-                }
-            }
-        }
-        return -ENOENT;
-    }
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(path, &remaining_path);
     if(mp == NULL) {
@@ -689,18 +636,20 @@ int init_vfs()
     };
     fs_mount_option mount_option = {.mode = S_IFDIR | S_IRWXU | S_IRWXG | S_IRWXO};
     fs_mount_point* mp = NULL;
-    int32_t mount_res = fs_mount("/boot", FILE_SYSTEM_US_TAR, mount_option, &tar_opt, &mp);
+    int32_t mount_res = fs_mount("/", FILE_SYSTEM_US_TAR, mount_option, &tar_opt, &mp);
     assert(mount_res == 0);
 
 	// mount hdb (IDE slave drive) to be the home dir (assumed to be FAT-32 formated)
 	storage = get_block_storage(IDE_SLAVE_DRIVE);
 	if(storage != NULL) {
         fat_mount_option fat_opt = (fat_mount_option) {.storage = storage};
-		mount_res = fs_mount("/home", FILE_SYSTEM_FAT_32, mount_option, &fat_opt, &mp);
+		// the existence of /home is guaranteed by the install-reserved-path target of kernel Makefile 
+        mount_res = fs_mount("/home", FILE_SYSTEM_FAT_32, mount_option, &fat_opt, &mp);
 		assert(mount_res == 0);
 	}
 
     // mount console
+    // the existence of /console is guaranteed by the install-reserved-path target of kernel Makefile 
     mount_option = (fs_mount_option) {.mode = S_IFREG | S_IRWXU | S_IRWXG | S_IRWXO};
     mount_res = fs_mount("/console", FILE_SYSTEM_CONSOLE, mount_option, NULL, &mp);
     assert(mount_res == 0);

@@ -9,5 +9,5 @@ else
 fi
 
 for PROJECT in $TO_BUILD; do
-  (cd $PROJECT && DESTDIR="$SYSROOT" $MAKE install)
+  (echo "Building $PROJECT" && cd $PROJECT && DESTDIR="$SYSROOT" $MAKE install)
 done

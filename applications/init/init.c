@@ -146,7 +146,7 @@ int main(int argc, char* argv[]) {
     test_file_system();
 
     // Execute the shell
-    char* shell_argv[] = {"/boot/usr/bin/shell.elf", NULL};
+    char* shell_argv[] = {"/usr/bin/shell.elf", NULL};
     printf("EXEC Shell\r\n");
-    execve("/boot/usr/bin/shell.elf", shell_argv, NULL);
+    execve("/usr/bin/shell.elf", shell_argv, NULL);
 }
