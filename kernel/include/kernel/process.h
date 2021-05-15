@@ -26,7 +26,8 @@ typedef struct proc {
   int32_t pid;                        // Process ID
   enum procstate state;               // Process state
   pde* page_dir;                      // Page directory (only user space part matter)
-  char *kernel_stack;                 // Bottom of kernel stack for this process
+  void *kernel_stack;                 // Bottom of kernel stack for this process
+  void *user_stack;                   // Bottom of user space stack for this process
   struct proc *parent;                // Parent process
   struct trapframe *tf;               // Trap frame for current syscall
   struct context *context;            // swtch() here to run process; used for switching between process in kernel space

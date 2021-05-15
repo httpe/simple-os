@@ -126,7 +126,7 @@ typedef struct fat32_meta {
     fat32_fsinfo* fs_info;
     uint32_t* fat;
 	block_storage* storage;
-	fat32_file_entry file_table[FAT32_N_OPEN_FILE];
+	fat32_file_entry* file_table;
 } fat32_meta;
 
 typedef struct fat_cluster {

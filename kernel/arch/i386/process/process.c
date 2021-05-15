@@ -76,7 +76,10 @@ proc* create_process()
     p->pid = next_pid++;
     p->state = PROC_STATE_EMBRYO;
     // allocate process's kernel stack
-    p->kernel_stack = (char*) alloc_pages(curr_page_dir(), N_KERNEL_STACK_PAGE_SIZE, true, true);
+    // allocate one additional read-only page and change it to read-only to detect stack overflow
+    uint32_t kernel_stack_addr = alloc_pages(curr_page_dir(), N_KERNEL_STACK_PAGE_SIZE + 1, true, true);
+    change_page_rw_attr(curr_page_dir(), PAGE_INDEX_FROM_VADDR(kernel_stack_addr), false);
+    p->kernel_stack = (char*) (kernel_stack_addr + PAGE_SIZE);
     uint32_t stack_size = PAGE_SIZE*N_KERNEL_STACK_PAGE_SIZE;
     memset(p->kernel_stack, 0, stack_size);
     char* sp = p->kernel_stack + stack_size;

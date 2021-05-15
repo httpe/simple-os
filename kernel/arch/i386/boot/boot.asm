@@ -20,7 +20,7 @@ align 4
 
 ; The multiboot standard does not define the value of the stack pointer register
 ; (esp) and it is up to the kernel to provide a stack. This allocates room for a
-; small stack by creating a symbol at the bottom of it, then allocating 16384
+; small stack by creating a symbol at the bottom of it, then allocating 524288
 ; bytes for it, and finally creating a symbol at the top. The stack grows
 ; downwards on x86. The stack is in its own section so it can be marked nobits,
 ; which means the kernel file is smaller because it does not contain an
@@ -146,9 +146,11 @@ _start:
 	mov cr3, eax
 	
 	mov eax, cr0
-	; Set Paging (bit 31) and Protection Mode (bit 0) bits
+	; Set Paging (bit 31), Protection Mode (bit 0) and Write Protect (bit 16) bits
 	; See https://en.wikipedia.org/wiki/Control_register#CR0
-	or eax, 0x80000001
+	; WP will prevent even ring 0 code to write on read-only address, enhancing security 
+	; See https://wiki.osdev.org/Paging#Enabling
+	or eax, 0x80010001
 	mov cr0, eax
 
 	; Jump to higher half with an absolute jump. 

@@ -111,9 +111,21 @@ inline void switch_page_directory(uint32_t physical_addr) {
 
 static void page_fault_callback(trapframe* regs) {
     UNUSED_ARG(regs);
-    uint32_t cr2;
-    asm volatile("mov %%cr2, %0": "=r"(cr2));
-    printf("KERNEL PANIC: PAGE FAULT! Address: 0x%x", cr2);
+    void* vaddr; // get the address causing this page fault
+    asm volatile("mov %%cr2, %0": "=r"(vaddr));
+    
+    // detect stack overflow
+    proc* p = curr_proc();
+    if(p->kernel_stack && vaddr >= p->kernel_stack - PAGE_SIZE && vaddr < p->kernel_stack) {
+        printf("KERNEL PANIC: PAGE FAULT (kernel stack overflow)!\n", vaddr);
+    } else if(p->user_stack && vaddr >= p->user_stack - PAGE_SIZE && vaddr < p->user_stack) {
+        printf("KERNEL PANIC: PAGE FAULT (user stack overflow)!\n", vaddr);
+    } else {
+        printf("KERNEL PANIC: PAGE FAULT!\n", vaddr);
+    }
+    printf("  ADDR    0x%x \n  SBRK    0x%x \n  USTACK  0x%x \n  KSTACKB 0x%x\n  KSTACKE 0x%x\n", 
+            vaddr, p->size, p->user_stack - PAGE_SIZE, p->kernel_stack - PAGE_SIZE, p->kernel_stack + N_KERNEL_STACK_PAGE_SIZE*PAGE_SIZE);
+    
     while (1);
 }
 
@@ -217,11 +229,12 @@ static uint32_t unmap_page(pde* page_dir, uint32_t page_index)
     page->present = 0;
     uint32_t page_frame = page->frame;
     
+    return_page_table(page_dir, page_table);
+
     if(is_curr_page_dir(page_dir)) {
         flush_tlb(vaddr);   // flush
         // printf("Page unmapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, page->frame);
     } else {
-        return_page_table(page_dir, page_table);
         // printf("Foreign Page unmapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, page->frame);
     }
 
@@ -262,16 +275,36 @@ static uint32_t map_page(pde* page_dir, uint32_t page_index, uint32_t frame_inde
     page_t page = { .present = 1, .user = !is_kernel, .rw = is_writeable, .frame = frame_index };
     page_table[page_table_idx] = page;
 
+    return_page_table(page_dir, page_table);
+
     if(is_curr_page_dir(page_dir)) {
         flush_tlb(VADDR_FROM_PAGE_INDEX(page_index));
         // printf("Page frame mapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, frame_index);
     } else {
-        return_page_table(page_dir, page_table);
         // printf("Foreign Page frame mapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, frame_index);
     }
 
     return VADDR_FROM_PAGE_INDEX(page_index);
 
+}
+
+uint32_t change_page_rw_attr(pde* page_dir, uint32_t page_index, bool is_writeable)
+{
+    uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
+    uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
+    
+    PANIC_ASSERT(page_dir[page_dir_idx].present);
+    page_t* page_table = get_page_table(page_dir, page_dir_idx);
+    
+    page_table[page_table_idx].rw = is_writeable;
+
+    return_page_table(page_dir, page_table);
+
+    if(is_curr_page_dir(page_dir)) {
+        flush_tlb(VADDR_FROM_PAGE_INDEX(page_index));
+    }
+
+    return VADDR_FROM_PAGE_INDEX(page_index);
 }
 
 uint32_t vaddr2paddr(pde* page_dir, uint32_t vaddr)
@@ -319,6 +352,10 @@ void dealloc_pages(pde* page_dir, uint32_t page_index, size_t page_count) {
 // return: starting vaddr of the allocated pages 
 uint32_t alloc_pages_at(pde* page_dir, uint32_t page_index, size_t page_count, bool is_kernel, bool is_writeable)
 {
+    if(page_count == 0) {
+        return 0;
+    }
+
     for (uint32_t idx = page_index; idx < page_index + page_count; idx++) {
         alloc_frame(page_dir, idx, is_kernel, is_writeable);
     }
@@ -341,6 +378,8 @@ uint32_t alloc_pages(pde* page_dir, size_t page_count, bool is_kernel, bool is_w
 }
 
 bool is_vaddr_accessible(pde* page_dir, uint32_t vaddr, bool is_from_kernel_code, bool is_writing) {
+    UNUSED_ARG(is_from_kernel_code);
+
     uint32_t page_index = PAGE_INDEX_FROM_VADDR(vaddr);
     uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
     uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
@@ -353,13 +392,14 @@ bool is_vaddr_accessible(pde* page_dir, uint32_t vaddr, bool is_from_kernel_code
     if (!page_table[page_table_idx].present) {
         accessible = false;
     }
-    else if (is_from_kernel_code) {
-        // Kernel can do anything, assuming we are not in write protected mode
-        // "The WP bit in CR0 determines if this is only applied to userland, 
-        //   always giving the kernel write access (the default) or both userland and the kernel 
-        //   (see Intel Manuals 3A 2-20)"
-        accessible = true;
-    }
+    // commenting out this section because we have set CR0 WP bit
+    // else if (is_from_kernel_code) {
+    //     // Kernel can do anything, assuming we are not in write protected mode
+    //     // "The WP bit in CR0 determines if this is only applied to userland, 
+    //     //   always giving the kernel write access (the default) or both userland and the kernel 
+    //     //   (see Intel Manuals 3A 2-20)"
+    //     accessible = true;
+    // }
     else if (page_dir[page_dir_idx].rw < is_writing) {
         accessible = false;
     }
@@ -429,9 +469,14 @@ uint32_t link_pages(pde* from_page_dir, uint32_t vaddr, uint32_t size, pde* to_p
             uint32_t paddr = vaddr2paddr(from_page_dir, vaddr_foreign);
             frame_idx = FRAME_INDEX_FROM_ADDR(paddr);
         } else {
+            // make sure the frame is not allocated already
+            //   and fail the test above because of write protection
+            assert(!is_vaddr_accessible(from_page_dir, vaddr_foreign, false, false));
+
             frame_idx = alloc_frame(from_page_dir, page_idx, false, alloc_writable_page);
         }
-        map_page(to_page_dir, page_idx_curr+i, frame_idx,true, true);
+        // for mapping in to_page_dir, always allow read & write
+        map_page(to_page_dir, page_idx_curr+i, frame_idx, true, true);
     }
 
     return VADDR_FROM_PAGE_INDEX(page_idx_curr) + offset;

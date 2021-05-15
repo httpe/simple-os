@@ -125,6 +125,7 @@ int sys_exec(trapframe* r)
     proc* p = curr_proc();
     p->tf->esp = esp;
     p->tf->eip = entry_point;
+    p->user_stack = (void*) ustack_start;
 
     p->size = (vaddr_ub + (PAGE_SIZE - 1))/PAGE_SIZE * PAGE_SIZE;
     p->orig_size = p->size;

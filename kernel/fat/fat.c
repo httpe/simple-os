@@ -170,6 +170,8 @@ static int fat32_get_meta(fat32_meta* meta)
         }
     }
 
+    meta->file_table = malloc(sizeof(*meta->file_table)*FAT32_N_OPEN_FILE);
+
     return 0;
 
 free_alternative_fat:
@@ -295,14 +297,19 @@ static void fat32_copy_meta(fat32_meta* new_meta, fat32_meta* meta)
     memmove(new_meta->fat, meta->fat, fat_byte_size);
 
     if(new_meta->fs_info == NULL) {
-        new_meta->fs_info = malloc(sizeof(fat32_fsinfo));
+        new_meta->fs_info = malloc(sizeof(*meta->fs_info));
     }
-    memmove(new_meta->fs_info, meta->fs_info, sizeof(fat32_fsinfo));
+    memmove(new_meta->fs_info, meta->fs_info, sizeof(*meta->fs_info));
 
     if(new_meta->bootsector == NULL) {
-        new_meta->bootsector = malloc(sizeof(fat32_bootsector));
+        new_meta->bootsector = malloc(sizeof(*meta->bootsector));
     }
     memmove(new_meta->bootsector, meta->bootsector, sizeof(*meta->bootsector));
+
+    if(new_meta->file_table == NULL) {
+        new_meta->file_table = malloc(sizeof(*new_meta->file_table)*FAT32_N_OPEN_FILE);
+    }
+    memmove(new_meta->file_table, meta->file_table, sizeof(*new_meta->file_table)*FAT32_N_OPEN_FILE);
 
     new_meta->storage = meta->storage;
 }
