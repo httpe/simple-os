@@ -12,6 +12,11 @@
 // maximum number of files opened in one process
 #define N_FILE_DESCRIPTOR_PER_PROCESS 16
 
+// max number of command line arguments
+#define MAX_ARGC 10
+// user program stack size in pages
+#define USER_STACK_PAGE_SIZE 1
+
 // process context, architecture specific
 struct context;
 // trapframe shall be provided by ISR
@@ -50,6 +55,7 @@ void switch_process_memory_mapping(proc* p);
 char* get_abs_path(const char* path);
 int chdir(const char* path);
 int getcwd(char* buf, size_t buf_size);
+int exec(const char* path, char* const* argv);
 
 // defined in switch_kernel_context.asm
 extern void switch_kernel_context(struct context **old_context, struct context *new_context);

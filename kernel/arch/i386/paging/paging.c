@@ -57,8 +57,6 @@ typedef struct page_directory_entry
 #define PAGE_DIR_PHYSICAL_ADDR (((pde*) 0xFFFFF000)[1023].page_table_frame << 12)
 
 
-extern char MAP_MEM_PA_ZERO_TO[], KERNEL_VIRTUAL_END[];
-
 // Declare internal utility functions
 static uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, bool is_kernel);
 static uint32_t map_page(pde* page_dir, uint32_t page_index, uint32_t frame_index, bool is_kernel, bool is_writeable);

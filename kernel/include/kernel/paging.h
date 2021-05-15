@@ -14,6 +14,9 @@
 
 #define PAGE_COUNT_FROM_BYTES(n_bytes) (((n_bytes) + (PAGE_SIZE-1))/PAGE_SIZE) 
 
+// Variables from linker script
+extern char MAP_MEM_PA_ZERO_TO[], KERNEL_VIRTUAL_END[];
+
 void initialize_paging();
 
 // definition various between architecture

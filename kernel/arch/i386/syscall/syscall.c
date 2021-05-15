@@ -1,149 +1,22 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <syscall.h>
 #include <common.h>
-#include <stdlib.h>
-#include <kernel/errno.h>
-#include <kernel/heap.h>
 #include <kernel/panic.h>
-#include <kernel/multiboot.h>
-#include <kernel/ata.h>
-#include <kernel/elf.h>
-#include <kernel/tar.h>
 #include <kernel/vfs.h>
-#include <kernel/file_system.h>
 #include <kernel/process.h>
-#include <kernel/paging.h>
-#include <kernel/stat.h>
-#include <kernel/time.h>
 #include <arch/i386/kernel/isr.h>
 #include <arch/i386/kernel/cpu.h>
-
-extern char MAP_MEM_PA_ZERO_TO[];
-
-// max number of command line arguments
-#define MAX_ARGC 10
-// user program stack size in pages
-#define USER_STACK_PAGE_SIZE 1
 
 int sys_exec(trapframe* r)
 {
     // TODO: parameter security check
-    uint32_t num = *(uint32_t*) r->esp;
+    // uint32_t num = *(uint32_t*) r->esp;
     char* path = (char*) *(uint32_t*) (r->esp + 4);
     char** argv = (char**) *(uint32_t*) (r->esp + 8);
-    printf("SYS_EXEC: eip: %u, path: %s\n", num, path);
-
-    // Load executable from file system
-    char* abs_path = get_abs_path(path);
-    if(abs_path == NULL) {
-        return -1;
-    }
-    fs_stat st = {0};
-    int fs_res = fs_getattr_path(abs_path, &st);
-    if(fs_res < 0) {
-        printf("SYS_EXEC: Cannot open the file\n");
-        free(abs_path);
-        return -1;
-    }
-    if(st.size == 0) {
-        printf("SYS_EXEC: File has size zero\n");
-        free(abs_path);
-        return -1;
-    }
-    printf("SYS_EXEC: program size: %u\n", st.size);
-
-    int fd = fs_open(abs_path, 0);
-    if(fd < 0) {
-        free(abs_path);
-        return -1;
-    }
-    char* file_buffer = malloc(st.size);
-    fs_res = fs_read(fd, file_buffer, st.size);
-    if(fs_res < 0) {
-        free(abs_path);
-        return -1;
-    }
-    fs_close(fd);
-    
-
-    if (!is_elf(file_buffer)) {
-        printf("SYS_EXEC: Invalid program\n");
-        free(file_buffer);
-        free(abs_path);
-        return -1;
-    }
-
-    // allocate page dir
-    pde* page_dir = alloc_page_dir();
-
-    // parse and load ELF binary
-    uint32_t vaddr_ub = 0;
-    uint32_t entry_point = load_elf(page_dir, file_buffer, &vaddr_ub);
-
-    // allocate stack to just below the higher half kernel mapping
-    uint32_t esp = (uint32_t) MAP_MEM_PA_ZERO_TO;
-    uint32_t ustack_start = alloc_pages_at(page_dir, PAGE_INDEX_FROM_VADDR(esp) - USER_STACK_PAGE_SIZE, USER_STACK_PAGE_SIZE, false, true);
-    // allocate one read-only page below the user stack to catch stack overflow or heap over growth
-    alloc_pages_at(page_dir, PAGE_INDEX_FROM_VADDR(ustack_start) - 1, 1, false, false);
-
-    // copy argv strings to the high end of the stack area
-    char* ustack_dst = (char*) link_pages(page_dir, ustack_start, PAGE_SIZE*USER_STACK_PAGE_SIZE, curr_page_dir(), false);
-
-    uint32_t ustack[3+MAX_ARGC+1]; // +1: add a termination zero
-    int argc;
-    for(argc=0; argc<MAX_ARGC; argc++) {
-        if(argv[argc] == 0) {
-            ustack[3 + argc] = 0;
-            break;
-        }
-        // copy the argv content to memory right above any mapped memory specified by the ELF binary
-        uint32_t size = strlen(argv[argc]) + 1;
-        // & ~3 to maintain 4 bytes alignment
-        esp = (esp - size) & ~3;
-        if(esp < ustack_start + sizeof(void*)*(3 + argc + 1 + 1)) {
-            // stack overflow, no room to store 3 (fake return PC, argc, argv) + argc+1 (pointer to previous arguments plus pointer to this arg)  + 1 (a terminating zero)
-            unmap_pages(curr_page_dir(), ustack_start, PAGE_SIZE*USER_STACK_PAGE_SIZE);
-            free_user_space(page_dir);
-            free(abs_path);
-            return -1;
-        }
-        memmove(ustack_dst + (esp - ustack_start), argv[argc], size);
-        ustack[3 + argc] = esp;
-    }
-    
-    // user stack, mimic a normal function call
-    ustack[0] = 0xFFFFFFFF; // fake return PC
-    ustack[1] = argc;
-    ustack[2] = esp - sizeof(void*)*(argc + 1);
-
-    uint32_t rem_stack_size = sizeof(void*)*(3 + argc + 1);
-    esp -= rem_stack_size;
-    memmove(ustack_dst + (esp - ustack_start), ustack, rem_stack_size);
-
-    // maintain trapframe
-    proc* p = curr_proc();
-    p->tf->esp = esp;
-    p->tf->eip = entry_point;
-    p->user_stack = (void*) ustack_start;
-
-    p->size = (vaddr_ub + (PAGE_SIZE - 1))/PAGE_SIZE * PAGE_SIZE;
-    p->orig_size = p->size;
-
-    // switch to new page dir
-    pde* old_page_dir = p->page_dir;
-    p->page_dir = page_dir;
-    switch_process_memory_mapping(p);
-    free_user_space(old_page_dir); // free frames occupied by the old page dir
-
-    PANIC_ASSERT(p->page_dir != old_page_dir);
-    PANIC_ASSERT((uint32_t) vaddr2paddr(curr_page_dir(), (uint32_t) curr_page_dir()) != vaddr2paddr(curr_page_dir(), (uint32_t) old_page_dir));
-    PANIC_ASSERT((uint32_t) vaddr2paddr(curr_page_dir(), (uint32_t) curr_page_dir()) == vaddr2paddr(curr_page_dir(), (uint32_t) page_dir));
-    PANIC_ASSERT(is_vaddr_accessible(curr_page_dir(), p->tf->eip, false, false));
-    PANIC_ASSERT(is_vaddr_accessible(curr_page_dir(), p->tf->esp, false, false));
-    
-    free(abs_path);
-    return 0;
+    // printf("SYS_EXEC: eip: %u, path: %s\n", num, path);
+    return exec(path, argv);
 }
 
 // increase/decrease process image size
