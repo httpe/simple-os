@@ -227,23 +227,6 @@ int fs_unlink(const char * path)
     return res;
 }
 
-int fs_truncate(const char * path, uint size)
-{
-    const char* remaining_path = NULL;
-    fs_mount_point* mp = find_mount_point(path, &remaining_path);
-    if(mp == NULL) {
-        return -ENXIO;
-    }
-    if(mp->operations.truncate == NULL) {
-        // if file system does not support this operation
-        return -EPERM;
-    }
-
-    int res = mp->operations.truncate(mp, remaining_path, size, NULL);
-    
-    return res;
-}
-
 int fs_link(const char* old_path, const char* new_path)
 {
     const char* remaining_path_old = NULL;
@@ -493,7 +476,44 @@ int fs_getattr_fd(int fd, struct fs_stat * stat)
         return -EPERM;
     }
 
-    int res = f->mount_point->operations.getattr(f->mount_point, f->path, stat, NULL);
+    struct fs_file_info fi = {.flags = f->open_flags, .fh=f->inum};
+    int res = f->mount_point->operations.getattr(f->mount_point, f->path, stat, &fi);
+    
+    return res;
+}
+
+
+int fs_truncate_path(const char * path, uint size)
+{
+    const char* remaining_path = NULL;
+    fs_mount_point* mp = find_mount_point(path, &remaining_path);
+    if(mp == NULL) {
+        return -ENXIO;
+    }
+    if(mp->operations.truncate == NULL) {
+        // if file system does not support this operation
+        return -EPERM;
+    }
+
+    int res = mp->operations.truncate(mp, remaining_path, size, NULL);
+    
+    return res;
+}
+
+int fs_truncate_fd(int fd, uint size)
+{
+
+    file* f = fd2file(fd);
+    if(f == NULL) {
+        return -EBADF;
+    }
+
+    if(f->mount_point->operations.truncate == NULL) {
+        // if file system does not support this operation
+        return -EPERM;
+    }
+    struct fs_file_info fi = {.flags = f->open_flags, .fh=f->inum};
+    int res = f->mount_point->operations.truncate(f->mount_point, f->path, size, &fi);
     
     return res;
 }

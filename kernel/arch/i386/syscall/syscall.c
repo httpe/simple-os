@@ -271,6 +271,26 @@ int sys_getattr_fd(trapframe* r)
     return fs_getattr_fd(fd, st);
 }
 
+int sys_truncate_path(trapframe* r)
+{
+    char* path = *(char**) (r->esp + 4);
+    uint size = *(uint*) (r->esp + 8);
+    char* abs_path = get_abs_path(path);
+    if(abs_path == NULL) {
+        return -1;
+    }
+    int res = fs_truncate_path(abs_path, size);
+    free(abs_path);
+    return res;
+}
+
+int sys_truncate_fd(trapframe* r)
+{
+    int fd = *(int*) (r->esp + 4);
+    uint size = *(uint*) (r->esp + 8);
+    return fs_truncate_fd(fd, size);
+}
+
 int sys_get_pid(trapframe* r)
 {
     UNUSED_ARG(r);
@@ -373,6 +393,12 @@ int sys_getcwd(trapframe* r)
     return getcwd(buf, buf_size);
 }
 
+int sys_test(trapframe* r)
+{
+    UNUSED_ARG(r);
+    return 0;
+}
+
 void syscall_handler(trapframe* r)
 {
     // Avoid scheduling when in syscall/kernel space
@@ -382,6 +408,9 @@ void syscall_handler(trapframe* r)
     // so r->eax will be the return value of the syscall  
     switch (r->eax)
     {
+    case SYS_TEST:
+        r->eax = sys_test(r);
+        break;
     case SYS_EXEC:
         r->eax = sys_exec(r);
         break;
@@ -451,6 +480,12 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_GETCWD:
         r->eax = sys_getcwd(r);
+        break;
+    case SYS_TRUNCATE_PATH:
+        r->eax = sys_truncate_path(r);
+        break;
+    case SYS_TRUNCATE_FD:
+        r->eax = sys_truncate_fd(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);

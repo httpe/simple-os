@@ -4,6 +4,7 @@
 // Syscall int number
 #define INT_SYSCALL 88
 
+#define SYS_TEST 0
 #define SYS_EXEC 1
 #define SYS_PRINT 2
 #define SYS_YIELD 3
@@ -27,6 +28,8 @@
 #define SYS_READDIR 21
 #define SYS_CHDIR 22
 #define SYS_GETCWD 23
+#define SYS_TRUNCATE_PATH 24
+#define SYS_TRUNCATE_FD 25
 
 // defined in interrupt.asm
 extern void int88();

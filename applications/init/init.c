@@ -11,6 +11,8 @@
 
 static inline _syscall0(SYS_YIELD, int, sys_yield)
 static inline _syscall1(SYS_DUP, int, sys_dup, int, fd)
+static inline _syscall2(SYS_TRUNCATE_FD, int, sys_truncate_fd, int, fd, uint, size)
+static inline _syscall2(SYS_TRUNCATE_PATH, int, sys_truncate_path, const char*, path, uint, size)
 
 static void test_multi_process()
 {
@@ -52,7 +54,9 @@ static void test_libc() {
 static void test_file_system() {
     struct stat st = {0};
     char buf1[100] = {0};
-    int fd = open("/home/RAND.OM", O_RDWR);
+    int fd;
+    
+    fd = open("/home/RAND.OM", O_RDWR);
     if(fd >= 0) {
         int read_in = read(fd, buf1, 10);
         fstat(fd, &st);
@@ -87,9 +91,30 @@ static void test_file_system() {
     printf("fopen+getline content(%ld/%ld): \r\n %s \r\n", linelen, linecap, line);
     free(line);
 
-    // Test file creation and deletion
+    // Test file creation, truncating and deletion
+    const char* to_write1 = "New content!";
     fd = open("/home/newfile", O_CREAT|O_RDWR);
-    close(fd);
+    // sys_test(1);
+    if(fd>=0) {
+        int written = write(fd, to_write1, strlen(to_write1) + 1);
+        printf("newfile: WRITTEN(%d)\r\n", written);
+        fstat(fd, &st);
+        printf("newfile: SIZE(%ld)\r\n", st.st_size);
+        close(fd);
+        truncate("/home/newfile", 3);
+    }
+    fd = open("/home/newfile", O_RDWR);
+    if(fd>=0) {
+        fstat(fd, &st);
+        printf("newfile: SIZE(%ld)\r\n", st.st_size);
+        ftruncate(fd, 5);
+        fstat(fd, &st);
+        printf("newfile: SIZE(%ld)\r\n", st.st_size);
+        memset(buf1, 0, 100);
+        int read_in = read(fd, buf1, strlen(to_write1) + 1);
+        printf("newfile: READ(%d), CONTENT(%s)\r\n", read_in, buf1);
+        close(fd);
+    }
     int res_link = link("/home/newfil", "/home/newfil.1");
     printf("Link(%d)\r\n", res_link);
     int res_rename = rename("/home/newfile", "/home/newfile.2");
