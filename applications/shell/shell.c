@@ -176,7 +176,7 @@ int main(int argc, char* argv[]) {
             while(1) {
                 int r = sys_readdir(ls_path, i++, &entry, sizeof(fs_dirent));
                 if(r < 0) {
-                    printf("ls: error %d\r\n", r);
+                    printf("ls error(%d): %s\r\n", r, strerror(-r));
                 }
                 if(r <= 0) {
                     printf("\r\n");
@@ -196,7 +196,7 @@ int main(int argc, char* argv[]) {
                     struct stat st = {0};
                     int r_stat = stat(path_buff, &st);
                     if(r_stat < 0) {
-                        printf("ls: stat error %d: %s\r\n", r_stat, entry.name);
+                        printf("ls %s stat error(%d): %s\r\n", entry.name, r_stat, strerror(-r_stat));
                     } else {
                         char* type;
                         if(S_ISDIR(st.st_mode)) {
@@ -205,8 +205,10 @@ int main(int argc, char* argv[]) {
                             type = "FILE";
                         }
                         char* datetime = ctime(&st.st_mtim.tv_sec);
-                        // ctime result includes a trailing '\n'
-                        printf("  %s: %s %ld %s\r", entry.name, type, st.st_size, datetime);
+                        // ctime result includes a trailing '\n', remove it
+                        char buf[64] = {0};
+                        memmove(buf, datetime, strlen(datetime)-1);
+                        printf("  %-4s %s %10ld: %s\r\n", type, buf, st.st_size, entry.name);
                     }
                 }
             }
@@ -217,7 +219,7 @@ int main(int argc, char* argv[]) {
             }
             int r = chdir(cd_path);
             if(r < 0) {
-                printf("cd: error %d\r\n", r);
+                printf("cd error(%d): %s\r\n", r, strerror(-r));
             }
         } else {
             printf("Unknow command:\r\n%s\r\n", command);

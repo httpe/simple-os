@@ -164,7 +164,7 @@ static int tar_read(struct fs_mount_point* mp, const char * path, char *buf, uin
     uint content_LBA;
     int filesize = tar_loopup_lazy(mp, path, &content_LBA, NULL);
     if(filesize < 0) {
-        return -1;
+        return -ENOENT;
     }
     if(filesize == 0) {
         return 0;
@@ -212,7 +212,7 @@ static int tar_getattr(struct fs_mount_point* mount_point, const char * path, st
     tar_file_header* header;
     int size = tar_loopup_lazy(mount_point, path, &content_LBA, &header);
     if(size < 0) {
-        return -1;
+        return -ENOENT;
     }
 
     st->mode = S_IRWXU | S_IRWXG | S_IRWXO;
@@ -272,7 +272,7 @@ static int tar_mount(struct fs_mount_point* mount_point, void* option)
 {
     tar_mount_option* opt_in = (tar_mount_option*) option;
     if(opt_in->storage->block_size != 512) {
-        return -1;
+        return -EIO;
     }
 
     // internalize the mounting option
