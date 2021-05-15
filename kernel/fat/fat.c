@@ -1556,6 +1556,9 @@ static int fat32_write(struct fs_mount_point* mount_point, const char * path, co
     if(dir_res < 0) {
         return dir_res;
     }
+    if(fi != NULL) {
+        meta->file_table[fi->fh] = file_entry;
+    }
 
     if(size == 0) {
         return 0;
@@ -1647,6 +1650,9 @@ static int fat32_truncate(struct fs_mount_point* mount_point, const char * path,
     int dir_res = fat32_update_file_entry(meta, &file_entry);
     if(dir_res < 0) {
         return dir_res;
+    }
+    if(fi != NULL) {
+        meta->file_table[fi->fh] = file_entry;
     }
 
     if(size == 0) {
