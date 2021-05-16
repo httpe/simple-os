@@ -1,6 +1,6 @@
 # Simple-OS
 
-Simple-OS is a (barely working) hobbyist operating system project. The target is to create a self-hosting operating system, i.e. you can compile itself in itself.
+Simple-OS is a (barely working) hobbyist operating system. My target is to create a self-hosting operating system, i.e. you can compile itself in itself.
 
 Currently the only CPU architecture supported is x86-32.
 
