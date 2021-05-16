@@ -518,18 +518,21 @@ void free_user_space(pde* page_dir)
 pde* copy_user_space(pde* page_dir)
 {
     pde* new_page_dir = (pde*) alloc_pages(curr_page_dir(), 1, true, true);
+    memset(new_page_dir, 0, sizeof(*new_page_dir)*PAGE_DIR_SIZE);
     uint32_t kernel_page_dir_idx = PAGE_INDEX_FROM_VADDR((uint32_t) MAP_MEM_PA_ZERO_TO) / PAGE_TABLE_SIZE;
     for(uint32_t i=0;i<kernel_page_dir_idx;i++) {
         if(page_dir[i].present) {
             // copy page dir entry
             new_page_dir[i] = page_dir[i];
             // allocate one new page table
-            uint32_t page_table_vaddr = alloc_pages(new_page_dir, 1, true, true);
-            uint32_t page_table_paddr = vaddr2paddr(new_page_dir, page_table_vaddr);
+            uint32_t page_table_vaddr = alloc_pages(curr_page_dir(), 1, true, true);
+            uint32_t page_table_paddr = vaddr2paddr(curr_page_dir(), page_table_vaddr);
             new_page_dir[i].page_table_frame = FRAME_INDEX_FROM_ADDR(page_table_paddr);
-            page_t* new_page_table =  get_page_table(new_page_dir, i);
 
+            page_t* new_page_table =  get_page_table(new_page_dir, i);
+            memset(new_page_table, 0, sizeof(*new_page_table)*PAGE_TABLE_SIZE);
             page_t* page_table = get_page_table(page_dir, i);
+            
             for(int j=0;j<PAGE_TABLE_SIZE;j++) {
                 if(page_table[j].present) {
                     // copy frame content
@@ -542,8 +545,9 @@ pde* copy_user_space(pde* page_dir)
                     }
                     uint32_t dst = link_pages(new_page_dir, VADDR_FROM_PAGE_INDEX(page_idx), PAGE_SIZE, curr_page_dir(), page_table[j].rw);
                     memmove((char*) dst, (char*) src, PAGE_SIZE);
+                    unmap_page(curr_page_dir(), PAGE_INDEX_FROM_VADDR(dst));
                     if(!is_curr_page_dir(page_dir)) {
-                        unmap_page(curr_page_dir(), page_idx);
+                        unmap_page(curr_page_dir(), PAGE_INDEX_FROM_VADDR(src));
                     }
                     // copy page table entry
                     uint32_t new_frame = new_page_table[j].frame;
