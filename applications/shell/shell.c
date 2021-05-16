@@ -106,18 +106,18 @@ int main(int argc, char* argv[]) {
     // Move cursor to top left
     write(STDOUT_FILENO, "\x1b[H", 3);
 
-    printf("Welcome to the Shell (%d x %d)!\r\n", row, col);
-    printf("Shell ARGC(%d)\r\n", argc);
+    printf("Welcome to the Shell (%d x %d)!\n", row, col);
+    printf("Shell ARGC(%d)\n", argc);
     for(int i=0; i<argc; i++) {
-        printf("  %d: %s\r\n", i, argv[i]);
+        printf("  %d: %s\n", i, argv[i]);
     }
-    printf("Use 'help' command to show usage\r\n");
+    printf("Use 'help' command to show usage\n");
     
     
     char command[MAX_COMMAND_LEN + 1] = {0};
-    int n_command_read = 0;
+    int n_command_read;
     char prev_command[MAX_COMMAND_LEN + 1] = {0};
-    int prev_n_command_read = 0;
+    int prev_n_command_read;
 
     char* cwd = malloc(MAX_PATH_LEN+1);
     char* path_buff = malloc(MAX_PATH_LEN+1);
@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
             int k;
             while((k = readKey()) <= 0);
             if(k == '\n') {
-                write(STDOUT_FILENO, &"\r\n", 2);
+                write(STDOUT_FILENO, &"\n", 1);
                 break;
             } else if(k == '\x7F' || k == '\b') {
                 if(n_command_read > 0) {
@@ -166,10 +166,10 @@ int main(int argc, char* argv[]) {
             continue;
         }
         if(strcmp(part, "help") == 0) {
-            printf("Supported commands:\r\n");
-            printf("ls: listing dir\r\n");
-            printf("cd: changing current dir\r\n");
-            printf("{program name}: Run program named {program name}.elf. Seach in various paths\r\n");
+            printf("Supported commands:\n");
+            printf("ls: listing dir\n");
+            printf("cd: changing current dir\n");
+            printf("{program name}: Run program named {program name}.elf. Seach in various paths\n");
         } else if(strcmp(part, "ls") == 0) {
             fs_dirent entry = {0};
             char* ls_path = strtok(NULL," ");
@@ -180,16 +180,15 @@ int main(int argc, char* argv[]) {
             while(1) {
                 int r = sys_readdir(ls_path, i++, &entry, sizeof(fs_dirent));
                 if(r < 0) {
-                    printf("ls error(%d): %s\r\n", r, strerror(-r));
+                    printf("ls error(%d): %s\n", r, strerror(-r));
                 }
                 if(r <= 0) {
-                    printf("\r\n");
                     break;
                 }
                 size_t path_len = strlen(ls_path);
                 size_t name_len = strlen(entry.name);
                 if(path_len + 1 + name_len > MAX_PATH_LEN) {
-                    printf("  File: %s\r\n", entry.name);
+                    printf("  File: %s\n", entry.name);
                 } else {
                     memmove(path_buff, ls_path, path_len);
                     if(path_len > 0 && ls_path[path_len-1] != '/') {
@@ -200,7 +199,7 @@ int main(int argc, char* argv[]) {
                     struct stat st = {0};
                     int r_stat = stat(path_buff, &st);
                     if(r_stat < 0) {
-                        printf("ls %s stat error(%d): %s\r\n", entry.name, r_stat, strerror(-r_stat));
+                        printf("ls %s stat error(%d): %s\n", entry.name, r_stat, strerror(-r_stat));
                     } else {
                         char* type;
                         if(S_ISDIR(st.st_mode)) {
@@ -212,7 +211,7 @@ int main(int argc, char* argv[]) {
                         // ctime result includes a trailing '\n', remove it
                         char buf[64] = {0};
                         memmove(buf, datetime, strlen(datetime)-1);
-                        printf("  %-4s %s %10ld: %s\r\n", type, buf, st.st_size, entry.name);
+                        printf("  %-4s %s %10ld: %s\n", type, buf, st.st_size, entry.name);
                     }
                 }
             }
@@ -223,7 +222,7 @@ int main(int argc, char* argv[]) {
             }
             int r = chdir(cd_path);
             if(r < 0) {
-                printf("cd error(%d): %s\r\n", r, strerror(-r));
+                printf("cd error(%d): %s\n", r, strerror(-r));
             }
         } else {
             // try execute programs
@@ -248,7 +247,7 @@ int main(int argc, char* argv[]) {
                 }
               }
               if(*path_prefix == NULL) {
-                printf("shell exec: Executable ELF not found\r\n");
+                printf("shell exec: Executable ELF not found\n");
                 continue;
               }
             }
@@ -271,16 +270,16 @@ int main(int argc, char* argv[]) {
                 while(1) {
                   int wait_ret = wait(&child_exit_status);
                   if(wait_ret < 0) {
-                      // printf("No child exited\r\n");
+                      // printf("No child exited\n");
                   } else {
-                      printf("Child %u exited, exit code = %d\r\n", wait_ret, WEXITSTATUS(child_exit_status));
+                      printf("Child %u exited, exit code = %d\n", wait_ret, WEXITSTATUS(child_exit_status));
                       break;
                   }
                 }
             } else {
                 // child
                 int ret = execve(program_argv[0], program_argv, NULL);
-                printf("shell exec error(%d)\r\n", ret);
+                printf("shell exec error(%d)\n", ret);
                 exit(ret);
             }
             

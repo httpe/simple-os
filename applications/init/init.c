@@ -16,35 +16,35 @@ static inline _syscall2(SYS_TRUNCATE_PATH, int, sys_truncate_path, const char*, 
 
 static void test_multi_process()
 {
-    printf("Test yielding\r\n");
+    printf("Test yielding\n");
     sys_yield();
-    printf("Welcome Back User World!\r\n");
+    printf("Welcome Back User World!\n");
 
     int fork_ret = fork();
     int child_exit_status;
 
     if(fork_ret) {
         // parent
-        printf("This is parent, child PID: %u\r\n", fork_ret);
+        printf("This is parent, child PID: %u\n", fork_ret);
         sys_yield();
         int wait_ret = wait(&child_exit_status);
         if(wait_ret < 0) {
-            printf("No child exited\r\n");
+            printf("No child exited\n");
         } else {
-            printf("Child %u exited, exit code = %d\r\n", wait_ret, WEXITSTATUS(child_exit_status));
+            printf("Child %u exited, exit code = %d\n", wait_ret, WEXITSTATUS(child_exit_status));
         }
     } else {
         // child
-        printf("This is child, exiting with code 123\r\n");
+        printf("This is child, exiting with code 123\n");
         exit(123);
     }
 }
 
 static void test_libc() {
-    printf("Welcome to %s!\r\n", "Newlib");
-    printf("Current Epoch: %lld\r\n", time(NULL));
+    printf("Welcome to %s!\n", "Newlib");
+    printf("Current Epoch: %lld\n", time(NULL));
 
-    const char* str2 = "Test malloc/free!\r\n";
+    const char* str2 = "Test malloc/free!\n";
     char* buf = malloc(100);
     memmove(buf, str2, strlen(str2)+1);
     printf("%s", buf);
@@ -61,10 +61,10 @@ static void test_file_system() {
         int read_in = read(fd, buf1, 10);
         fstat(fd, &st);
         int closed = close(fd);
-        printf("FD(%d), READ(%d), CLOSE(%d), MODTIME(%lld)\r\n", fd, read_in, closed, st.st_mtim.tv_sec);
-        printf("READ content: \r\n %s \r\n", buf1);
+        printf("FD(%d), READ(%d), CLOSE(%d), MODTIME(%lld)\n", fd, read_in, closed, st.st_mtim.tv_sec);
+        printf("READ content: \n %s \n", buf1);
     } else {
-        printf("OPEN error\r\n");
+        printf("OPEN error\n");
     }
 
     const char* to_write = "Hello User I/O World!";
@@ -76,10 +76,10 @@ static void test_file_system() {
         int read_in = read(fd, buf1, strlen(to_write) + 1);
         fstat(fd, &st);
         int closed = close(fd);
-        printf("FD(%d), WRITE(%d), SEEK(%d), READ(%d), CLOSE(%d), MODTIME(%lld)\r\n", fd, written, lseek_res, read_in, closed, st.st_mtim.tv_sec);
-        printf("READ content: \r\n %s \r\n", buf1);
+        printf("FD(%d), WRITE(%d), SEEK(%d), READ(%d), CLOSE(%d), MODTIME(%lld)\n", fd, written, lseek_res, read_in, closed, st.st_mtim.tv_sec);
+        printf("READ content: \n %s \n", buf1);
     } else {
-        printf("OPEN error\r\n");
+        printf("OPEN error\n");
     }
 
     // Test FILE struct based file I/O
@@ -88,7 +88,7 @@ static void test_file_system() {
     size_t linecap = 0;
     ssize_t linelen;
     linelen = __getline(&line, &linecap, fp);
-    printf("fopen+getline content(%ld/%ld): \r\n %s \r\n", linelen, linecap, line);
+    printf("fopen+getline content(%ld/%ld): \n %s \n", linelen, linecap, line);
     free(line);
 
     // Test file creation, truncating and deletion
@@ -97,32 +97,32 @@ static void test_file_system() {
     // sys_test(1);
     if(fd>=0) {
         int written = write(fd, to_write1, strlen(to_write1) + 1);
-        printf("newfile: WRITTEN(%d)\r\n", written);
+        printf("newfile: WRITTEN(%d)\n", written);
         fstat(fd, &st);
-        printf("newfile: SIZE(%ld)\r\n", st.st_size);
+        printf("newfile: SIZE(%ld)\n", st.st_size);
         close(fd);
         truncate("/home/newfile", 3);
     }
     fd = open("/home/newfile", O_RDWR);
     if(fd>=0) {
         fstat(fd, &st);
-        printf("newfile: SIZE(%ld)\r\n", st.st_size);
+        printf("newfile: SIZE(%ld)\n", st.st_size);
         ftruncate(fd, 5);
         fstat(fd, &st);
-        printf("newfile: SIZE(%ld)\r\n", st.st_size);
+        printf("newfile: SIZE(%ld)\n", st.st_size);
         memset(buf1, 0, 100);
         int read_in = read(fd, buf1, strlen(to_write1) + 1);
-        printf("newfile: READ(%d), CONTENT(%s)\r\n", read_in, buf1);
+        printf("newfile: READ(%d), CONTENT(%s)\n", read_in, buf1);
         close(fd);
     }
     int res_link = link("/home/newfil", "/home/newfil.1");
-    printf("Link(%d)\r\n", res_link);
+    printf("Link(%d)\n", res_link);
     int res_rename = rename("/home/newfile", "/home/newfile.2");
-    printf("Rename(%d)\r\n", res_rename);
+    printf("Rename(%d)\n", res_rename);
     int res_unlink = unlink("/home/newfile.2");
-    printf("Unlink(%d)\r\n", res_unlink);
+    printf("Unlink(%d)\n", res_unlink);
     res_unlink = unlink("/home/newfile");
-    printf("Unlink(%d)\r\n", res_unlink);
+    printf("Unlink(%d)\n", res_unlink);
 }
 
 
@@ -138,7 +138,7 @@ int main(int argc, char* argv[]) {
     // file descriptor 2: stderr, console, STDERR_FILENO
     sys_dup(0);
 
-    printf("Hello User World!\r\n");
+    printf("Hello User World!\n");
 
     // Perform tests of user space features
     test_multi_process();
@@ -147,6 +147,6 @@ int main(int argc, char* argv[]) {
 
     // Execute the shell
     char* shell_argv[] = {"/usr/bin/shell.elf", NULL};
-    printf("EXEC Shell\r\n");
+    printf("EXEC Shell\n");
     execve("/usr/bin/shell.elf", shell_argv, NULL);
 }
