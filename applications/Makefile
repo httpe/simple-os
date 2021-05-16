@@ -20,6 +20,8 @@ BINDIR=$(PREFIX)/bin
 BINARIES=\
 init/init.elf \
 shell/shell.elf \
+editor/editor.elf \
+
 
 .PHONY: all clean install
 # .SUFFIXES: .o .c .S
