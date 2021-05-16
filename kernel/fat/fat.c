@@ -1761,17 +1761,22 @@ static int fat32_open(struct fs_mount_point* mount_point, const char * path, str
             if(parent_cluster < 0) {
                 return parent_cluster;
             }
+            status = fat32_resolve_path(meta, path, &file_entry);
+            assert(status == FAT_PATH_RESOLVE_FOUND);
+        } else {
+            return -ENOENT;
         }
-        if(HAS_ATTR(fi->flags, O_TRUNC)) {
-            int res = fat32_truncate(mount_point, path, 0, fi);
-            if(res < 0) {
-                return res;
-            }
+    }
+    
+    if(HAS_ATTR(fi->flags, O_TRUNC)) {
+        int res = fat32_truncate(mount_point, path, 0, fi);
+        if(res < 0) {
+            return res;
         }
         status = fat32_resolve_path(meta, path, &file_entry);
         assert(status == FAT_PATH_RESOLVE_FOUND);
     }
-    
+
     // Save the resolved file entry to the file table
     //   in order to reuse the path resolution result
     assert(file_entry.dir_entry_count > 0);
