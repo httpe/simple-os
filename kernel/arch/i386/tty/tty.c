@@ -77,6 +77,13 @@ void terminal_clear_screen(enum tty_clear_screen_mode mode) {
         col_end = VGA_WIDTH - 1;
     }
 
+    if(col_start >= VGA_WIDTH) {
+        col_start = VGA_WIDTH - 1;
+    }
+    if(col_end >= VGA_WIDTH) {
+        col_end = VGA_WIDTH - 1;
+    }
+
     for (size_t y = row_start; y <= row_end; y++) {
         for (size_t x = col_start; x <= col_end; x++) {
             const size_t index = y * VGA_WIDTH + x;
@@ -125,6 +132,11 @@ void terminal_putentryat(unsigned char c, uint8_t color, size_t col, size_t row)
 void terminal_putchar(char c) {
     unsigned char uc = c;
 
+    if(terminal_column >= VGA_WIDTH) {
+        terminal_column = 0;
+        ++terminal_row;
+    }
+
     if (c == '\n') {
         terminal_row += 1;
     } else if(c == '\r') {
@@ -142,10 +154,7 @@ void terminal_putchar(char c) {
         terminal_putentryat(' ', terminal_color, terminal_column, terminal_row);
     } else {
         terminal_putentryat(uc, terminal_color, terminal_column, terminal_row);
-        if (++terminal_column == VGA_WIDTH) {
-            terminal_column = 0;
-            ++terminal_row;
-        }
+        ++terminal_column;
     }
 
     if (terminal_row >= VGA_HEIGHT) {
@@ -182,6 +191,9 @@ void set_text_mode_cursor(size_t row, size_t col) {
 
 // Update text cursor to where the last char was printed
 void update_cursor(void) {
+    if(terminal_column >= VGA_WIDTH) {
+        terminal_column = VGA_WIDTH - 1;
+    }
     set_text_mode_cursor(terminal_row, terminal_column);
 }
 
