@@ -4,12 +4,14 @@
 #include <syscall.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#include <sys/stat.h>
 #include <fs.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 
 #define MAX_COMMAND_LEN 255
 #define MAX_PATH_LEN 4096
+#define MAX_ARGC 10
 
 static inline _syscall4(SYS_READDIR, int, sys_readdir, const char *, path, uint, entry_offset, fs_dirent*, buf, uint, buf_size)
 
@@ -164,8 +166,10 @@ int main(int argc, char* argv[]) {
             continue;
         }
         if(strcmp(part, "help") == 0) {
-            printf("Supported commands\r\n");
+            printf("Supported commands:\r\n");
             printf("ls: listing dir\r\n");
+            printf("cd: changing current dir\r\n");
+            printf("{program name}: Run program named {program name}.elf. Seach in various paths\r\n");
         } else if(strcmp(part, "ls") == 0) {
             fs_dirent entry = {0};
             char* ls_path = strtok(NULL," ");
@@ -222,7 +226,64 @@ int main(int argc, char* argv[]) {
                 printf("cd error(%d): %s\r\n", r, strerror(-r));
             }
         } else {
-            printf("Unknow command:\r\n%s\r\n", command);
+            // try execute programs
+            struct stat st = {0};
+            char prog_path[255] = {0};
+            if(*part == '/') {
+              strncpy(prog_path, part, 254);
+            } else {
+              // Mimic PATH environ vairbale
+              // Search for these places for the binary, also append the .elf suffix
+              char* PATH[]= {"/usr/bin/","/home/bin/","", NULL};
+              char** path_prefix = PATH;
+              for(;*path_prefix; path_prefix++) {
+                int prefix_len = strlen(*path_prefix);
+                int name_len = strlen(part);
+                strncpy(prog_path, *path_prefix, 250);
+                strncat(prog_path, part, 250 - prefix_len);
+                strncat(prog_path, ".elf", 250 - prefix_len - name_len);
+                int r_stat = stat(prog_path, &st);
+                if(r_stat == 0 && S_ISREG(st.st_mode)) {
+                  break;
+                }
+              }
+              if(*path_prefix == NULL) {
+                printf("shell exec: Executable ELF not found\r\n");
+                continue;
+              }
+            }
+
+            char* program_argv[MAX_ARGC + 1] = {NULL};
+            program_argv[0] = prog_path;
+            for(int i=1;i<MAX_ARGC;i++) {
+              char* arg = strtok(NULL," ");
+              if(arg == NULL) {
+                break;
+              }
+              program_argv[i] = arg;
+            }
+
+            int fork_ret = fork();
+            int child_exit_status;
+
+            if(fork_ret) {
+                // parent
+                while(1) {
+                  int wait_ret = wait(&child_exit_status);
+                  if(wait_ret < 0) {
+                      // printf("No child exited\r\n");
+                  } else {
+                      printf("Child %u exited, exit code = %d\r\n", wait_ret, WEXITSTATUS(child_exit_status));
+                      break;
+                  }
+                }
+            } else {
+                // child
+                int ret = execve(program_argv[0], program_argv, NULL);
+                printf("shell exec error(%d)\r\n", ret);
+                exit(ret);
+            }
+            
         }
 
     }

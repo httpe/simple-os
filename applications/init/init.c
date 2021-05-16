@@ -26,7 +26,7 @@ static void test_multi_process()
     if(fork_ret) {
         // parent
         printf("This is parent, child PID: %u\r\n", fork_ret);
-        // sys_yield();
+        sys_yield();
         int wait_ret = wait(&child_exit_status);
         if(wait_ret < 0) {
             printf("No child exited\r\n");
