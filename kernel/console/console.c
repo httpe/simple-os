@@ -291,7 +291,12 @@ static int process_escaped_sequence(const char* buf, size_t size)
                 enum vga_color fg, bg;
                 terminal_get_color(&fg, &bg);
                 for(int i=0; i<6; i++) {
-                    int opt = str2int(args[i], 0);
+                    int opt;
+                    if(i == 0) {
+                        opt = str2int(args[i], 0);
+                    } else {
+                        opt = str2int(args[i], -1);
+                    }
                     if(opt == 0) {
                         // Clear all attr
                         attr = TTY_FONT_ATTR_CLEAR;
