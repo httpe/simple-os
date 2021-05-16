@@ -1,3 +1,10 @@
+// Editor based on the kilo project
+// Ref: https://github.com/antirez/kilo
+// Base version is from the tutorial "Build Your Own Text Editor" at
+// https://viewsourcecode.org/snaptoken/kilo/index.html
+// Source code ported from: 
+// https://github.com/snaptoken/kilo-src
+
 /*** includes ***/
 
 #define _DEFAULT_SOURCE
@@ -17,7 +24,7 @@
 
 /*** defines ***/
 
-#define KILO_VERSION "0.0.1"
+#define KILO_VERSION "0.0.2"
 #define KILO_TAB_STOP 8
 #define KILO_QUIT_TIMES 3
 
