@@ -188,7 +188,7 @@ static int tar_read(struct fs_mount_point* mp, const char * path, char *buf, uin
     int in_block_offset = offset % TAR_SECTOR_SIZE;
     memmove(buf, full_buf + in_block_offset, size);
 
-    return 0;
+    return size;
 }
 
 
