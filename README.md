@@ -1,8 +1,8 @@
 # Simple-OS
 
-Simple-OS is targeted to be a self-hosting operating system, i.e. you can compile itself in itself.
+Simple-OS is a (barely working) hobbyist operating system project. The target is to create a self-hosting operating system, i.e. you can compile itself in itself.
 
-Currently the only supported CPU architecture is x86-32.
+Currently the only CPU architecture supported is x86-32.
 
 ## Current Status & Goal
 
@@ -52,6 +52,8 @@ Although the final goal is to make the system self-hosting, we have planned for 
     - Port a simplified C compiler to the system
     - Compile and run the text editor inside the system
     - **In Progress**
+      - A shell with `cd`, `ls` and program execution was implemented
+      - Ported the simple text editor [Kilo](https://viewsourcecode.org/snaptoken/kilo/index.html), with basic editing functionalities and C syntax highlighting
 
 1. **Milestone Six: Mutli-core CPU support and IPC**
     - Support multi-core CPU through [APCI](https://wiki.osdev.org/APIC)
@@ -236,45 +238,59 @@ Once we finish switching to protected mode, we start to write the remaining part
 The `kernel/` and `libc/` folders are build upon a clone from the [Meaty Skeleton](https://wiki.osdev.org/Meaty_Skeleton) tutorial.
 
 - `kernel/`
-  - `includes/`
-    - Headers will be copied by `kernel`'s `make install` to `sysroot/` under project root folder, which will ultimately be packed into the disk image `bootable_kernel.bin` by `bootloader`'s Makefile, i.e. the headers will be shipped along with the kernel binary executable.
-    - `arch/i386/`: Architecture specific headers
-  - `kernel/`
-    - `kernel.c`: Kernel main function
-  - `heap/`
-    - [Heap]((http://www.jamesmolloy.co.uk/tutorial_html/7.-The%20Heap.html)) manager, allowing dynamic memory allocation and [virtual memory manager](https://wiki.osdev.org/Writing_a_memory_manager), implemented as a sorted linked list of free memory blocks with memory header and footer inspired by [INWOX](https://github.com/qvjp/INWOX/wiki/010-malloc()-&-free())
-  - `memory_bitmap/`
-    - A physical memory manager / page frame allocator implemented as a [bitmap](http://www.jamesmolloy.co.uk/tutorial_html/6.-Paging.html).
+  - `block_io/`
+    - Abstract layer for block storage
+  - `console/`
+    - A console/terminal emulator implemented a subset of VT-100 ASCII escape control sequence.
   - `elf/`
     - ELF binary parsing and loading
-  - `tar/`
-    - Tar ball parsing, used to implement a simple US-TAR read-only filesystem
+  - `fat/`
+    - A full functioning FAT32 filesystem. See [Simple-FS](https://github.com/httpe/simple-fs)
+  - `heap/`
+    - [Heap]((http://www.jamesmolloy.co.uk/tutorial_html/7.-The%20Heap.html)) manager, allowing dynamic memory allocation and [virtual memory manager](https://wiki.osdev.org/Writing_a_memory_manager), implemented as a sorted linked list of free memory blocks with memory header and footer inspired by [INWOX](https://github.com/qvjp/INWOX/wiki/010-malloc()-&-free())
+  - `include/`
+    - Headers will be copied by `kernel`'s `make install` to `sysroot/` under project root folder, which will ultimately be packed into the disk image `bootable_kernel.bin` by `bootloader`'s Makefile, i.e. the headers will be shipped along with the kernel binary executable.
+    - `arch/i386/`: Architecture specific headers
+      - `port_io/`: Inline assembly for port I/O, e.g. inb/outb ([Examples](https://wiki.osdev.org/Inline_Assembly/Examples))
+  - `kernel/`
+    - `kernel.c`: Kernel main function
+  - `memory_bitmap/`
+    - A physical memory manager / page frame allocator implemented as a [bitmap](http://www.jamesmolloy.co.uk/tutorial_html/6.-Paging.html).
   - `panic/`
-    - Utility function to raise kernel panic
+    - Utility functions to raise kernel panic
+  - `tar/`
+    - A simple US-TAR (tar ball) based read-only filesystem
+  - `vfs/`
+    - Virtual file system. An abstract layer to support mounting multiple device under a single rooted file tree.
   - `arch/i386/`: Architecture specific implementations
+    - `arch_init/`: Collection of architecture specific initializations
+    - `ata/`: 28 bit ATA PIO disk driver
     - `boot`:
       - `boot.asm`:
         - Intel/NASM syntax version of Meaty skeleton's boot.S
         - Plus initializing paging and [higher half kernel](https://wiki.osdev.org/Higher_Half_x86_Bare_Bones)
       - `gdt.asm`: Same as bootloader's flat mode GDT
+    - `cpu/`: CPU related operations lick enable/disable interrupts
+    - `crt/`: [C program initialization](https://wiki.osdev.org/Calling_Global_Constructors#Using_crti.o.2C_crtbegin.o.2C_crtend.o.2C_and_crtn.o_in_a_Kernel) components for the kernel
     - Interrupt related
       - `idt/`: [IDT](https://wiki.osdev.org/IDT) initialization and interrupt gate installation
       - `isr/`: [CPU exceptions](https://wiki.osdev.org/Exceptions) and IRQs handlers ([ISRs](https://wiki.osdev.org/Interrupt_Service_Routines))
       - `pic/`: [PIC](https://wiki.osdev.org/PIC) utility for IRQs
-    - `port_io/`: Inline assembly for port I/O, e.g. inb/outb ([Examples](https://wiki.osdev.org/Inline_Assembly/Examples))
     - `keyboard/`: Keyboard driver
-    - `timer/`: [PIT](https://wiki.osdev.org/PIT) timer (used for process switching)
-    - `tty/` and `vga.h`: VGA Text Mode driver
-    - `arch_init/`: Collection of architecture specific initializations
-    - `paging/` and `memory_bitmap.*`: Paging code
-    - `serial/`: [Serial port I/O](https://wiki.osdev.org/Serial_ports) utilities. We output all printing though serial port so QEMU can export the printed content to a file `serial_port_output.txt`.
+    - `paging/`: Virtual memory management and paging
     - `process/`:
       - `process.c`: Process management (Ref: [xv6/proc](https://github.com/mit-pdos/xv6-public/blob/master/proc.c))
       - `start_init.asm`: First usage mode program to run, will call SYS_EXEC to replace itself with `init.elf`
       - `switch_kernel_context.asm`: Used to switch between CPU context between scheduler (context which we initially boot into) and individual process's kernel code (e.g. system call handler)
+    - `serial/`: [Serial port I/O](https://wiki.osdev.org/Serial_ports) utilities. We output all printing though serial port so QEMU can export the printed content to a file `serial_port_output.txt`.
+    - `syscall/`: Wrapper for various system calls, mostly just recovering the argument from the stack.
+    - `time/`: [RTC](https://wiki.osdev.org/RTC) clock
+    - `timer/`: [PIT](https://wiki.osdev.org/PIT) timer (used for process switching)
+    - `tty/` and `vga.h`: VGA Text Mode driver
 
 - `libc/`: Progressive implementation of the standard C library
   - Mostly from Meaty Skeleton, and some are from Xv6.
+  - Will be minimum in terms of feature set, since more complicated user space programs will be supported by ported external C library, like newlib.
 
 ### Applications
 
@@ -284,7 +300,13 @@ User space applications to be compiled by os specific tool-chain and use Newlib 
   - `init/`
     - Compile to the first user space program to be ran (`init.elf`), perform user space initialization (like preparing for stdin/stdout/stderr) and then fork-exec shell. Currently also be used to test several user space features.
   - `shell/`
-    - Shell, under development.
+    - Shell, supporting commands include
+      - `ls`
+      - `cd`
+      - and program execution
+  - `editor/`
+    - A port from the Kilo project
+    - A simple editor with basic editing feature and C syntax highlighting
 
 ## Reference
 
@@ -303,6 +325,8 @@ Multiple tutorials have been referenced in the development of this project.
 1. [The little book about OS development](http://littleosbook.github.io/#) and [Writing a Simple Operating System - from Scratch](https://www.cs.bham.ac.uk/~exr/lectures/opsys/10_11/lectures/os-dev.pdf). They provide explanation to exemplary code for many OS concepts. They can be used as a complement to the OSDev Wiki.
 
 1. [MIT 6.S081 Operating System Engineering Course](https://pdos.csail.mit.edu/6.828/2020/schedule.html). This course provides lecture video this year so it can be seen as a good OS MOOC. It is based on a very popular educational system Xv6, which is a full functioning multi-process OS implemented within 10K lines of code. It will serve as our reference implementation. The course switched to RISC-V architecture in 2019 ([Xv6-RISC](https://github.com/mit-pdos/xv6-riscv)), however for our purpose, the [x86 version](https://github.com/mit-pdos/xv6-public) will be more useful. It also provides a [functional classification](https://pdos.csail.mit.edu/6.828/2018/xv6/xv6-rev10.pdf) for each file in the x86 version repo.
+
+1. [Build Your Own Text Editor](https://viewsourcecode.org/snaptoken/kilo/index.html) A very good step by step tutorial on how to build a text application like an editor from scratch. The final product, Kilo, is around 1000 lines of code, and includes features like basic text editing, searching and even C syntax highlighting.
 
 ### Documentation
 
