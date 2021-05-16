@@ -256,6 +256,7 @@ int fork()
 {
     proc* p_new = create_process();
     proc* p_curr = curr_proc();
+    // Duplicate user space content, kernel space will be mapped in scheduler
     p_new->page_dir = copy_user_space(p_curr->page_dir);
     p_new->parent = p_curr;
     p_new->size = p_curr->size;
@@ -407,16 +408,16 @@ int exec(const char* path, char* const * argv)
     fs_stat st = {0};
     int fs_res = fs_getattr_path(abs_path, &st);
     if(fs_res < 0) {
-        printf("SYS_EXEC: Cannot open the file\n");
+        printf("exec: Cannot open the file\n");
         free(abs_path);
         return -1;
     }
     if(st.size == 0) {
-        printf("SYS_EXEC: File has size zero\n");
+        printf("exec: File has size zero\n");
         free(abs_path);
         return -1;
     }
-    printf("SYS_EXEC: program size: %u\n", st.size);
+    printf("exec: program size: %u\n", st.size);
 
     int fd = fs_open(abs_path, 0);
     if(fd < 0) {
@@ -433,7 +434,7 @@ int exec(const char* path, char* const * argv)
     
 
     if (!is_elf(file_buffer)) {
-        printf("SYS_EXEC: Invalid program\n");
+        printf("exec: Invalid program\n");
         free(file_buffer);
         free(abs_path);
         return -1;

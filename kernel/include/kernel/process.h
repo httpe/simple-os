@@ -2,8 +2,8 @@
 #define _KERNEL_PROCESS_H
 
 #include <kernel/paging.h>
-#include <arch/i386/kernel/isr.h>
 #include <kernel/file_system.h>
+#include <arch/i386/kernel/isr.h>
 
 // maximum number of processes
 #define N_PROCESS        64  
