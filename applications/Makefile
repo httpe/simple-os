@@ -23,6 +23,7 @@ shell/shell.elf \
 editor/editor.elf \
 ls/ls.elf \
 rm/rm.elf \
+mv/mv.elf \
 
 .PHONY: all clean install
 # .SUFFIXES: .o .c .S
