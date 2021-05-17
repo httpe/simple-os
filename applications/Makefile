@@ -21,7 +21,7 @@ BINARIES=\
 init/init.elf \
 shell/shell.elf \
 editor/editor.elf \
-
+ls/ls.elf \
 
 .PHONY: all clean install
 # .SUFFIXES: .o .c .S
