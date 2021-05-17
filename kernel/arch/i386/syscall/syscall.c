@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <syscall.h>
 #include <common.h>
+#include <kernel/errno.h>
 #include <kernel/panic.h>
 #include <kernel/vfs.h>
 #include <kernel/process.h>
@@ -28,7 +29,7 @@ int sys_sbrk(trapframe* r)
     uint32_t orig_size = p->size;
     uint32_t new_size = p->size + delta;
     if(new_size < p->orig_size || new_size < p->orig_size) {
-        return -1;
+        return -EINVAL;
     } 
     p->size = new_size;
     uint32_t orig_last_pg_idx = PAGE_INDEX_FROM_VADDR(orig_size - 1);
@@ -81,7 +82,7 @@ int sys_open(trapframe* r)
     int32_t flags = *(int*) (r->esp + 8);
     char* abs_path = get_abs_path(path);
     if(abs_path == NULL) {
-        return -1;
+        return -ENOENT;
     }
     int res = fs_open(abs_path, flags);
     free(abs_path);
@@ -130,7 +131,7 @@ int sys_getattr_path(trapframe* r)
     struct fs_stat* st = *(struct fs_stat**) (r->esp + 8);
     char* abs_path = get_abs_path(path);
     if(abs_path == NULL) {
-        return -1;
+        return -ENOENT;
     }
     int res = fs_getattr_path(abs_path, st);
     free(abs_path);
@@ -150,7 +151,7 @@ int sys_truncate_path(trapframe* r)
     uint size = *(uint*) (r->esp + 8);
     char* abs_path = get_abs_path(path);
     if(abs_path == NULL) {
-        return -1;
+        return -ENOENT;
     }
     int res = fs_truncate_path(abs_path, size);
     free(abs_path);
@@ -183,7 +184,7 @@ int sys_unlink(trapframe* r)
     char* path = *(char**) (r->esp + 4);
     char* abs_path = get_abs_path(path);
     if(abs_path == NULL) {
-        return -1;
+        return -ENOENT;
     }
     int res = fs_unlink(abs_path);
     free(abs_path);
@@ -197,11 +198,11 @@ int sys_link(trapframe* r)
 
     char* old_abs_path = get_abs_path(old_path);
     if(old_abs_path == NULL) {
-        return -1;
+        return -ENOENT;
     }
     char* new_abs_path = get_abs_path(new_path);
     if(new_abs_path == NULL) {
-        return -1;
+        return -ENOENT;
     }
 
     int res = fs_link(old_abs_path, new_abs_path);
@@ -219,11 +220,11 @@ int sys_rename(trapframe* r)
 
     char* old_abs_path = get_abs_path(old_path);
     if(old_abs_path == NULL) {
-        return -1;
+        return -ENOENT;
     }
     char* new_abs_path = get_abs_path(new_path);
     if(new_abs_path == NULL) {
-        return -1;
+        return -ENOENT;
     }
 
     uint flags = *(uint*) (r->esp + 12);
@@ -244,7 +245,7 @@ int sys_readdir(trapframe* r)
 
     char* abs_path = get_abs_path(path);
     if(abs_path == NULL) {
-        return -1;
+        return -ENOENT;
     }
     
     int res = fs_readdir(abs_path, entry_offset, buf, buf_size);
@@ -270,6 +271,27 @@ int sys_test(trapframe* r)
 {
     UNUSED_ARG(r);
     return 0;
+}
+
+int sys_mkdir(trapframe* r)
+{
+    const char* path = *(const char**) (r->esp + 4);
+    char* abs_path = get_abs_path(path);
+    if(abs_path == NULL) {
+        return -ENOENT;
+    }
+    uint mode = *(uint*) (r->esp + 8);
+    return fs_mkdir(abs_path, mode);
+}
+
+int sys_rmdir(trapframe* r)
+{
+    const char* path = *(const char**) (r->esp + 4);
+    char* abs_path = get_abs_path(path);
+    if(abs_path == NULL) {
+        return -ENOENT;
+    }
+    return fs_rmdir(abs_path);
 }
 
 void syscall_handler(trapframe* r)
@@ -359,6 +381,12 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_TRUNCATE_FD:
         r->eax = sys_truncate_fd(r);
+        break;
+    case SYS_MKDIR:
+        r->eax = sys_mkdir(r);
+        break;
+    case SYS_RMDIR:
+        r->eax = sys_rmdir(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);

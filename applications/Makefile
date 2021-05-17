@@ -24,6 +24,8 @@ editor/editor.elf \
 ls/ls.elf \
 rm/rm.elf \
 mv/mv.elf \
+mkdir/mkdir.elf \
+rmdir/rmdir.elf \
 
 .PHONY: all clean install
 # .SUFFIXES: .o .c .S

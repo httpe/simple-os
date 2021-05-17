@@ -30,6 +30,8 @@
 #define SYS_GETCWD 23
 #define SYS_TRUNCATE_PATH 24
 #define SYS_TRUNCATE_FD 25
+#define SYS_MKDIR 26
+#define SYS_RMDIR 27
 
 // defined in interrupt.asm
 extern void int88();
