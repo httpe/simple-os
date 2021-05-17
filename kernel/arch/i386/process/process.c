@@ -222,7 +222,7 @@ void yield()
 int wait(int* wait_status)
 {
     proc* p = curr_proc();
-    printf("PID %u waiting\n", curr_proc()->pid);
+    // printf("PID %u waiting\n", curr_proc()->pid);
     bool no_child = true;
     while(1) {
         for(int i=0; i<N_PROCESS; i++) {
@@ -239,7 +239,7 @@ int wait(int* wait_status)
                     free_user_space(child->page_dir);
                     *child = (proc) {0};
                     child->state = PROC_STATE_UNUSED;
-                    printf("PID %u waiting: zombie child (PID %u) found\n", curr_proc()->pid, child_pid);
+                    // printf("PID %u waiting: zombie child (PID %u) found\n", curr_proc()->pid, child_pid);
                     return child_pid;
                 }
             }
@@ -417,7 +417,7 @@ int exec(const char* path, char* const * argv)
         free(abs_path);
         return -1;
     }
-    printf("exec: program size: %u\n", st.size);
+    // printf("exec: program size: %u\n", st.size);
 
     int fd = fs_open(abs_path, 0);
     if(fd < 0) {

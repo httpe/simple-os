@@ -65,7 +65,7 @@ int sys_fork(trapframe* r)
 void sys_exit(trapframe* r)
 {
     int32_t exit_code = *(int32_t*) (r->esp + 4);
-    printf("PID %u exiting with code %d\n", curr_proc()->pid, exit_code);
+    // printf("PID %u exiting with code %d\n", curr_proc()->pid, exit_code);
     exit(exit_code);
 }
 
