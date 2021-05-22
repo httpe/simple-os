@@ -52,6 +52,11 @@ ln -s i686-elf-ranlib i686-simpleos-ranlib
 These specific versions are required by Newlib 4.1.0
 
 ```bash
+cd $CURR_DIR
+
+# Need to have autoconf installed in the host system
+sudo apt update
+sudo apt install autoconf
 
 curl https://ftp.gnu.org/gnu/automake/automake-1.11.6.tar.gz --output automake-1.11.6.tar.gz
 curl https://ftp.gnu.org/gnu/autoconf/autoconf-2.68.tar.gz --output autoconf-2.68.tar.gz
