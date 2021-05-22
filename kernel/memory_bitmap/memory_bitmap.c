@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <kernel/multiboot.h>
-
+#include <kernel/panic.h>
 #include <kernel/memory_bitmap.h>
 
 // Memory bitmap
@@ -11,17 +11,21 @@
 extern char KERNEL_PHYSICAL_START[], KERNEL_PHYSICAL_END[];
 
 // A bitset of frames - used or free.
-uint32_t frames[N_FRAMES];
+static uint32_t frames[ARRAY_INDEX_FROM_FRAME_INDEX(N_FRAMES)];
 
-// Static function to set a bit in the frames bitset
+// Last known allocated frame, not necessarily correct 
+static uint32_t last_allocated_frame_idx = 0;
+
+// Set a bit in the frames bitset
 void set_frame(uint32_t frame_idx) {
     // uint32_t frame_idx = FRAME_INDEX_FROM_ADDR(physical_addr);
     uint32_t idx = ARRAY_INDEX_FROM_FRAME_INDEX(frame_idx);
     uint32_t off = BIT_OFFSET_FROM_FRAME_INDEX(frame_idx);
     frames[idx] |= (0x1 << off);
+    last_allocated_frame_idx = frame_idx;
 }
 
-// Static function to clear a bit in the frames bitset
+// Clear a bit in the frames bitset
 void clear_frame(uint32_t frame_idx) {
     // uint32_t frame_idx = FRAME_INDEX_FROM_ADDR(physical_addr);
     uint32_t idx = ARRAY_INDEX_FROM_FRAME_INDEX(frame_idx);
@@ -29,7 +33,7 @@ void clear_frame(uint32_t frame_idx) {
     frames[idx] &= ~(0x1 << off);
 }
 
-// Static function to test if a bit is set.
+// Test if a bit is set.
 uint32_t test_frame(uint32_t frame_idx) {
     // uint32_t frame_idx = FRAME_INDEX_FROM_ADDR(physical_addr);
     uint32_t idx = ARRAY_INDEX_FROM_FRAME_INDEX(frame_idx);
@@ -37,10 +41,12 @@ uint32_t test_frame(uint32_t frame_idx) {
     return (frames[idx] & (0x1 << off));
 }
 
-// Static function to find the first free frame.
+// Find the first free frame.
 uint32_t first_free_frame() {
-    uint32_t i, j;
-    for (i = 0; i < N_FRAMES; i++)     {
+    uint32_t frame_idx = (last_allocated_frame_idx + 1) % N_FRAMES;
+    for(; frame_idx != last_allocated_frame_idx; frame_idx = (frame_idx + 1) % N_FRAMES) {
+        uint32_t i = ARRAY_INDEX_FROM_FRAME_INDEX(frame_idx);
+        uint32_t j = BIT_OFFSET_FROM_FRAME_INDEX(frame_idx);
         if (frames[i] != 0xFFFFFFFF) // nothing free, exit early.
         {
             // at least one bit is free here.
@@ -53,12 +59,11 @@ uint32_t first_free_frame() {
         }
     }
 
-    printf("KERNEL PANIC: No free frame!\n");
-    while (1);
+    PANIC("No free frame!");
 }
 
 void initialize_bitmap(uint32_t mbt_physical_addr) {
-    for (int i = 0;i < N_FRAMES;i++) {
+    for (int i = 0;i < ARRAY_INDEX_FROM_FRAME_INDEX(N_FRAMES);i++) {
         // Initialize all memory to be used/reserved, we will clear for available memory below
         frames[i] = 0xFFFFFFFF;
     }
