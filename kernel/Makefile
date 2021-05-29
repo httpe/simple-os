@@ -88,6 +88,7 @@ install: install-headers install-kernel install-reserved-path
 install-headers:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
 	cp -Rp include/. $(DESTDIR)$(INCLUDEDIR)/.
+	mkdir -p $(TOOL_CHAIN_ROOT)$(INCLUDEDIR)
 	cp -Rp include/. $(TOOL_CHAIN_ROOT)$(INCLUDEDIR)/.
 	
 install-kernel: simple_os.kernel 

@@ -83,13 +83,13 @@ A one-stop shop for OS development is the [OsDev Wiki](https://wiki.osdev.org/Ma
 
 To compile this project, you need to install the following dependencies:
 
-1. [NASM Assembler](https://www.nasm.us/)
+1. [NASM Assembler](https://www.nasm.us/). For Ubuntu 20.04 LTS, run `sudo apt-get install nasm`.
+
+1. [QEMU](https://www.qemu.org/) Emulator: We will use QEMU to emulate our system, avoiding restarting computer again and again just to test the system. For Ubuntu 20.04 LTS, run `sudo apt-get install qemu-system`.
 
 1. GCC & Binutils for x86: It is recommended to [compile a cross-compiler for your own](https://wiki.osdev.org/GCC_Cross-Compiler). Your system shall also have GCC tool chain installed, since we will use utility like GNU Make. For Ubuntu 20.04 LTS, you can try running `build_cross_compiler.sh`
 
 1. Hosted GCC & Binutils and Newlib for Simple-OS: We will need the specialized tool-chain and Newlib for those user space programs including init and shell. Please refer to `HostedToolchain.md` on how to build them.
-
-1. [QEMU](https://www.qemu.org/) Emulator: We will use QEMU to emulate our system, avoiding restarting computer again and again just to test the system.
 
 1. (Optional) [VSCode](https://code.visualstudio.com/): We provide some integration of the building/debugging process with VSCode, but it is optional. To debug using VSCode, you need to install the extension `Native Debug`.
 
@@ -99,34 +99,36 @@ To compile this project, you need to install the following dependencies:
 
 ### Configure
 
-Firstly, you need to change the `CROSSCOMPILERBIN` variable in `config.sh` to point it to the folder containing the cross-compiling GCC/Binutils binaries (see *Dependencies* section). Note that the env variable `AS` is assumed to be the system wide NASM assembler, if not set, `nasm` is used. Also, you need to make sure the hosted tool-chain and Newlib is compiled and installed to the location indicated by `TOOL_CHAIN_ROOT` variable in `config.sh` for the user space programs (those under `applications`) to be compiled successfully.
+Firstly, you need to change the `CROSSCOMPILERBIN` variable in `config.sh` to point it to the folder containing the cross-compiling GCC/Binutils binaries (see *Dependencies* section). If you use the `build_cross_compiler.sh` script to build the cross compiler, you can use the default value there.
 
-Here we assume a Windows + [WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10) environment. We install QEMU in Windows, because QEMU needs GTK and WSL graphical support is limited.
+Note that the env variable `AS` is assumed to be the system wide NASM assembler, if not set, `nasm` is used. 
+
+Also, you need to make sure the hosted tool-chain and Newlib is compiled and installed to the location indicated by `TOOL_CHAIN_ROOT` variable in `config.sh` for the user space programs (those under `applications`) to be compiled successfully. If you followed `HostedToolchain.md` exactly, you can use the default value.
 
 ### Compile
 
-Then you can **build** the project by running in WSL:
+Once you have the cross-compiler and hosted tool-chain ready, you can **build** Simple-OS by running:
 
 ```bash
 ./clean.sh
 ./build.sh
 ```
 
-If compile finish successfully, `bootable_kernel.bin` will be generated.
+If compile finish successfully, `bootable_kernel.bin` will be generated under the source root dir.
 
 ### Emulate
 
-You can then test it using QEMU.
-
-We can run the compiled kernel through QEMU in WSL:
+You can test run the compiled kernel by QEMU:
 
 ```bash
 ./qemu.sh
 ```
 
-If the environment is detected to be WSL, the script will run the Windows version of QEMU.
+Note if the environment is detected to be WSL, the script will run the Windows version of QEMU.
 
-Anything written to the serial port will be logged in `serial_port_output.txt`.
+Anything written to the serial port (all outputs to the screen will be copied to the serial port by the kernel) will be logged in `serial_port_output.txt`.
+
+The script also check if there is a `testfs.fat` image file under root dir, if so, it will mount it as `hdb` when starting QEMU. This file should be a hard disk image of a FAT-32 file system. If `hdb` is present, Simple-OS will try to mount it under `/home`.
 
 ### Debug
 
@@ -156,13 +158,17 @@ This trick is also describe in the [os-tutorial](https://github.com/cfenollosa/o
 
 ### VSCode Integration
 
-Better still, it is possible to do all above graphically in VSCode.
+Better still, it is possible to do all the above graphically in VSCode.
 
 `.vscode/tasks.json` provide integrated Clean/Build/Emulate task.
 
 You can trigger them in Command Palette (Ctrl+Shift+P).
 
-`.vscode/launch.json` provides the debug gdb debug profiles. Note  the "Native Debug" extension is required to debug in VSCode.
+`.vscode/launch.json` provides the debug gdb debug profiles.
+
+VSCode extensions required:
+1. [Native Debug](https://marketplace.visualstudio.com/items?itemName=webfreak.debug) extension is required to debug remotely through SSH.
+1. To run QEMU through SSH, VSCode extension [Remote X11](https://marketplace.visualstudio.com/items?itemName=spadin.remote-x11) and [Remote X11 (SSH)](https://marketplace.visualstudio.com/items?itemName=spadin.remote-x11-ssh) are required.If you are using Windows, then a local X-window server is also needed. You can use [vcxsrv](https://sourceforge.net/projects/vcxsrv/).
 
 With all of the setup, the debugging process is streamlined to:
 

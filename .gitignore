@@ -14,3 +14,4 @@ shell
 serial_port_output.txt
 *.fat
 toolchain/
+build-toolchain/
