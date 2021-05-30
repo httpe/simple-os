@@ -59,8 +59,8 @@ typedef struct page_directory_entry
 
 // Declare internal utility functions
 static uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, bool is_kernel);
-static uint32_t map_page(pde* page_dir, uint32_t page_index, uint32_t frame_index, bool is_kernel, bool is_writeable);
-static uint32_t unmap_page(pde* page_dir, uint32_t page_index);
+static uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32_t* frames,  bool is_kernel, bool is_writeable);
+static uint unmap_pages_from(pde* page_dir, uint page_index, uint page_count, bool free_frame, bool skip_unmapped);
 
 
 // Load GDT
@@ -141,17 +141,43 @@ pde* curr_page_dir()
     return PAGE_DIR_PTR;
 }
 
-// map page table's physical frame to a page and return as pointer, need to unmap by return_page_table
-static page_t* get_page_table(pde* page_dir, uint32_t page_dir_idx)
+static void alloc_page_table(pde* page_dir, uint page_dir_idx)
 {
-    PANIC_ASSERT(page_dir[page_dir_idx].present);
+    PANIC_ASSERT(!page_dir[page_dir_idx].present);
+
+    uint32_t  page_table_frame = first_free_frame();
+    set_frame(page_table_frame);
+
+    pde page_dir_entry = { .present = 1, .rw = 1, .user = 1, .page_table_frame = page_table_frame };
+    page_dir[page_dir_idx] = page_dir_entry;
+    if(is_curr_page_dir(page_dir)) {
+        switch_page_directory(PAGE_DIR_PHYSICAL_ADDR);  // flush
+    }
+}
+
+static page_t* get_page_table(pde* page_dir, uint32_t page_dir_idx, bool allow_alloc)
+{
+    PANIC_ASSERT(page_dir_idx < PAGE_DIR_SIZE);
+    PANIC_ASSERT(page_dir[page_dir_idx].present || allow_alloc);
+
+    bool new_page_table = false;
+    if(!page_dir[page_dir_idx].present && allow_alloc) {
+        alloc_page_table(page_dir, page_dir_idx);
+        new_page_table = true;
+    }
+
     page_t* page_table;
     if(is_curr_page_dir(page_dir)) {
         page_table = PAGE_TABLE_PTR(page_dir_idx);
     } else {
         uint32_t page_table_frame = page_dir[page_dir_idx].page_table_frame;
         uint32_t page_table_page_index = find_contiguous_free_pages(curr_page_dir(), 1, true);
-        page_table = (page_t*) map_page(curr_page_dir(), page_table_page_index, page_table_frame, true, true);
+        map_pages_at(curr_page_dir(), page_table_page_index, 1, &page_table_frame, true, true);
+        page_table = (page_t*) VADDR_FROM_PAGE_INDEX(page_table_page_index);
+    }
+
+    if(new_page_table) {
+        memset(page_table, 0, sizeof(*page_table)*PAGE_TABLE_SIZE);
     }
 
     return page_table;
@@ -161,7 +187,7 @@ static page_t* get_page_table(pde* page_dir, uint32_t page_dir_idx)
 static void return_page_table(pde* page_dir, page_t* page_table)
 {
     if(!is_curr_page_dir(page_dir)) {
-        unmap_page(curr_page_dir(), PAGE_INDEX_FROM_VADDR((uint32_t) page_table));
+        unmap_pages_from(curr_page_dir(), PAGE_INDEX_FROM_VADDR((uint32_t) page_table), 1, false, false);
     }
 }
 
@@ -194,7 +220,7 @@ static uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, boo
             page_table_idx = 0;
         }
         for (; page_table_idx < PAGE_TABLE_SIZE; page_table_idx++) {
-            page_t* page_table = get_page_table(page_dir, page_dir_idx);
+            page_t* page_table = get_page_table(page_dir, page_dir_idx, false);
             if (page_table[page_table_idx].present == 0) {
                 if (contiguous_page_count + 1 >= page_count) {
                     return_page_table(page_dir, page_table);
@@ -212,78 +238,198 @@ static uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, boo
 
 }
 
-// return: physical frame index unmapped
-static uint32_t unmap_page(pde* page_dir, uint32_t page_index)
+// Map or allocate pages
+//@param frames frame index arrary of length page_count, map to these frames. If NULL, allocate new frames
+//@return number of frames mapped
+static uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32_t* frames,  bool is_kernel, bool is_writeable)
 {
-    uint32_t vaddr = VADDR_FROM_PAGE_INDEX(page_index);
-    uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
-    uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
-
-    page_t* page_table = get_page_table(page_dir, page_dir_idx);
-
-    page_t* page = &page_table[page_table_idx];
-    PANIC_ASSERT(page->present);
-
-    page->present = 0;
-    uint32_t page_frame = page->frame;
-    
-    return_page_table(page_dir, page_table);
-
-    if(is_curr_page_dir(page_dir)) {
-        flush_tlb(vaddr);   // flush
-        // printf("Page unmapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, page->frame);
-    } else {
-        // printf("Foreign Page unmapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, page->frame);
+    if(page_count == 0) {
+        return 0;
     }
 
-    return page_frame;
+    size_t page_allocated = 0;
+
+    uint page_dir_idx = page_index / PAGE_TABLE_SIZE;
+    uint page_table_idx = page_index % PAGE_TABLE_SIZE;
+    uint kernel_page_dir_idx = PAGE_INDEX_FROM_VADDR((uint) MAP_MEM_PA_ZERO_TO) / PAGE_TABLE_SIZE;
+
+    PANIC_ASSERT(page_table_idx < PAGE_TABLE_SIZE);
+    PANIC_ASSERT((page_dir_idx < kernel_page_dir_idx) ^ is_kernel);
+    page_t* page_table = get_page_table(page_dir, page_dir_idx, true);
+
+    while(page_allocated < page_count) {
+        page_t old_pte = page_table[page_table_idx];
+
+        // Make sure the page hasn't been mapped to any physical memory
+        PANIC_ASSERT(!old_pte.present);
+
+        uint frame_index;
+        if(frames == NULL) {
+            frame_index = first_free_frame();
+            set_frame(frame_index);
+        } else {
+            frame_index = *frames++;
+            PANIC_ASSERT(test_frame(frame_index));
+        }
+        
+        page_t new_pte = { .present = 1, .user = !is_kernel, .rw = is_writeable, .frame = frame_index };
+        page_table[page_table_idx] = new_pte;
+
+        if(is_curr_page_dir(page_dir)) {
+            flush_tlb(VADDR_FROM_PAGE_INDEX(page_table_idx + page_dir_idx*PAGE_TABLE_SIZE));
+            // printf("Page Mapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, frame_index);
+        } else {
+            // printf("Foreign Page Mapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, frame_index);
+        }
+
+        page_allocated++;
+
+        page_table_idx++;
+        if(page_table_idx >= PAGE_TABLE_SIZE) {
+            return_page_table(page_dir, page_table);
+            page_table_idx = 0;
+            page_dir_idx++;
+            PANIC_ASSERT(page_dir_idx < PAGE_DIR_SIZE);
+            page_table = get_page_table(page_dir, page_dir_idx, true);
+        }
+    }
+
+    return page_allocated;
 }
 
-// return: mapped vaddr
-static uint32_t map_page(pde* page_dir, uint32_t page_index, uint32_t frame_index, bool is_kernel, bool is_writeable)
+// Unmap/Deallocate pages
+//@param free_frame if true, deallocate physical frames, otherwise unmap only
+//@param skip_unmapped if false, kernel panic if trying to unmap page not present
+//@return number of pages unmapped
+static uint unmap_pages_from(pde* page_dir, uint page_index, uint page_count, bool free_frame, bool skip_unmapped)
 {
-    uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
-    uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
+    if(page_count == 0) {
+        return 0;
+    }
+    
+    size_t page_deallocated = 0;
 
-    uint32_t kernel_page_dir_idx = PAGE_INDEX_FROM_VADDR((uint32_t) MAP_MEM_PA_ZERO_TO) / PAGE_TABLE_SIZE;
-    PANIC_ASSERT((page_dir_idx < kernel_page_dir_idx) ^ is_kernel);
+    uint page_dir_idx = page_index / PAGE_TABLE_SIZE;
+    uint page_table_idx = page_index % PAGE_TABLE_SIZE;
 
-    set_frame(frame_index);                    // ensure is frame is marked used
+    PANIC_ASSERT(page_dir_idx < PAGE_DIR_SIZE);
+    page_t* page_table = get_page_table(page_dir, page_dir_idx, true);
 
-    page_t* page_table;
-    if (!page_dir[page_dir_idx].present) {
-        // Page table not allocated, create it first
-        uint32_t  page_table_frame = first_free_frame(); // idx is now the index of the first free frame.
-        set_frame(page_table_frame);                    // this frame is now ours!
-        pde page_dir_entry = { .present = 1, .rw = 1, .user = 1, .page_table_frame = page_table_frame };
-        page_dir[page_dir_idx] = page_dir_entry;
-        if(is_curr_page_dir(page_dir)) {
-            switch_page_directory(PAGE_DIR_PHYSICAL_ADDR);  // flush
+    while(page_deallocated < page_count) {
+
+        PANIC_ASSERT(skip_unmapped || page_table[page_table_idx].present);
+
+        if(page_table[page_table_idx].present) {
+            if(free_frame) {
+                clear_frame(page_table[page_table_idx].frame);
+            }
+            memset(&page_table[page_table_idx], 0, sizeof(*page_table));
+
+            if(is_curr_page_dir(page_dir)) {
+                flush_tlb(VADDR_FROM_PAGE_INDEX(page_table_idx + page_dir_idx*PAGE_TABLE_SIZE));
+                // printf("Page Unmapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, frame_index);
+            } else {
+                // printf("Foreign Page Unmapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, frame_index);
+            }
         }
-        // new_page_table = true;
-        page_table = get_page_table(page_dir, page_dir_idx);
-        memset(page_table, 0, sizeof(page_t) * PAGE_TABLE_SIZE);
-    } else {
-        page_table = get_page_table(page_dir, page_dir_idx);
+
+        page_deallocated++;
+
+        page_table_idx++;
+        if(page_table_idx >= PAGE_TABLE_SIZE) {
+            return_page_table(page_dir, page_table);
+            page_table_idx = 0;
+            page_dir_idx++;
+            PANIC_ASSERT(page_dir_idx < PAGE_DIR_SIZE);
+            page_table = get_page_table(page_dir, page_dir_idx, true);
+        }
     }
 
-    page_t old_page = page_table[page_table_idx];
-    PANIC_ASSERT(!old_page.present);
-    // Not present means it hasn't been mapped to physical space
-    page_t page = { .present = 1, .user = !is_kernel, .rw = is_writeable, .frame = frame_index };
-    page_table[page_table_idx] = page;
+    return page_deallocated;
+}
 
-    return_page_table(page_dir, page_table);
-
-    if(is_curr_page_dir(page_dir)) {
-        flush_tlb(VADDR_FROM_PAGE_INDEX(page_index));
-        // printf("Page frame mapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, frame_index);
-    } else {
-        // printf("Foreign Page frame mapped: PD[%d]:PT[%d]:Frame[0x%x]\n", page_dir_idx, page_table_idx, frame_index);
+// Link two virtual address space pages between page dirs by with the same physical memory space
+// Find a continuous virtual space in pd_target and map to the physical frames under [vaddr,vaddr+size-1] vaddr space in pd_source
+// If the virtual space in pd_source is not mapped, allocate frame & map before linking
+//@return vaddr of beginning of the linked space in pd_target
+uint32_t link_pages_between(pde* pd_source, uint32_t vaddr, uint32_t size, pde* pd_target, bool alloc_source_rw, bool target_rw)
+{
+    PANIC_ASSERT(pd_source != pd_target);
+    
+    // do not allow linking to kernel space (kernel shall always be linked already)
+    if(!(vaddr < (uint32_t) MAP_MEM_PA_ZERO_TO && vaddr + size - 1 < (uint32_t) MAP_MEM_PA_ZERO_TO)) {
+        PANIC_ASSERT(vaddr < (uint32_t) MAP_MEM_PA_ZERO_TO && vaddr + size - 1 < (uint32_t) MAP_MEM_PA_ZERO_TO);
+    }
+    
+    uint page_idx_source = PAGE_INDEX_FROM_VADDR(vaddr);
+    uint offset = vaddr - VADDR_FROM_PAGE_INDEX(page_idx_source);
+    
+    uint page_count = PAGE_COUNT_FROM_BYTES(offset + size);
+    uint page_idx_target = find_contiguous_free_pages(pd_target, page_count, false);
+    
+    if(page_count == 0) {
+        return 0;
     }
 
-    return VADDR_FROM_PAGE_INDEX(page_index);
+    uint dir_idx_source = page_idx_source / PAGE_TABLE_SIZE;
+    uint table_idx_source = page_idx_source % PAGE_TABLE_SIZE;
+    uint dir_idx_target = page_idx_target / PAGE_TABLE_SIZE;
+    uint table_idx_target = page_idx_target % PAGE_TABLE_SIZE;
 
+    size_t page_linked = 0;
+
+    PANIC_ASSERT(dir_idx_source < PAGE_DIR_SIZE);
+    PANIC_ASSERT(dir_idx_target < PAGE_DIR_SIZE);
+    page_t* table_source = get_page_table(pd_source, dir_idx_source, true);
+    page_t* table_target = get_page_table(pd_target, dir_idx_target, true);
+
+    while(page_linked < page_count) {
+        page_t* pte_source = &table_source[table_idx_source];
+
+        uint frame_index;
+        if(!pte_source->present) {
+            frame_index = first_free_frame();
+            set_frame(frame_index);
+            *pte_source = (page_t) {.present = 1, .user = true, .rw = alloc_source_rw, .frame = frame_index};
+            if(is_curr_page_dir(pd_source)) {
+                flush_tlb(VADDR_FROM_PAGE_INDEX(table_idx_source + dir_idx_source*PAGE_TABLE_SIZE));
+            }
+        } else {
+            frame_index = pte_source->frame;
+        }
+        
+        page_t* pte_target = &table_target[table_idx_target];
+
+        PANIC_ASSERT(!pte_target->present);
+
+        *pte_target = (page_t) {.present = 1, .user = true, .rw = target_rw, .frame = frame_index};
+
+        if(is_curr_page_dir(pd_target)) {
+            flush_tlb(VADDR_FROM_PAGE_INDEX(table_idx_target + dir_idx_target*PAGE_TABLE_SIZE));
+        }
+
+        page_linked++;
+
+        table_idx_source++;
+        if(table_idx_source >= PAGE_TABLE_SIZE) {
+            return_page_table(pd_source, table_source);
+            table_idx_source = 0;
+            dir_idx_source++;
+            PANIC_ASSERT(dir_idx_source < PAGE_DIR_SIZE);
+            table_source = get_page_table(pd_source, dir_idx_source, true);
+        }
+
+        table_idx_target++;
+        if(table_idx_target >= PAGE_TABLE_SIZE) {
+            return_page_table(pd_target, table_target);
+            table_idx_target = 0;
+            dir_idx_target++;
+            PANIC_ASSERT(dir_idx_target < PAGE_DIR_SIZE);
+            table_target = get_page_table(pd_target, dir_idx_target, true);
+        }
+    }
+    
+    return VADDR_FROM_PAGE_INDEX(page_idx_target) + offset;
 }
 
 uint32_t change_page_rw_attr(pde* page_dir, uint32_t page_index, bool is_writeable)
@@ -292,7 +438,7 @@ uint32_t change_page_rw_attr(pde* page_dir, uint32_t page_index, bool is_writeab
     uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
     
     PANIC_ASSERT(page_dir[page_dir_idx].present);
-    page_t* page_table = get_page_table(page_dir, page_dir_idx);
+    page_t* page_table = get_page_table(page_dir, page_dir_idx, false);
     
     page_table[page_table_idx].rw = is_writeable;
 
@@ -311,7 +457,7 @@ uint32_t vaddr2paddr(pde* page_dir, uint32_t vaddr)
     uint32_t page_dir_idx = page_index / PAGE_TABLE_SIZE;
     uint32_t page_table_idx = page_index % PAGE_TABLE_SIZE;
     PANIC_ASSERT(page_dir[page_dir_idx].present);
-    page_t* page_table = get_page_table(page_dir, page_dir_idx);
+    page_t* page_table = get_page_table(page_dir, page_dir_idx, false);
     page_t* page = &page_table[page_table_idx];
     PANIC_ASSERT(page->present);
     uint32_t paddr = (page->frame << 12) + (vaddr & 0xFFF);
@@ -319,31 +465,8 @@ uint32_t vaddr2paddr(pde* page_dir, uint32_t vaddr)
     return paddr;
 }
 
-// Unmapped a page, and then free its mapped frame
-static void free_frame(pde* page_dir, uint32_t page_index) {
-    uint32_t vaddr = VADDR_FROM_PAGE_INDEX(page_index);
-    // Fill with garbage to crash dangling reference/pointer earlier
-    memset((char*)vaddr, 1, PAGE_SIZE);
-    uint32_t frame_index = unmap_page(page_dir, page_index);
-    clear_frame(frame_index);
-}
-
-// Allocate physical space for a page (must not be already mapped)
-// return: allocated physical frame index
-static uint32_t alloc_frame(pde* page_dir, uint32_t page_index, bool is_kernel, bool is_writeable) {
-    uint32_t frame_index = first_free_frame(); // idx is now the index of the first free frame.
-    map_page(page_dir, page_index, frame_index, is_kernel, is_writeable);
-    return frame_index;
-}
-
 void dealloc_pages(pde* page_dir, uint32_t page_index, size_t page_count) {
-    if (page_count == 0) {
-        return;
-    }
-    
-    for (uint32_t idx = page_index; idx < page_index + page_count; idx++) {
-        free_frame(page_dir, idx);
-    }
+    unmap_pages_from(page_dir, page_index, page_count, true, false);
 }
 
 // allocate frames for pages starting at vaddr, panic if already mapped
@@ -353,11 +476,7 @@ uint32_t alloc_pages_at(pde* page_dir, uint32_t page_index, size_t page_count, b
     if(page_count == 0) {
         return 0;
     }
-
-    for (uint32_t idx = page_index; idx < page_index + page_count; idx++) {
-        alloc_frame(page_dir, idx, is_kernel, is_writeable);
-    }
-
+    map_pages_at(page_dir, page_index, page_count, NULL, is_kernel, is_writeable);
     return VADDR_FROM_PAGE_INDEX(page_index);
 }
 
@@ -366,12 +485,8 @@ uint32_t alloc_pages(pde* page_dir, size_t page_count, bool is_kernel, bool is_w
     if (page_count == 0) {
         return 0;
     }
-
     uint32_t page_index = find_contiguous_free_pages(page_dir, page_count, is_kernel);
-    for (uint32_t idx = page_index; idx < page_index + page_count; idx++) {
-        alloc_frame(page_dir, idx, is_kernel, is_writeable);
-    }
-
+    map_pages_at(page_dir, page_index, page_count, NULL, is_kernel, is_writeable);
     return VADDR_FROM_PAGE_INDEX(page_index);
 }
 
@@ -384,7 +499,7 @@ bool is_vaddr_accessible(pde* page_dir, uint32_t vaddr, bool is_from_kernel_code
     if (!page_dir[page_dir_idx].present) {
         return false;
     }
-    page_t* page_table = get_page_table(page_dir, page_dir_idx);
+    page_t* page_table = get_page_table(page_dir, page_dir_idx, false);
 
     bool accessible;
     if (!page_table[page_table_idx].present) {
@@ -444,81 +559,33 @@ void copy_kernel_space_mapping(pde* page_dir)
     page_dir[PAGE_DIR_SIZE-1].page_table_frame = vaddr2paddr(curr_page_dir(), (uint32_t) page_dir) >> 12;
 }
 
-// make the vaddr[size] space of from_page_dir available in to_page_dir
-// link them to the same physical memory
-// if vaddr[size] space is not mapped in from_page_dir, allocate it first
-// shall only be used for user space memory area since kernel space is always linked
-// return: vaddr of to_page_dir to access the space
-uint32_t link_pages(pde* from_page_dir, uint32_t vaddr, uint32_t size, pde* to_page_dir, bool alloc_writable_page)
-{
-    // do not allow linking to kernel space
-    PANIC_ASSERT(vaddr < (uint32_t) MAP_MEM_PA_ZERO_TO || vaddr + size < (uint32_t) MAP_MEM_PA_ZERO_TO);
-
-    uint32_t page_idx_foreign = PAGE_INDEX_FROM_VADDR(vaddr);
-    uint32_t offset = vaddr - VADDR_FROM_PAGE_INDEX(page_idx_foreign);
-    
-    uint32_t n_page = PAGE_COUNT_FROM_BYTES(offset + size);
-    uint32_t page_idx_curr = find_contiguous_free_pages(to_page_dir, n_page, true);
-    for(uint32_t i=0; i<n_page;i++) {
-        uint32_t frame_idx;
-        uint32_t page_idx = page_idx_foreign + i;
-        uint32_t vaddr_foreign =  VADDR_FROM_PAGE_INDEX(page_idx);
-        if(is_vaddr_accessible(from_page_dir, vaddr_foreign, false, alloc_writable_page)) {
-            uint32_t paddr = vaddr2paddr(from_page_dir, vaddr_foreign);
-            frame_idx = FRAME_INDEX_FROM_ADDR(paddr);
-        } else {
-            // make sure the frame is not allocated already
-            //   and fail the test above because of write protection
-            assert(!is_vaddr_accessible(from_page_dir, vaddr_foreign, false, false));
-
-            frame_idx = alloc_frame(from_page_dir, page_idx, false, alloc_writable_page);
-        }
-        // for mapping in to_page_dir, always allow read & write
-        map_page(to_page_dir, page_idx_curr+i, frame_idx, true, true);
-    }
-
-    return VADDR_FROM_PAGE_INDEX(page_idx_curr) + offset;
-}
-
 // unmap (not dealloc) pages underlying vaddr to vaddr+size
 void unmap_pages(pde* page_dir, uint32_t vaddr, uint32_t size)
 {
     uint32_t page_idx = PAGE_INDEX_FROM_VADDR(vaddr);
     uint32_t offset = vaddr - VADDR_FROM_PAGE_INDEX(page_idx);
     uint32_t n_page = PAGE_COUNT_FROM_BYTES(offset + size);
-    for(uint32_t i=0; i<n_page;i++) {
-        unmap_page(page_dir, page_idx + i);
-    }
+
+    unmap_pages_from(page_dir, page_idx, n_page, false, false);
 }
 
 // unmap/free all user space pages, free all underlying frames
 void free_user_space(pde* page_dir)
 {
     uint32_t kernel_page_dir_idx = PAGE_INDEX_FROM_VADDR((uint32_t) MAP_MEM_PA_ZERO_TO) / PAGE_TABLE_SIZE;
-    for(uint32_t i=0;i<kernel_page_dir_idx;i++) {
-        if(page_dir[i].present) {
-            page_t* page_table = get_page_table(page_dir, i);
-            for(int j=0;j<PAGE_TABLE_SIZE;j++) {
-                if(page_table[j].present) {
-                    page_table[j].present = 0;
-                    clear_frame(page_table[j].frame);
-                }
-            }
-            page_dir[i].present = 0;
-            clear_frame(page_dir[i].page_table_frame);
-            return_page_table(page_dir, page_table);
-        }
-    }
-    if(is_curr_page_dir(page_dir)) {
-        switch_page_directory(PAGE_DIR_PHYSICAL_ADDR);
-    }
-    // dealloc_pages(curr_page_dir(), (uint32_t) page_dir, 1);
+    unmap_pages_from(page_dir, 0, kernel_page_dir_idx, true, true);
+}
+
+pde* alloc_page_dir()
+{
+    pde* page_dir = (pde*) alloc_pages(curr_page_dir(), 1, true, true);
+    memset(page_dir, 0, sizeof(pde)*PAGE_DIR_SIZE);
+    return page_dir;
 }
 
 pde* copy_user_space(pde* page_dir)
 {
-    pde* new_page_dir = (pde*) alloc_pages(curr_page_dir(), 1, true, true);
-    memset(new_page_dir, 0, sizeof(*new_page_dir)*PAGE_DIR_SIZE);
+    pde* new_page_dir = alloc_page_dir();
     uint32_t kernel_page_dir_idx = PAGE_INDEX_FROM_VADDR((uint32_t) MAP_MEM_PA_ZERO_TO) / PAGE_TABLE_SIZE;
     for(uint32_t i=0;i<kernel_page_dir_idx;i++) {
         if(page_dir[i].present) {
@@ -529,9 +596,8 @@ pde* copy_user_space(pde* page_dir)
             uint32_t page_table_paddr = vaddr2paddr(curr_page_dir(), page_table_vaddr);
             new_page_dir[i].page_table_frame = FRAME_INDEX_FROM_ADDR(page_table_paddr);
 
-            page_t* new_page_table =  get_page_table(new_page_dir, i);
-            memset(new_page_table, 0, sizeof(*new_page_table)*PAGE_TABLE_SIZE);
-            page_t* page_table = get_page_table(page_dir, i);
+            page_t* new_page_table =  get_page_table(new_page_dir, i, true);
+            page_t* page_table = get_page_table(page_dir, i, false);
             
             for(int j=0;j<PAGE_TABLE_SIZE;j++) {
                 if(page_table[j].present) {
@@ -541,13 +607,13 @@ pde* copy_user_space(pde* page_dir)
                     if(is_curr_page_dir(page_dir)) {
                         src = VADDR_FROM_PAGE_INDEX(page_idx);
                     } else {
-                        src = link_pages(page_dir, VADDR_FROM_PAGE_INDEX(page_idx), PAGE_SIZE, curr_page_dir(), false);
+                        src = link_pages_between(page_dir, VADDR_FROM_PAGE_INDEX(page_idx), PAGE_SIZE, curr_page_dir(), false, false);
                     }
-                    uint32_t dst = link_pages(new_page_dir, VADDR_FROM_PAGE_INDEX(page_idx), PAGE_SIZE, curr_page_dir(), page_table[j].rw);
+                    uint32_t dst = link_pages_between(new_page_dir, VADDR_FROM_PAGE_INDEX(page_idx), PAGE_SIZE, curr_page_dir(), page_table[j].rw, true);
                     memmove((char*) dst, (char*) src, PAGE_SIZE);
-                    unmap_page(curr_page_dir(), PAGE_INDEX_FROM_VADDR(dst));
+                    unmap_pages_from(curr_page_dir(), PAGE_INDEX_FROM_VADDR(dst), 1, false, false);
                     if(!is_curr_page_dir(page_dir)) {
-                        unmap_page(curr_page_dir(), PAGE_INDEX_FROM_VADDR(src));
+                        unmap_pages_from(curr_page_dir(), PAGE_INDEX_FROM_VADDR(src), 1, false, false);
                     }
                     // copy page table entry
                     uint32_t new_frame = new_page_table[j].frame;
@@ -562,13 +628,6 @@ pde* copy_user_space(pde* page_dir)
     return new_page_dir;
 }
 
-pde* alloc_page_dir()
-{
-    // allocate page dir
-    pde* page_dir = (pde*) alloc_pages(curr_page_dir(), 1, true, true);
-    memset(page_dir, 0, sizeof(pde)*PAGE_DIR_SIZE);
-    return page_dir;
-}
 
 void initialize_paging() {
     init_gdt();

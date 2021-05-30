@@ -116,7 +116,7 @@ void init_first_process()
     PANIC_ASSERT((uint32_t)START_INIT_SIZE > 0);
     PANIC_ASSERT(0!=*(char*)START_INIT_VIRTUAL_BEGIN);
 
-    uint32_t dst = link_pages(p->page_dir, (uint32_t) START_INIT_RELOC_BEGIN, (uint32_t)START_INIT_SIZE, curr_page_dir(), true);
+    uint32_t dst = link_pages_between(p->page_dir, (uint32_t) START_INIT_RELOC_BEGIN, (uint32_t)START_INIT_SIZE, curr_page_dir(), true, true);
     memmove((char*) dst, START_INIT_VIRTUAL_BEGIN, (uint32_t)START_INIT_SIZE);
     unmap_pages(curr_page_dir(), dst, (uint32_t)START_INIT_SIZE);
 
@@ -454,7 +454,7 @@ int exec(const char* path, char* const * argv)
     alloc_pages_at(page_dir, PAGE_INDEX_FROM_VADDR(ustack_start) - 1, 1, false, false);
 
     // copy argv strings to the high end of the stack area
-    char* ustack_dst = (char*) link_pages(page_dir, ustack_start, PAGE_SIZE*USER_STACK_PAGE_SIZE, curr_page_dir(), false);
+    char* ustack_dst = (char*) link_pages_between(page_dir, ustack_start, PAGE_SIZE*USER_STACK_PAGE_SIZE, curr_page_dir(), false, true);
 
     uint32_t ustack[3+MAX_ARGC+1]; // +1: add a termination zero
     int argc;
