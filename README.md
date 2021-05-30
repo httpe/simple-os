@@ -83,11 +83,11 @@ A one-stop shop for OS development is the [OsDev Wiki](https://wiki.osdev.org/Ma
 
 Our testing environment is Ubuntu 20.04 LTS, so it will be easier if you use the same.
 
-1. [NASM Assembler](https://www.nasm.us/). For Ubuntu 20.04 LTS, run `sudo apt-get install nasm`.
+1. [NASM Assembler](https://www.nasm.us/). On Ubuntu 20.04 LTS, run `sudo apt-get install nasm`.
 
-1. [QEMU](https://www.qemu.org/) Emulator: We will use QEMU to emulate our system, avoiding restarting computer again and again just to test the system. For Ubuntu 20.04 LTS, run `sudo apt-get install qemu-system`.
+1. [QEMU](https://www.qemu.org/) Emulator: We will use QEMU to emulate our system, avoiding restarting computer again and again just to test the system. On Ubuntu 20.04 LTS, run `sudo apt-get install qemu-system`.
 
-1. GCC & Binutils for x86: It is recommended to [compile a cross-compiler for your own](https://wiki.osdev.org/GCC_Cross-Compiler). Your system shall also have GCC tool chain installed, since we will use utility like GNU Make. For Ubuntu 20.04 LTS, you can try running `build_cross_compiler.sh`
+1. GCC & Binutils for x86: It is recommended to [compile a cross-compiler for your own](https://wiki.osdev.org/GCC_Cross-Compiler). Your system shall also have GCC tool chain installed, since we will use utility like GNU Make. On Ubuntu 20.04 LTS, you can try running `build_cross_compiler.sh`
 
 1. Hosted GCC & Binutils and Newlib for Simple-OS: We will need the specialized tool-chain and Newlib for those user space programs including init and shell. Please refer to `HostedToolchain.md` on how to build them.
 
