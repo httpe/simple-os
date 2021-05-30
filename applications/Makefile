@@ -20,7 +20,7 @@ BINDIR=$(PREFIX)/bin
 BINARIES=\
 init/init.elf \
 shell/shell.elf \
-editor/editor.elf \
+edit/edit.elf \
 ls/ls.elf \
 rm/rm.elf \
 mv/mv.elf \
