@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <fs.h>
+#include <dirent.h>
 #include <sys/wait.h>
 
 static inline _syscall0(SYS_YIELD, int, sys_yield)
@@ -56,6 +57,21 @@ static void test_file_system() {
     char buf1[100] = {0};
     int fd;
     
+    DIR* dir = opendir("/");
+    if(dir) {
+        struct dirent *dir_ent;
+        while((dir_ent = readdir(dir))) {
+            printf("readdir(/home): (%u) %s\n", (uint) dir_ent->d_ino, dir_ent->d_name);
+        }
+        int cdr = closedir(dir);
+        if(cdr < 0) {
+            printf("closedir error: %d\n", cdr);
+        }
+    } else {
+        printf("readdir error\n");
+    }
+
+
     fd = open("/home/RAND.OM", O_RDWR);
     if(fd >= 0) {
         int read_in = read(fd, buf1, 10);
