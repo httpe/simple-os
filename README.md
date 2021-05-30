@@ -9,7 +9,7 @@ Currently the only CPU architecture supported is x86-32.
 Although the final goal is to make the system self-hosting, we have planned for several practical milestone:
 
 1. **Milestone One: Bootloader**
-    Many of the existing tutorials rely on GRUB to boot the system and do some initialize (like entering Protected Mode), which we don't like. For educational purpose, we want to have full control over everthing, starting from booting the system. Therefore, we choose to implement a standalone bootloader as our first step.
+    Many of the existing tutorials rely on GRUB to boot the system and do some initialize (like entering Protected Mode), which we don't like. For educational purpose, we want to fully control everything, starting from booting the system. Therefore, we choose to implement a standalone bootloader as our first step.
     - Enter 32-bit protected mode and do various initialize before passing control to the kernel
     - Provide disk I/O routines and a (read-only) file system to host the kernel
     - Able to parse and load a ELF kernel written in C
@@ -55,7 +55,7 @@ Although the final goal is to make the system self-hosting, we have planned for 
       - A shell with `cd`, `ls` and program execution was implemented
       - Ported the simple text editor [Kilo](https://viewsourcecode.org/snaptoken/kilo/index.html), with basic editing functionalities and C syntax highlighting
 
-1. **Milestone Six: Mutli-core CPU support and IPC**
+1. **Milestone Six: Multi-core CPU support and IPC**
     - Support multi-core CPU through [APCI](https://wiki.osdev.org/APIC)
     - Provide [synchronization mechanism](https://wiki.osdev.org/Synchronization_Primitives) for multi-tasking environment, like locks
     - Provide inter process communication ([IPC](https://wiki.osdev.org/Category:IPC)) mechanism like pipe and signal
@@ -81,7 +81,7 @@ A one-stop shop for OS development is the [OsDev Wiki](https://wiki.osdev.org/Ma
 
 ## Dependencies
 
-To compile this project, you need to install the following dependencies:
+Our testing environment is Ubuntu 20.04 LTS, so it will be easier if you use the same.
 
 1. [NASM Assembler](https://www.nasm.us/). For Ubuntu 20.04 LTS, run `sudo apt-get install nasm`.
 
@@ -91,7 +91,7 @@ To compile this project, you need to install the following dependencies:
 
 1. Hosted GCC & Binutils and Newlib for Simple-OS: We will need the specialized tool-chain and Newlib for those user space programs including init and shell. Please refer to `HostedToolchain.md` on how to build them.
 
-1. (Optional) [VSCode](https://code.visualstudio.com/): We provide some integration of the building/debugging process with VSCode, but it is optional. To debug using VSCode, you need to install the extension `Native Debug`.
+1. (Optional) [VSCode](https://code.visualstudio.com/): We provide some integration of the building/debugging process with VSCode, but it is optional. Some extension may also be needed as described in the `Debug` section below.
 
 1. (Optional) [GRUB](https://www.gnu.org/software/grub/): The `iso.sh` uses GRUB to generate a bootable ISO image, but since we have our own `bootloader/` implemented, it is not required.
 
@@ -101,7 +101,7 @@ To compile this project, you need to install the following dependencies:
 
 Firstly, you need to change the `CROSSCOMPILERBIN` variable in `config.sh` to point it to the folder containing the cross-compiling GCC/Binutils binaries (see *Dependencies* section). If you use the `build_cross_compiler.sh` script to build the cross compiler, you can use the default value there.
 
-Note that the env variable `AS` is assumed to be the system wide NASM assembler, if not set, `nasm` is used. 
+Note that the env variable `AS` is assumed to be the system wide NASM assembler, if not set, `nasm` is used.
 
 Also, you need to make sure the hosted tool-chain and Newlib is compiled and installed to the location indicated by `TOOL_CHAIN_ROOT` variable in `config.sh` for the user space programs (those under `applications`) to be compiled successfully. If you followed `HostedToolchain.md` exactly, you can use the default value.
 
@@ -167,6 +167,7 @@ You can trigger them in Command Palette (Ctrl+Shift+P).
 `.vscode/launch.json` provides the debug gdb debug profiles.
 
 VSCode extensions required:
+
 1. [Native Debug](https://marketplace.visualstudio.com/items?itemName=webfreak.debug) extension is required to debug remotely through SSH.
 1. To run QEMU through SSH, VSCode extension [Remote X11](https://marketplace.visualstudio.com/items?itemName=spadin.remote-x11) and [Remote X11 (SSH)](https://marketplace.visualstudio.com/items?itemName=spadin.remote-x11-ssh) are required.If you are using Windows, then a local X-window server is also needed. You can use [vcxsrv](https://sourceforge.net/projects/vcxsrv/).
 
@@ -339,5 +340,5 @@ Multiple tutorials have been referenced in the development of this project.
 1. [NASM Documentation](https://www.nasm.us/xdoc/2.15.05/html/nasmdoc0.html)
 1. [GNU Make Documentation](https://www.gnu.org/software/make/manual/make.html)
 1. [ELF Format](http://www.skyfree.org/linux/references/ELF_Format.pdf)
-1. [x86 Instuction Set Manual](https://www.felixcloutier.com/x86/)
+1. [x86 Instruction Set Manual](https://www.felixcloutier.com/x86/)
 1. [GCC Inline Assembly](https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html)
