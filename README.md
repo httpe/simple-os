@@ -81,19 +81,19 @@ A one-stop shop for OS development is the [OsDev Wiki](https://wiki.osdev.org/Ma
 
 ## Dependencies
 
-Our testing environment is Ubuntu 20.04 LTS, if you use the same, you can install all the mandatory dependencies by running `build-toolchain.sh`.
+Our testing environment is Ubuntu 20.04 LTS, if you use the same, you can install all the mandatory dependencies (1. to 4.) by running `build-toolchain.sh`.
 
 1. [NASM Assembler](https://www.nasm.us/).
 
-1. [QEMU](https://www.qemu.org/) Emulator: We will use QEMU to emulate our system, avoiding restarting computer again and again just to test the system.
+2. [QEMU](https://www.qemu.org/) Emulator: We will use QEMU to emulate our system, avoiding restarting computer again and again just to test the system.
 
-1. GCC & Binutils for x86: It is recommended to [compile a cross-compiler for your own](https://wiki.osdev.org/GCC_Cross-Compiler). Your system shall also have GCC tool chain installed, since we will use utility like GNU Make.
+3. GCC & Binutils for x86: It is recommended to [compile a cross-compiler for your own](https://wiki.osdev.org/GCC_Cross-Compiler). Your system shall also have GCC tool chain installed, since we will use utility like GNU Make.
 
-1. Hosted GCC & Binutils and Newlib for Simple-OS: We will need the specialized tool-chain and Newlib for those user space programs including init and shell. Please refer to `HostedToolchain.md` on how to build them.
+4. Hosted GCC & Binutils and Newlib for Simple-OS: We will need the specialized tool-chain and Newlib for those user space programs including init and shell. Please refer to `HostedToolchain.md` on how to build them.
 
-1. (Optional) [VSCode](https://code.visualstudio.com/): We provide some integration of the building/debugging process with VSCode, but it is optional. Some extension may also be needed as described in the `Debug` section below.
+5. (Optional) [VSCode](https://code.visualstudio.com/): We provide some integration of the building/debugging process with VSCode, but it is optional. Some extension may also be needed as described in the `Debug` section below.
 
-1. (Optional) [GRUB](https://www.gnu.org/software/grub/): The `iso.sh` uses GRUB to generate a bootable ISO image, but since we have our own `bootloader/` implemented, it is not required.
+6. (Optional) [GRUB](https://www.gnu.org/software/grub/): The `iso.sh` uses GRUB to generate a bootable ISO image, but since we have our own `bootloader/` implemented, it is not required.
 
 ## Build
 
@@ -130,7 +130,7 @@ Note if the environment is detected to be WSL, the script will run the Windows v
 
 Anything written to the serial port (all outputs to the screen will be copied to the serial port by the kernel) will be logged in `serial_port_output.txt`.
 
-The script also check if there is a `testfs.fat` image file under root dir, if so, it will mount it as `hdb` when starting QEMU. This file should be a hard disk image of a FAT-32 file system. If `hdb` is present, Simple-OS will try to mount it under `/home`.
+The script also check if there is a `testfs.fat` image file under root dir, if so, it will mount it as `hdb` when starting QEMU. This file should be a hard disk image of a FAT-32 file system. If `hdb` is present, Simple-OS will try to mount it under `/home`. For testing purpose, you can use the [FAT32 image]([testfs.fat.tar](https://github.com/aroulin/FAT32-FS-Driver/blob/master/testfs.fat.tar?raw=true)) provided by the [FAT32-FS-Driver](https://github.com/aroulin/FAT32-FS-Driver) project.
 
 ### Debug
 
