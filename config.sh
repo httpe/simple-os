@@ -5,7 +5,9 @@ export MAKE=${MAKE:-make}
 export HOST=${HOST:-$(./default-host.sh)}
 export TAR=${TAR:-tar}
  
-export CROSSCOMPILERBIN=~/opt/cross/bin
+ # Root of hosted tool chain
+export TOOL_CHAIN_ROOT="$(pwd)/toolchain"
+export CROSSCOMPILERBIN=$TOOL_CHAIN_ROOT/usr/bin
 
 export AR=${CROSSCOMPILERBIN}/${HOST}-ar
 export AS=${AS:-nasm}
@@ -22,8 +24,6 @@ export CPPFLAGS=''
 
 # Configure the cross-compiler to use the desired system root.
 export SYSROOT="$(pwd)/sysroot"
-# Root of hosted tool chain
-export TOOL_CHAIN_ROOT="$(pwd)/toolchain"
 export CC="$CC --sysroot=$SYSROOT"
 
 # Work around that the -elf gcc targets doesn't have a system include directory

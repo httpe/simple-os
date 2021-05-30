@@ -1,10 +1,12 @@
 #!/bin/bash
 
+set -e
+
 ######################################################
 ### Setup Environment Variables
 ######################################################
 
-export SIMPLE_OS_SRC=`dirname "$0"`
+export SIMPLE_OS_SRC=$(readlink -f $(dirname "$0"))
 export TOOL_CHAIN_BUILD_DIR=$SIMPLE_OS_SRC/build-toolchain
 mkdir -p $TOOL_CHAIN_BUILD_DIR
 
@@ -32,12 +34,14 @@ export PATH=$TOOL_CHAIN_ROOT/usr/bin:$PATH
 
 sudo apt -y update
 sudo apt -y install build-essential autoconf automake git
+sudo apt -y install qemu-system-x86
 sudo apt -y install bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo libisl-dev curl
 
+cd $TOOL_CHAIN_BUILD_DIR
 curl https://ftp.gnu.org/gnu/binutils/binutils-2.35.1.tar.gz --output binutils-2.35.1.tar.gz
 tar -xf binutils-2.35.1.tar.gz
 
-mkdir $TOOL_CHAIN_BUILD_DIR/build-cross-binutils
+mkdir -p $TOOL_CHAIN_BUILD_DIR/build-cross-binutils
 cd $TOOL_CHAIN_BUILD_DIR/build-cross-binutils
 ../binutils-2.35.1/configure --target=$STANDALONE_TARGET --prefix="$STANDALONE_PREFIX" --with-sysroot --disable-nls --disable-werror
 make -j4
@@ -54,7 +58,7 @@ tar -xf gcc-10.2.0.tar.gz
 # The $PREFIX/bin dir _must_ be in the PATH. We did that above.
 which -- $STANDALONE_TARGET-as || echo $STANDALONE_TARGET-as is not in the PATH
 
-mkdir $TOOL_CHAIN_BUILD_DIR/build-cross-gcc
+mkdir -p $TOOL_CHAIN_BUILD_DIR/build-cross-gcc
 cd $TOOL_CHAIN_BUILD_DIR/build-cross-gcc
 ../gcc-10.2.0/configure --target=$STANDALONE_TARGET --prefix="$STANDALONE_PREFIX" --disable-nls --enable-languages=c,c++ --without-headers
 make -j4 all-gcc
@@ -63,19 +67,16 @@ make install-gcc
 make install-target-libgcc
 
 ######################################################
-### Exposing Cross compiler
+### Build Newlib with Standalone Tool-chain
 ######################################################
 
+# Use standalone toolchain to fake os specific ones
 cd $CROSS_COMPILER_BIN
 ln -s i686-elf-ar i686-simpleos-ar
 ln -s i686-elf-as i686-simpleos-as
 ln -s i686-elf-gcc i686-simpleos-gcc
 ln -s i686-elf-gcc i686-simpleos-cc
 ln -s i686-elf-ranlib i686-simpleos-ranlib
-
-######################################################
-### Build Newlib with Standalone Tool-chain
-######################################################
 
 cd $TOOL_CHAIN_BUILD_DIR
 
@@ -96,6 +97,9 @@ make DESTDIR="$TOOL_CHAIN_ROOT" install
 cp -ar $TOOL_CHAIN_ROOT/usr/i686-simpleos/lib $TOOL_CHAIN_ROOT/usr/
 cp -ar $TOOL_CHAIN_ROOT/usr/i686-simpleos/include $TOOL_CHAIN_ROOT/usr/
 
+# We are going to build our hosted Binutil/GCC built now, remove the fake ones
+cd $CROSS_COMPILER_BIN
+rm i686-simpleos*
 
 ######################################################
 ### Build Hosted Binutils
@@ -134,17 +138,15 @@ make install-gcc install-target-libgcc
 make -j4 all-target-libstdc++-v3
 make install-target-libstdc++-v3
 
-# We have our hosted Binutil/GCC built now, remove the fake ones
-cd $CROSS_COMPILER_BIN
-rm i686-simpleos*
-
 
 ######################################################
 ### Rebuild Newlib with hosted Binutils and GCC
 ######################################################
 
+cd $SIMPLE_OS_SRC
+
 # Install system headers
-$SIMPLE_OS_SRC/headers.sh
+./headers.sh
 
 cd $TOOL_CHAIN_BUILD_DIR/build-newlib
 rm -rf $TOOL_CHAIN_BUILD_DIR/build-newlib/*
