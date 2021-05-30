@@ -111,6 +111,10 @@ make DESTDIR="$TOOL_CHAIN_ROOT" install
 cp -ar $TOOL_CHAIN_ROOT/usr/i686-simpleos/lib $TOOL_CHAIN_ROOT/usr/
 cp -ar $TOOL_CHAIN_ROOT/usr/i686-simpleos/include $TOOL_CHAIN_ROOT/usr/
 
+# We are going to build our OS specific Binutil/GCC built now, remove the fake ones
+cd $CROSS_COMPILER_BIN
+rm i686-simpleos*
+
 ```
 
 ## Build Hosted Binutils
@@ -149,10 +153,6 @@ make -j4 all-target-libgcc
 make install-gcc install-target-libgcc
 make -j4 all-target-libstdc++-v3
 make install-target-libstdc++-v3
-
-# We have our hosted Binutil/GCC built now, remove the fake ones
-cd $CROSS_COMPILER_BIN
-rm i686-simpleos*
 
 ```
 

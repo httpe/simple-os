@@ -81,13 +81,13 @@ A one-stop shop for OS development is the [OsDev Wiki](https://wiki.osdev.org/Ma
 
 ## Dependencies
 
-Our testing environment is Ubuntu 20.04 LTS, so it will be easier if you use the same.
+Our testing environment is Ubuntu 20.04 LTS, if you use the same, you can install all the mandatory dependencies by running `build-toolchain.sh`.
 
-1. [NASM Assembler](https://www.nasm.us/). On Ubuntu 20.04 LTS, run `sudo apt-get install nasm`.
+1. [NASM Assembler](https://www.nasm.us/).
 
-1. [QEMU](https://www.qemu.org/) Emulator: We will use QEMU to emulate our system, avoiding restarting computer again and again just to test the system. On Ubuntu 20.04 LTS, run `sudo apt-get install qemu-system-x86`.
+1. [QEMU](https://www.qemu.org/) Emulator: We will use QEMU to emulate our system, avoiding restarting computer again and again just to test the system.
 
-1. GCC & Binutils for x86: It is recommended to [compile a cross-compiler for your own](https://wiki.osdev.org/GCC_Cross-Compiler). Your system shall also have GCC tool chain installed, since we will use utility like GNU Make. On Ubuntu 20.04 LTS, you can try running `build_cross_compiler.sh`
+1. GCC & Binutils for x86: It is recommended to [compile a cross-compiler for your own](https://wiki.osdev.org/GCC_Cross-Compiler). Your system shall also have GCC tool chain installed, since we will use utility like GNU Make.
 
 1. Hosted GCC & Binutils and Newlib for Simple-OS: We will need the specialized tool-chain and Newlib for those user space programs including init and shell. Please refer to `HostedToolchain.md` on how to build them.
 
@@ -99,11 +99,13 @@ Our testing environment is Ubuntu 20.04 LTS, so it will be easier if you use the
 
 ### Configure
 
-Firstly, you need to change the `CROSSCOMPILERBIN` variable in `config.sh` to point it to the folder containing the cross-compiling GCC/Binutils binaries (see *Dependencies* section). If you use the `build_cross_compiler.sh` script to build the cross compiler, you can use the default value there.
+If your tool-chain is built by the `build-toolchain.sh` script, you can skip this section. The default value should work automatically.
+
+Firstly, you need to change the `CROSSCOMPILERBIN` variable in `config.sh` to point it to the folder containing the cross-compiling GCC/Binutils binaries (see *Dependencies* section).
 
 Note that the env variable `AS` is assumed to be the system wide NASM assembler, if not set, `nasm` is used.
 
-Also, you need to make sure the hosted tool-chain and Newlib is compiled and installed to the location indicated by `TOOL_CHAIN_ROOT` variable in `config.sh` for the user space programs (those under `applications`) to be compiled successfully. If you followed `HostedToolchain.md` exactly, you can use the default value.
+Also, you need to make sure the hosted tool-chain and Newlib is compiled and installed to the location indicated by `TOOL_CHAIN_ROOT` variable in `config.sh` for the user space programs (those under `applications`) to be compiled successfully.
 
 ### Compile
 
