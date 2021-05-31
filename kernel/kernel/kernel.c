@@ -92,13 +92,11 @@ void kernel_main(uint32_t mbt_physical_addr) {
 	// Non-architecture specific initialization
 	init();
 	
-	terminal_clear_screen(TTY_CLEAR_ALL);
-	set_cursor(0, 0);
-
+	terminal_set_font_attr(TTY_FONT_ATTR_BLINK);
 	printf("Welcome to Simple-OS!\n");
 	date_time dt = current_datetime();
-	printf("CMOS Time: %u-%u-%u %u:%u:%u", dt.tm_year + 1900, dt.tm_mon, dt.tm_mday, dt.tm_hour, dt.tm_min, dt.tm_sec);
-	printf("\nPress any key to start typing on the screen!\n");
+	printf("CMOS Time: %u-%u-%u %u:%u:%u\n", dt.tm_year + 1900, dt.tm_mon, dt.tm_mday, dt.tm_hour, dt.tm_min, dt.tm_sec);
+	terminal_set_font_attr(TTY_FONT_ATTR_CLEAR);
 
 	test_malloc();
 	test_ata();

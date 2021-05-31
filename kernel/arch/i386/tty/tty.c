@@ -35,12 +35,15 @@ void disable_cursor()
 }
 
 void terminal_initialize(void) {
+    terminal_row = 0;
+    terminal_column = 0;
     enable_cursor();
     update_cursor();
     terminal_color_fg = TTY_DEFAULT_COLOR_FG;
     terminal_color_bg = TTY_DEFAULT_COLOR_BG;
     terminal_set_font_attr(TTY_FONT_ATTR_CLEAR);
     terminal_buffer = VGA_MEMORY;
+    terminal_clear_screen(TTY_CLEAR_ALL);
 }
 
 void terminal_clear_screen(enum tty_clear_screen_mode mode) {
@@ -192,10 +195,11 @@ void set_text_mode_cursor(size_t row, size_t col) {
 
 // Update text cursor to where the last char was printed
 void update_cursor(void) {
-    if(terminal_column >= VGA_WIDTH) {
-        terminal_column = VGA_WIDTH - 1;
+    size_t col = terminal_column;
+    if(col >= VGA_WIDTH) {
+        col = VGA_WIDTH - 1;
     }
-    set_text_mode_cursor(terminal_row, terminal_column);
+    set_text_mode_cursor(terminal_row, col);
 }
 
 void set_cursor(size_t row, size_t col)
