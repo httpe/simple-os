@@ -26,6 +26,8 @@ enum specialKey {
   PAGE_DOWN
 };
 
+static char* PATH[]= {"/usr/bin/","/home/bin/","", NULL};
+
 int getCursorPosition(int *rows, int *cols) {
   char buf[32];
   unsigned int i = 0;
@@ -165,7 +167,16 @@ int main(int argc, char* argv[]) {
         if(strcmp(part, "help") == 0) {
             printf("Supported commands:\n");
             printf("cd: changing current dir\n");
-            printf("{program name}: Run program named {program name}.elf. Seach in various paths\n");
+            printf("{program name}: Run program named {program name}.elf.\n  Seaching the following paths:\n");
+            char** p = PATH;
+            while(*p) {
+              if(strlen(*p) == 0) {
+                printf("  ./\n");
+              } else {
+                printf("  %s\n", *p);
+              }
+              p++;
+            }
         } else if(strcmp(part, "cd") == 0) {
             char* cd_path = strtok(NULL," ");
             if(cd_path == NULL) {
@@ -184,7 +195,6 @@ int main(int argc, char* argv[]) {
             } else {
               // Mimic PATH environ vairbale
               // Search for these places for the binary, also append the .elf suffix
-              char* PATH[]= {"/usr/bin/","/home/bin/","", NULL};
               char** path_prefix = PATH;
               for(;*path_prefix; path_prefix++) {
                 int prefix_len = strlen(*path_prefix);
