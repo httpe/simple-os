@@ -4,6 +4,7 @@
 #include <kernel/serial.h>
 #include <kernel/memory_bitmap.h>
 #include <kernel/paging.h>
+#include <kernel/pci.h>
 
 #include <arch/i386/kernel/isr.h>
 #include <kernel/timer.h>
@@ -32,6 +33,9 @@ void initialize_architecture(uint32_t mbt_physical_addr) {
 
     // Initialize a heap for kmalloc and kfree
     initialize_kernel_heap();
+
+    // Enumerate and initialize PCI devices
+    init_pci();
 
     // Set up system timer using PIT(Programmable Interval Timer)
     // Set freq = 50 (i.e. 50 tick per seconds)
