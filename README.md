@@ -126,7 +126,14 @@ You can test run the compiled kernel by QEMU:
 
 Anything written to the serial port (all outputs to the screen will be copied to the serial port by the kernel) will be logged in `serial_port_output.txt`.
 
-The script also check if there is a `testfs.fat` image file under root dir, if so, it will mount it as `hdb` when starting QEMU. This file should be a hard disk image of a FAT-32 file system. If `hdb` is present, Simple-OS will try to mount it under `/home`. For testing purpose, you can use the [FAT32 image]([testfs.fat.tar](https://github.com/aroulin/FAT32-FS-Driver/blob/master/testfs.fat.tar?raw=true)) provided by the [FAT32-FS-Driver](https://github.com/aroulin/FAT32-FS-Driver) project.
+The script also check if there is a `testfs.fat` image file under root dir, if so, it will mount it as `hdb` when starting QEMU. This file should be a hard disk image of a FAT-32 file system. If `hdb` is present, Simple-OS will try to mount it under `/home`.
+
+For testing purpose, you can use the [FAT32 image]([testfs.fat.tar](https://github.com/aroulin/FAT32-FS-Driver/blob/master/testfs.fat.tar?raw=true)) provided by the [FAT32-FS-Driver](https://github.com/aroulin/FAT32-FS-Driver) project. Or simply generate an empty FAT32 image (512MiB) by:
+
+```bash
+dd if=/dev/zero of=testfs.fat bs=1024 count=$(expr 512 \* 1024)
+mkfs.vfat testfs.fat
+```
 
 ### Debug
 
