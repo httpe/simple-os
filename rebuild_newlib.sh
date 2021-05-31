@@ -5,9 +5,9 @@ export TOOL_CHAIN_BUILD_DIR=$SIMPLE_OS_SRC/build-toolchain
 export TOOL_CHAIN_ROOT=$SIMPLE_OS_SRC/toolchain
 export PATH=$TOOL_CHAIN_ROOT/usr/bin:$PATH
 
-######################################################
-### Rebuild Newlib with hosted Binutils and GCC
-######################################################
+#################################################################
+### Rebuild Newlib for any change in the simple-newlib project
+#################################################################
 
 cd $SIMPLE_OS_SRC
 
@@ -15,6 +15,7 @@ cd $SIMPLE_OS_SRC
 ./headers.sh
 
 cd $TOOL_CHAIN_BUILD_DIR/build-newlib
+git pull
 make -j4 all
 
 make DESTDIR="$TOOL_CHAIN_ROOT" install
