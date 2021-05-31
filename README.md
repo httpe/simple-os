@@ -81,7 +81,7 @@ A one-stop shop for OS development is the [OsDev Wiki](https://wiki.osdev.org/Ma
 
 ## Dependencies
 
-Our testing environment is Ubuntu 20.04 LTS, if you use the same, you can install all the mandatory dependencies (1. to 4.) by running `build-toolchain.sh`.
+Our testing environment is Ubuntu 20.04 LTS, if you use the same, you can install all the mandatory dependencies (1. through 4.) by running `build-toolchain.sh`.
 
 1. [NASM Assembler](https://www.nasm.us/).
 
@@ -93,13 +93,11 @@ Our testing environment is Ubuntu 20.04 LTS, if you use the same, you can instal
 
 5. (Optional) [VSCode](https://code.visualstudio.com/): We provide some integration of the building/debugging process with VSCode, but it is optional. Some extension may also be needed as described in the `Debug` section below.
 
-6. (Optional) [GRUB](https://www.gnu.org/software/grub/): The `iso.sh` uses GRUB to generate a bootable ISO image, but since we have our own `bootloader/` implemented, it is not required.
-
 ## Build
 
 ### Configure
 
-If your tool-chain is built by the `build-toolchain.sh` script, you can skip this section. The default value should work automatically.
+If your tool-chain is built by the `build-toolchain.sh` script, you can skip this section. The default values should work automatically.
 
 Firstly, you need to change the `CROSSCOMPILERBIN` variable in `config.sh` to point it to the folder containing the cross-compiling GCC/Binutils binaries (see *Dependencies* section).
 
@@ -125,8 +123,6 @@ You can test run the compiled kernel by QEMU:
 ```bash
 ./qemu.sh
 ```
-
-Note if the environment is detected to be WSL, the script will run the Windows version of QEMU.
 
 Anything written to the serial port (all outputs to the screen will be copied to the serial port by the kernel) will be logged in `serial_port_output.txt`.
 
@@ -168,10 +164,14 @@ You can trigger them in Command Palette (Ctrl+Shift+P).
 
 `.vscode/launch.json` provides the debug gdb debug profiles.
 
-VSCode extensions required:
+Assuming you are running Simple-OS in a remote (virtual) machine, to setup the remote debugging:
 
-1. [Native Debug](https://marketplace.visualstudio.com/items?itemName=webfreak.debug) extension is required to debug remotely through SSH.
-1. To run QEMU through SSH, VSCode extension [Remote X11](https://marketplace.visualstudio.com/items?itemName=spadin.remote-x11) and [Remote X11 (SSH)](https://marketplace.visualstudio.com/items?itemName=spadin.remote-x11-ssh) are required.If you are using Windows, then a local X-window server is also needed. You can use [vcxsrv](https://sourceforge.net/projects/vcxsrv/).
+1. [How to SSH to a system inside Virtual Box](https://medium.com/nycdev/how-to-ssh-from-a-host-to-a-guest-vm-on-your-local-machine-6cb4c91acc2e)
+1. [Remote - SSH](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh) extension
+1. [Native Debug](https://marketplace.visualstudio.com/items?itemName=webfreak.debug) extension for remote debug through SSH.
+1. VSCode extensions [Remote X11](https://marketplace.visualstudio.com/items?itemName=spadin.remote-x11) and [Remote X11 (SSH)](https://marketplace.visualstudio.com/items?itemName=spadin.remote-x11-ssh) to run QEMU (GUI application) through SSH
+    - If your host machine is Windows, then a local X-window server is also needed. You can use [vcxsrv](https://sourceforge.net/projects/vcxsrv/).
+    - If you SSH into a virtual machine by port forwarding, change `remoteX11.SSH.host` and `remoteX11.SSH.port` in "Remote X11 (SSH)" remote setting (e.g. change to 127.0.0.1 and 5679).
 
 With all of the setup, the debugging process is streamlined to:
 
@@ -182,30 +182,6 @@ With all of the setup, the debugging process is streamlined to:
 1. After finishing debugging, click detach debugger and close the QEMU window
 
 **Note:** Some code in `bootloader/arch/i386/bootloader.asm` and `kernel/arch/i386/boot/boot.asm` can not be debug in this way, please see the comments there.  
-
-### (Optional) Generate GRUB Bootable ISO
-
-If you have GRUB installed, you can build a bootable CD-ROM image of the operating system by invoking:
-
-```bash
-./iso.sh
-```
-
-In this case, GRUB is used instead of our home made bootloader to boot the system.
-
-To emulate it, run in Powershell:
-
-```ps
-qemu-system-i386.exe -cdrom .\simple_os.iso
-```
-
-### (Optional) Install Header Only
-
-You can install all the system headers into the system root without relying on the compiler at all, which will be useful later on when switching to a Hosted GCC Cross-Compiler, by invoking:
-
-```bash
-./headers.sh
-```
 
 ## Folder Structure
 
