@@ -20,6 +20,18 @@
         {
             "name": "Linux",
             "includePath": [
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "linux-gcc-x86",
+            "compilerArgs": [
+            ]
+        },
+        {
+            "name": "i686-elf",
+            "includePath": [
                 "${workspaceFolder}/kernel/include/**",
                 "${workspaceFolder}/libc/include/**"
             ],
