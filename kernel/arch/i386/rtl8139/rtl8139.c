@@ -30,15 +30,16 @@ static void rtl8139_irq_handler(trapframe* tf)
     UNUSED_ARG(tf);
 
     uint16_t int_reg = inw(dev.io_base + 0x3E);
-    printf("RTL8139 IRQ raised: Int reg 0x%x\n", int_reg);
+    printf("RTL8139 IRQ: Int reg 0x%x\n", int_reg);
 
     if(int_reg & 1) {
-        printf("RTL8139 IRQ Receive OK (ROK)\n");
-        // Confirm packet received
+        printf("RTL8139 IRQ: Receive OK (ROK)\n");
+        // Confirm IRQ processed
         outw(dev.io_base + 0x3E, 1);
     }
     if(int_reg & (1 << 2)) {
-        printf("RTL8139 IRQ Transmit OK (ROK)\n");
+        printf("RTL8139 IRQ: Transmit OK (TOK)\n");
+        // Confirm IRQ processed
         outw(dev.io_base + 0x3E, 1 << 2);
     }
 
