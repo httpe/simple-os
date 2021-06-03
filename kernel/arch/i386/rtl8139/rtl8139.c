@@ -50,15 +50,12 @@ void init_rtl8139(uint8_t bus, uint8_t device, uint8_t function)
     // only support one RTL8139
     PANIC_ASSERT(!initialized);
     
-    uint16_t command = pci_read_reg(bus, device, function, 1) & 0xFFFF;
-    command |= 1 << 2; // Enable PCI Bus Mastering
-    command &= ~(1 << 10); // Enable PCI interrupt
-    uint16_t status = (pci_read_reg(bus, device, function, 1) >> 16) & 0xFFFF;
-    // status |= 1 << 3; // Enable PCI interrupt
-    uint32_t reg1 = (((uint32_t) status) << 16) | (uint32_t) command;
-    pci_write_reg(bus, device, function, 1, reg1);
+    uint16_t command = PCI_COMMAND(bus,device,function);
+    command |= PCI_COMMAND_BUS_MASTER; // Enable PCI Bus Mastering
+    command &= ~PCI_COMMAND_INT_DISABLE; // Enable PCI interrupt
+    PCI_W_COMMAND(bus, device, function, command);
 
-    uint32_t bar0 =  pci_read_reg(bus, device, function, 4);
+    uint32_t bar0 =  PCI_BAR_0(bus, device, function);
     // Make sure BAR0 is I/O space address
     PANIC_ASSERT(bar0 & 1);
     PANIC_ASSERT((bar0 & ~0x3) < 0xFFFF);
@@ -94,8 +91,7 @@ void init_rtl8139(uint8_t bus, uint8_t device, uint8_t function)
     memset(dev.send_buff, 0, page_count*PAGE_SIZE);
 
     // Get interrupt line
-    uint8_t irq = pci_read_reg(bus, device, function, 0x0F) & 0xFF;
-    // uint8_t int_pin = (pci_read_reg(bus, device, function, 0x0F) >> 8) & 0xFF;
+    uint8_t irq = PCI_INT_LINE(bus,device,function);
     printf("RTL8139 is using IRQ(%u)\n", irq);
     register_interrupt_handler(IRQ_TO_INTERRUPT(irq), rtl8139_irq_handler);
     IRQ_clear_mask(irq);
