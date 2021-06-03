@@ -25,14 +25,14 @@ uint32_t pci_read_reg(uint8_t bus, uint8_t device, uint8_t function, uint8_t off
  
     /* create configuration address as per Figure 1 */
     address = (uint32_t)((lbus << 16) | (ldevice << 11) |
-              (lfunction << 8) | (offset & ~2) | ((uint32_t)0x80000000));
+              (lfunction << 8) | (offset & ~3) | ((uint32_t)0x80000000));
  
     /* write out the address */
     outl(PCI_CONFIG_ADDRESS_PORT, address);
 
     /* read in the data */
     uint32_t r = inl(PCI_CONFIG_DATA_PORT);
-    r = r >> (offset & 2)*8;
+    r = r >> (offset & 3)*8;
     if(size == 4) {
         return r;
     } else if(size == 2) {
@@ -53,7 +53,7 @@ void pci_write_reg(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset
  
     /* create configuration address as per Figure 1 */
     address = (uint32_t)((lbus << 16) | (ldevice << 11) |
-              (lfunction << 8) | (offset &  ~2) | ((uint32_t)0x80000000));
+              (lfunction << 8) | (offset &  ~3) | ((uint32_t)0x80000000));
  
     /* write out the address */
     outl(PCI_CONFIG_ADDRESS_PORT, address);
@@ -65,10 +65,10 @@ void pci_write_reg(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset
         uint32_t reg = inl(PCI_CONFIG_DATA_PORT);
         if(size == 2) {
             uint16_t* p_reg = (uint16_t*) &reg;
-            p_reg[(offset & 2)/2] = (uint16_t) value;
+            p_reg[(offset & 3)/2] = (uint16_t) value;
         } else if (size == 1) {
             uint8_t* p_reg = (uint8_t*) &reg;
-            p_reg[offset & 2] = (uint8_t) value;
+            p_reg[offset & 3] = (uint8_t) value;
         } else {
             PANIC("pci_write_reg size not supported");
         }
