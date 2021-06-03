@@ -15,10 +15,12 @@ else
   HDB=""
 fi
 
+NET_ARG="-nic user,model=rtl8139,mac=52:54:98:76:54:32"
+
 if grep -q Microsoft /proc/version; then
   echo "Windows Subsystem for Linux"
-  qemu-system-$(./target-triplet-to-arch.sh $HOST).exe ${DEBUG_FLAG} -hda bootable_kernel.bin ${HDB} -serial file:serial_port_output.txt
+  qemu-system-$(./target-triplet-to-arch.sh $HOST).exe ${DEBUG_FLAG} -hda bootable_kernel.bin ${HDB} -serial file:serial_port_output.txt ${NET_ARG}
 else
   echo "Native Linux"
-  qemu-system-$(./target-triplet-to-arch.sh $HOST) ${DEBUG_FLAG} -hda bootable_kernel.bin ${HDB} -serial file:serial_port_output.txt
+  qemu-system-$(./target-triplet-to-arch.sh $HOST) ${DEBUG_FLAG} -hda bootable_kernel.bin ${HDB} -serial file:serial_port_output.txt ${NET_ARG}
 fi

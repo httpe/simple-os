@@ -1,6 +1,9 @@
 #include <stdio.h>
+#include <common.h>
+#include <kernel/panic.h>
 #include <kernel/pci.h>
 #include <arch/i386/kernel/port_io.h>
+#include <arch/i386/kernel/rtl8139.h>
 
 // Ref: https://wiki.osdev.org/PCI
 
@@ -33,6 +36,25 @@ uint32_t pci_read_reg(uint8_t bus, uint8_t device, uint8_t function, uint8_t reg
     return r;
 }
 
+void pci_write_reg(uint8_t bus, uint8_t device, uint8_t function, uint8_t reg, uint32_t value)
+{
+    uint32_t address;
+    uint32_t lbus  = (uint32_t)bus;
+    uint32_t ldevice = (uint32_t)device;
+    uint32_t lfunction = (uint32_t)function;
+ 
+    /* create configuration address as per Figure 1 */
+    address = (uint32_t)((lbus << 16) | (ldevice << 11) |
+              (lfunction << 8) | (reg << 2) | ((uint32_t)0x80000000));
+ 
+    /* write out the address */
+    outl(PCI_CONFIG_ADDRESS_PORT, address);
+
+    /* write out the data */
+    outl(PCI_CONFIG_DATA_PORT, value);
+    
+}
+
 uint16_t pci_get_vender_id(uint8_t bus, uint8_t device, uint8_t function) {
     uint32_t reg = pci_read_reg(bus, device, function, 0);
     return (uint16_t) (reg & 0xFFFF);
@@ -63,12 +85,28 @@ uint8_t pci_get_secondary_bus(uint8_t bus, uint8_t device, uint8_t function) {
     return (uint8_t) ((reg >> 8) & 0xFF);
 }
 
+static void init_pci_device(uint8_t bus, uint8_t device, uint8_t function)
+{
+    uint16_t vendor_id = pci_get_vender_id(bus, device, function);
+    uint16_t device_id = pci_get_device_id(bus, device, function);
+    uint8_t header_type = pci_get_header_type(bus, device, function);
+    uint32_t bar0 = pci_read_reg(bus, device, function, 4);
+    uint32_t bar1 = pci_read_reg(bus, device, function, 5);
+    printf("PCI Device Found: BUS[%u]:DEV[%u]:FUNC[%u]:VENDOR[0x%x]:DEV_ID[0x%x]:H[%u]:B0[0x%x]:B1[0x%x]\n", 
+        bus, device, function, vendor_id, device_id, header_type, bar0, bar1);
 
+    // Hard coded list of know PCI devices
+    if(vendor_id == 0x10EC && device_id == 0x8139) {
+        init_rtl8139(bus, device, function);
+    }
+}
 
 static void pci_check_function(uint8_t bus, uint8_t device, uint8_t function) {
     uint8_t baseClass;
     uint8_t subClass;
     uint8_t secondaryBus;
+
+    init_pci_device(bus, device, function);
 
     baseClass = pci_get_base_class(bus, device, function);
     subClass = pci_get_sub_class(bus, device, function);
@@ -83,9 +121,6 @@ static void pci_check_device(uint8_t bus, uint8_t device) {
 
     uint16_t vendorID = pci_get_vender_id(bus, device, function);
     if(vendorID == 0xFFFF) return;        // Device doesn't exist
-
-    uint16_t device_id = pci_get_device_id(bus, device, function);
-    printf("PCI Device Found: BUS[%u]:DEV[%u]:VENDOR_ID[0x%x]:DEV_ID[0x%x]\n", bus, device, vendorID, device_id);
 
     pci_check_function(bus, device, function);
     uint8_t headerType = pci_get_header_type(bus, device, function);

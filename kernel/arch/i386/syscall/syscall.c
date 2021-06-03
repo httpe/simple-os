@@ -9,6 +9,7 @@
 #include <kernel/process.h>
 #include <arch/i386/kernel/isr.h>
 #include <arch/i386/kernel/cpu.h>
+#include <arch/i386/kernel/rtl8139.h>
 
 int sys_exec(trapframe* r)
 {
@@ -270,6 +271,9 @@ int sys_getcwd(trapframe* r)
 int sys_test(trapframe* r)
 {
     UNUSED_ARG(r);
+    char * buf = *(char**) (r->esp + 4);
+    uint buf_size = *(uint *) (r->esp + 8);
+    rtl8139_send_packet(buf, buf_size);
     return 0;
 }
 
