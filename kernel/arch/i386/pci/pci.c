@@ -13,12 +13,12 @@
 #define PCI_CONFIG_ADDRESS_PORT 0xCF8
 #define PCI_CONFIG_DATA_PORT 0xCFC
 
-#define VENDER_ID(bus,device,function) (uint16_t) (pci_read_reg((bus), (device), (function), 0) & 0xFFFF)
-#define DEVICE_ID(bus,device,function) (uint16_t) ((pci_read_reg((bus), (device), (function), 0) >> 16) & 0xFFFF)
-#define HEADER_TYPE(bus,device,function) (uint8_t) ((pci_read_reg((bus), (device), (function), 3) >> 16) & 0xFF)
-#define BASE_CLASS(bus,device,function) (uint8_t) ((pci_read_reg((bus), (device), (function), 2) >> 24) & 0xFF)
-#define SUB_CLASS(bus,device,function) (uint8_t) ((pci_read_reg((bus), (device), (function), 2) >> 16) & 0xFF)
-#define SECONDARY_BUS(bus,device,function) (uint8_t) ((pci_read_reg((bus), (device), (function), 6) >> 8) & 0xFF)
+#define VENDER_ID(bus,device,function) ((uint16_t) (pci_read_reg((bus), (device), (function), 0) & 0xFFFF))
+#define DEVICE_ID(bus,device,function) ((uint16_t) ((pci_read_reg((bus), (device), (function), 0) >> 16) & 0xFFFF))
+#define HEADER_TYPE(bus,device,function) ((uint8_t) ((pci_read_reg((bus), (device), (function), 3) >> 16) & 0xFF))
+#define BASE_CLASS(bus,device,function) ((uint8_t) ((pci_read_reg((bus), (device), (function), 2) >> 24) & 0xFF))
+#define SUB_CLASS(bus,device,function) ((uint8_t) ((pci_read_reg((bus), (device), (function), 2) >> 16) & 0xFF))
+#define SECONDARY_BUS(bus,device,function) ((uint8_t) ((pci_read_reg((bus), (device), (function), 6) >> 8) & 0xFF))
 #define BAR_0(bus,device,function) pci_read_reg((bus), (device), (function), 4)
 #define BAR_1(bus,device,function) pci_read_reg((bus), (device), (function), 5)
 
