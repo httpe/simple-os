@@ -2,6 +2,7 @@
 #define _KERNEL_MEMORY_BITMAP_H
 
 #include <stdint.h>
+#include <common.h>
 
 // Macros used in the bitset algorithms.
 // A frame is 4KiB in size
@@ -22,6 +23,7 @@ void set_frame(uint32_t frame_idx);
 void clear_frame(uint32_t frame_idx);
 uint32_t test_frame(uint32_t frame_idx);
 uint32_t first_free_frame();
+uint32_t n_free_frames(uint n);
 void initialize_bitmap(uint32_t mbt_physical_addr);
 
 #endif

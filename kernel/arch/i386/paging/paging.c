@@ -59,7 +59,7 @@ typedef struct page_directory_entry
 
 // Declare internal utility functions
 static uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, bool is_kernel);
-static uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32_t* frames,  bool is_kernel, bool is_writeable);
+static uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32_t* frames,  bool is_kernel, bool is_writeable, bool alloc_consecutive_frame);
 static uint unmap_pages_from(pde* page_dir, uint page_index, uint page_count, bool free_frame, bool skip_unmapped);
 
 
@@ -172,7 +172,7 @@ static page_t* get_page_table(pde* page_dir, uint32_t page_dir_idx, bool allow_a
     } else {
         uint32_t page_table_frame = page_dir[page_dir_idx].page_table_frame;
         uint32_t page_table_page_index = find_contiguous_free_pages(curr_page_dir(), 1, true);
-        map_pages_at(curr_page_dir(), page_table_page_index, 1, &page_table_frame, true, true);
+        map_pages_at(curr_page_dir(), page_table_page_index, 1, &page_table_frame, true, true, false);
         page_table = (page_t*) VADDR_FROM_PAGE_INDEX(page_table_page_index);
     }
 
@@ -241,7 +241,7 @@ static uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, boo
 // Map or allocate pages
 //@param frames frame index arrary of length page_count, map to these frames. If NULL, allocate new frames
 //@return number of frames mapped
-static uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32_t* frames,  bool is_kernel, bool is_writeable)
+static uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32_t* frames,  bool is_kernel, bool is_writeable, bool alloc_consecutive_frame)
 {
     if(page_count == 0) {
         return 0;
@@ -256,6 +256,11 @@ static uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32
     PANIC_ASSERT(page_table_idx < PAGE_TABLE_SIZE);
     PANIC_ASSERT((page_dir_idx < kernel_page_dir_idx) ^ is_kernel);
     page_t* page_table = get_page_table(page_dir, page_dir_idx, true);
+    
+    uint frame_index;
+    if(frames == NULL && alloc_consecutive_frame) {
+        frame_index = n_free_frames(page_count);
+    }
 
     while(page_allocated < page_count) {
         page_t old_pte = page_table[page_table_idx];
@@ -263,10 +268,13 @@ static uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32
         // Make sure the page hasn't been mapped to any physical memory
         PANIC_ASSERT(!old_pte.present);
 
-        uint frame_index;
         if(frames == NULL) {
-            frame_index = first_free_frame();
-            set_frame(frame_index);
+            if(alloc_consecutive_frame) {
+                set_frame(frame_index++);
+            } else {
+                frame_index = first_free_frame();
+                set_frame(frame_index);
+            }
         } else {
             frame_index = *frames++;
             PANIC_ASSERT(test_frame(frame_index));
@@ -476,7 +484,7 @@ uint32_t alloc_pages_at(pde* page_dir, uint32_t page_index, size_t page_count, b
     if(page_count == 0) {
         return 0;
     }
-    map_pages_at(page_dir, page_index, page_count, NULL, is_kernel, is_writeable);
+    map_pages_at(page_dir, page_index, page_count, NULL, is_kernel, is_writeable, false);
     return VADDR_FROM_PAGE_INDEX(page_index);
 }
 
@@ -486,8 +494,21 @@ uint32_t alloc_pages(pde* page_dir, size_t page_count, bool is_kernel, bool is_w
         return 0;
     }
     uint32_t page_index = find_contiguous_free_pages(page_dir, page_count, is_kernel);
-    map_pages_at(page_dir, page_index, page_count, NULL, is_kernel, is_writeable);
+    map_pages_at(page_dir, page_index, page_count, NULL, is_kernel, is_writeable, false);
     return VADDR_FROM_PAGE_INDEX(page_index);
+}
+
+uint32_t alloc_pages_consecutive_frames(pde* page_dir, size_t page_count, bool is_writeable, uint32_t* physical_addr) {
+    if (page_count == 0) {
+        return 0;
+    }
+    uint32_t page_index = find_contiguous_free_pages(page_dir, page_count, true);
+    map_pages_at(page_dir, page_index, page_count, NULL, true, is_writeable, true);
+    uint32_t vaddr = VADDR_FROM_PAGE_INDEX(page_index);
+    if(physical_addr != NULL) {
+        *physical_addr = vaddr2paddr(page_dir, vaddr);
+    }
+    return vaddr;
 }
 
 bool is_vaddr_accessible(pde* page_dir, uint32_t vaddr, bool is_from_kernel_code, bool is_writing) {

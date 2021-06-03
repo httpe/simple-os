@@ -41,8 +41,15 @@ uint32_t test_frame(uint32_t frame_idx) {
     return (frames[idx] & (0x1 << off));
 }
 
-// Find the first free frame.
-uint32_t first_free_frame() {
+// Find N consecutive free frames
+//@return: first frame index of the series
+uint32_t n_free_frames(uint n)
+{
+    PANIC_ASSERT(n>0);
+
+    uint32_t n_found = 0;
+    uint32_t first_frame = 0;
+
     uint32_t frame_idx = (last_allocated_frame_idx + 1) % N_FRAMES;
     for(; frame_idx != last_allocated_frame_idx; frame_idx = (frame_idx + 1) % N_FRAMES) {
         uint32_t i = ARRAY_INDEX_FROM_FRAME_INDEX(frame_idx);
@@ -50,16 +57,31 @@ uint32_t first_free_frame() {
         if (frames[i] != 0xFFFFFFFF) // nothing free, exit early.
         {
             // at least one bit is free here.
-            for (j = 0; j < 32; j++)             {
+            for (j = 0; j < 32; j++) {
                 uint32_t toTest = 0x1 << j;
-                if (!(frames[i] & toTest))                 {
-                    return i * 4 * 8 + j; // return the index of the first free frame
+                if (!(frames[i] & toTest)) {
+                    if(n_found == 0) {
+                        first_frame = i * 4 * 8 + j;
+                    }
+                    n_found++;
+                    if(n_found == n) {
+                        return first_frame;
+                    }
+                } else {
+                    n_found = 0;
                 }
             }
+        } else {
+            n_found = 0;
         }
     }
 
     PANIC("No free frame!");
+}
+
+// Find the first free frame.
+uint32_t first_free_frame() {
+    return n_free_frames(1);
 }
 
 void initialize_bitmap(uint32_t mbt_physical_addr) {
