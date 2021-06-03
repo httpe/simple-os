@@ -52,7 +52,8 @@ Although the final goal is to make the system self-hosting, we have planned for 
     - Port a simplified C compiler to the system
     - Compile and run the text editor inside the system
     - **In Progress**
-      - A shell with `cd`, `ls` and program execution was implemented
+      - A shell with `cd` and program execution was implemented
+      - Implemented various file management utilities including `ls`, `mkdir`, `rmdir`, `mv` and `rm`
       - Ported the simple text editor [Kilo](https://viewsourcecode.org/snaptoken/kilo/index.html), with basic editing functionalities and C syntax highlighting
 
 1. **Milestone Six: Multi-core CPU support and IPC**
@@ -63,6 +64,7 @@ Although the final goal is to make the system self-hosting, we have planned for 
 1. **Milestone Seven: Networking**
     - Allow connecting to the Internet
     - Implement DNS query and ping command
+    - **In Progress**
 
 1. **Final Goal: Self-hosting**
     - Port a sophisticate enough compiler to the system
@@ -292,13 +294,13 @@ User space applications to be compiled by os specific tool-chain and use Newlib 
   - `init/`
     - Compile to the first user space program to be ran (`init.elf`), perform user space initialization (like preparing for stdin/stdout/stderr) and then fork-exec shell. Currently also be used to test several user space features.
   - `shell/`
-    - Shell, supporting commands include
-      - `ls`
-      - `cd`
-      - and program execution
+    - Shell, supporting `cd` commands and program execution with argc/argv
+      - e.g. if user type `ls` and hit enter, the shell will try to find `ls.elf` in `/usr/bin/`, `/home/bin/` and the current working directory. If found, the shell will fork and execute it.
   - `editor/`
     - A port from the Kilo project
     - A simple editor with basic editing feature and C syntax highlighting
+  - `ls`, `mv/`, `rm/`, `mkdir/`, `rmdir/`
+    - Various file management utilities
 
 ## Reference
 
