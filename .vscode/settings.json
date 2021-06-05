@@ -10,5 +10,9 @@
     "C_Cpp.vcFormat.newLine.beforeElse": false,
     "C_Cpp.vcFormat.newLine.beforeOpenBrace.block": "sameLine",
     "C_Cpp.vcFormat.newLine.beforeOpenBrace.function": "sameLine",
-    "C_Cpp.formatting": "vcFormat"
+    "C_Cpp.formatting": "vcFormat",
+    "C_Cpp.files.exclude": {
+        "**/build-toolchain/**": true,
+        "**/.vscode": true
+    }
 }
