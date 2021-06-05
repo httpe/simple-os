@@ -17,10 +17,32 @@ typedef struct rtl8139 {
     uint8_t mac[6];
     void* receive_buff;
     uint32_t receive_buff_phy_addr;
+    uint32_t rx_offset;
     uint packet_sent;
     void* send_buff;
     uint32_t send_buff_phy_addr;
 } rtl8139;
+
+typedef struct rtl18139_packet_header {
+    union
+    {
+        struct {
+            uint16_t ROK:1;
+            uint16_t FAE:1;
+            uint16_t CRC:1;
+            uint16_t LONG:1;
+            uint16_t RUNT:1;
+            uint16_t ISE:1;
+            uint16_t reserved:7;
+            uint16_t BAR:1;
+            uint16_t PAM:1;
+            uint16_t MAR:1;
+
+        } status_detail;
+        uint16_t status;
+    } packet_status;
+    uint16_t packet_len;
+} rtl18139_packet_header;
 
 static int initialized = 0;
 static rtl8139 dev;
@@ -34,6 +56,26 @@ static void rtl8139_irq_handler(trapframe* tf)
 
     if(int_reg & 1) {
         printf("RTL8139 IRQ: Receive OK (ROK)\n");
+
+        rtl18139_packet_header* header = dev.receive_buff + dev.rx_offset;
+        printf("RTL8139 IRQ: Receive Status[0x%x], Len[%u], Content:", 
+            header->packet_status.status,
+            header->packet_len
+            );
+        unsigned char* buf = dev.receive_buff + dev.rx_offset + sizeof(rtl18139_packet_header);
+        for(int i=0; i<header->packet_len - 4; i++) { // 4: CRC trailing the packet data
+            if(i % 16 == 0) {
+                printf("\n");
+            }
+            printf("0x%x ", buf[i]);
+        }
+        printf("\nCRC[0x%x]\n", *(uint32_t*) &buf[header->packet_len - 4]);
+
+        dev.rx_offset += (dev.rx_offset + header->packet_len + sizeof(rtl18139_packet_header) + 3) & -4;
+        if(dev.rx_offset >= 8192 + 16 + 150) {
+            dev.rx_offset -= 8192 + 16 + 150;
+        }
+
         // Confirm IRQ processed
         outw(dev.io_base + 0x3E, 1);
     }
