@@ -568,9 +568,10 @@ void editorOpen(char *filename) {
 
   editorSelectSyntaxHighlight();
 
-  FILE *fp = fopen(filename, "a+");
-  if (!fp) die("fopen");
-  fseek(fp, 0, SEEK_SET);
+  FILE *fp = fopen(filename, "r");
+  if (!fp) {
+    return;
+  }
 
   char *line = NULL;
   size_t linecap = 0;
