@@ -11,6 +11,11 @@
 #include <arch/i386/kernel/pic.h>
 
 // Ref: https://wiki.osdev.org/RTL8139
+// Ref: https://www.cs.usfca.edu/~cruse/cs326f04/RTL8139D_DataSheet.pdf
+
+// Receive buffer size, +1500 to allow WRAP=1 in Rx Configuration Register
+#define RTL8139_RECEIVE_BUF_SIZE (8192+16+1500)
+#define RTL8139_TRANSMIT_BUF_SIZE 1792
 
 typedef struct rtl8139 {
     uint16_t io_base;
@@ -51,10 +56,13 @@ static void rtl8139_irq_handler(trapframe* tf)
 {
     UNUSED_ARG(tf);
 
-    uint16_t int_reg = inw(dev.io_base + 0x3E);
+    uint16_t int_reg = inw(dev.io_base + RTL8139_ISR);
     printf("RTL8139 IRQ: Int reg 0x%x\n", int_reg);
 
-    if(int_reg & 1) {
+    // Acknowledge IRQ
+    outw(dev.io_base + RTL8139_ISR, int_reg);
+
+    if(int_reg & RTL8139_IxR_ROK) {
         printf("RTL8139 IRQ: Receive OK (ROK)\n");
 
         rtl18139_packet_header* header = dev.receive_buff + dev.rx_offset;
@@ -72,17 +80,12 @@ static void rtl8139_irq_handler(trapframe* tf)
         printf("\nCRC[0x%x]\n", *(uint32_t*) &buf[header->packet_len - 4]);
 
         dev.rx_offset += (dev.rx_offset + header->packet_len + sizeof(rtl18139_packet_header) + 3) & -4;
-        if(dev.rx_offset >= 8192 + 16 + 150) {
-            dev.rx_offset -= 8192 + 16 + 150;
+        if(dev.rx_offset >= RTL8139_RECEIVE_BUF_SIZE) {
+            dev.rx_offset -= RTL8139_RECEIVE_BUF_SIZE;
         }
-
-        // Confirm IRQ processed
-        outw(dev.io_base + 0x3E, 1);
     }
-    if(int_reg & (1 << 2)) {
+    if(int_reg & RTL8139_IxR_TOK) {
         printf("RTL8139 IRQ: Transmit OK (TOK)\n");
-        // Confirm IRQ processed
-        outw(dev.io_base + 0x3E, 1 << 2);
     }
 
 }
@@ -108,28 +111,30 @@ void init_rtl8139(uint8_t bus, uint8_t device, uint8_t function)
     printf("RTL8139 base I/O port: 0x%x\n", dev.io_base);
 
     // Turning on the RTL8139
-    outb(dev.io_base + 0x52, 0x0);
+    outb(dev.io_base + RTL8139_CONFIG1, 0x0);
 
     // Software Reset
-    outb(dev.io_base + 0x37, 0x10);
-    while( (inb(dev.io_base + 0x37) & 0x10) != 0);
+    outb(dev.io_base + RTL8139_CR, RTL8139_CR_RST);
+    while( (inb(dev.io_base + RTL8139_CR) & RTL8139_CR_RST) != 0);
 
     // Read MAC
-    uint32_t mac_lo = inl(dev.io_base + 0x0);
-    uint16_t mac_hi = inw(dev.io_base + 0x4);
+    uint32_t mac_lo = inl(dev.io_base + RTL8139_IDR_HI);
+    uint16_t mac_hi = inw(dev.io_base + RTL8139_IDR_LO);
     memmove(dev.mac, &mac_lo, 4);
     memmove(dev.mac + 4, &mac_hi, 2);
 
     printf("RTL8139 MAC: %x:%x:%x:%x:%x:%x\n", dev.mac[0],dev.mac[1],dev.mac[2],dev.mac[3],dev.mac[4],dev.mac[5]);
 
     // Init Receive buffer
-    uint page_count = PAGE_COUNT_FROM_BYTES(8192 + 16 + 150);
+    uint page_count = PAGE_COUNT_FROM_BYTES(RTL8139_RECEIVE_BUF_SIZE);
     dev.receive_buff = (void*) alloc_pages_consecutive_frames(curr_page_dir(), page_count, true, &dev.receive_buff_phy_addr);
     memset(dev.receive_buff, 0, page_count*PAGE_SIZE);
-    outl(dev.io_base + 0x30, dev.receive_buff_phy_addr);
+    dev.rx_offset = 0;
+    outw(dev.io_base + RTL8139_CAPR, 0);
+    outl(dev.io_base + RTL8139_RBSTART, dev.receive_buff_phy_addr);
 
     // Init transmit buffer
-    page_count = PAGE_COUNT_FROM_BYTES(1792 * 4);
+    page_count = PAGE_COUNT_FROM_BYTES(RTL8139_TRANSMIT_BUF_SIZE * 4);
     dev.send_buff = (void*) alloc_pages_consecutive_frames(curr_page_dir(), page_count, true, &dev.send_buff_phy_addr);
     memset(dev.send_buff, 0, page_count*PAGE_SIZE);
 
@@ -141,30 +146,30 @@ void init_rtl8139(uint8_t bus, uint8_t device, uint8_t function)
 
     // Set IMR + ISR
     // To set the RTL8139 to accept only the Transmit OK (TOK) and Receive OK (ROK) interrupts
-    outw(dev.io_base + 0x3C, 0x0005);
+    outw(dev.io_base + RTL8139_IMR, RTL8139_IxR_TOK | RTL8139_IxR_ROK);
 
     // Configuring receive buffer (RCR)
-    // AB - Accept Broadcast: Accept broadcast packets sent to mac ff:ff:ff:ff:ff:ff
-    // AM - Accept Multicast: Accept multicast packets.
-    // APM - Accept Physical Match: Accept packets send to NIC's MAC address.
-    // AAP - Accept All Packets. Accept all packets (run in promiscuous mode).
-    outl(dev.io_base + 0x44, 0xF | (1 << 7)); // (1 << 7) is the WRAP bit, 0xF is AB+AM+APM+AAP
+    // AB (bit 3) - Accept Broadcast: Accept broadcast packets sent to mac ff:ff:ff:ff:ff:ff
+    // AM (bit 2) - Accept Multicast: Accept multicast packets.
+    // APM (bit 1) - Accept Physical Match: Accept packets send to NIC's MAC address.
+    // AAP (bit 0) - Accept All Packets. Accept all packets (run in promiscuous mode)
+    outl(dev.io_base + RTL8139_RCR, RTL8139_RCR_AB | RTL8139_RCR_AM | RTL8139_RCR_APM | RTL8139_RCR_WRAP); // (1 << 7) is the WRAP bit, 0xE is AB+AM+APM
 
     // Enable Receive and Transmitter
-    outb(dev.io_base + 0x37, 0x0C); // Sets the RE (Receiver Enabled) and the TE (Transmitter Enabled) bits high
+    outb(dev.io_base + RTL8139_CR, RTL8139_CR_RXEN | RTL8139_CR_TXEN); // Sets the RE (Receiver Enabled) and the TE (Transmitter Enabled) bits high
 
     initialized = 1;
 }
 
 void rtl8139_send_packet(void* buf, uint size)
 {
-    PANIC_ASSERT(size <= 1792);
-    uint buff_idx = dev.packet_sent % 4;
-    uint32_t transmit_buff_paddr = dev.send_buff_phy_addr + 1792*buff_idx;
-    uint start_reg = dev.io_base + 0x20 + 4*buff_idx;
-    uint status_reg = dev.io_base + 0x10 + 4*buff_idx;
+    PANIC_ASSERT(size <= RTL8139_TRANSMIT_BUF_SIZE);
+    uint buff_idx = dev.packet_sent % 4; // there are four transimit buffer used iteratively
+    uint32_t transmit_buff_paddr = dev.send_buff_phy_addr + RTL8139_CR_TXEN*buff_idx;
+    uint start_reg = dev.io_base + RTL8139_TSAD_n(buff_idx);
+    uint status_reg = dev.io_base + RTL8139_TSD_n(buff_idx);
 
-    memmove(dev.send_buff + 1792*buff_idx, buf, size);
+    memmove(dev.send_buff + RTL8139_TRANSMIT_BUF_SIZE*buff_idx, buf, size);
     outl(start_reg, transmit_buff_paddr);
     outl(status_reg, size);
 
