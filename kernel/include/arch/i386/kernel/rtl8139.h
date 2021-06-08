@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 void init_rtl8139(uint8_t bus, uint8_t device, uint8_t function);
-void rtl8139_send_packet(void* buf, uint size);
+int rtl8139_send_packet(void* buf, uint size);
 
 // Source: https://github.com/doug65536/dgos/blob/master/kernel/device/rtl8139/rtl8139.bits.h
 
