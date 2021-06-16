@@ -15,7 +15,10 @@ else
   HDB=""
 fi
 
+# To use user mode network:
 NET_ARG="-nic user,model=rtl8139,mac=52:54:98:76:54:32"
+# To use tap network (see setup_tap.sh and cleanup_tap.sh):
+# NET_ARG="-netdev tap,id=mynet0,ifname=tap0,script=no,downscript=no -device rtl8139,netdev=mynet0,mac=52:54:98:76:54:32"
 
 if grep -q Microsoft /proc/version; then
   echo "Windows Subsystem for Linux"
