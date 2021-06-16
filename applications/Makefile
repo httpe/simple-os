@@ -27,6 +27,7 @@ mv/mv.elf \
 mkdir/mkdir.elf \
 rmdir/rmdir.elf \
 ping/ping.elf \
+cp/cp.elf
 
 .PHONY: all clean install
 # .SUFFIXES: .o .c .S
