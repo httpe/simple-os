@@ -71,6 +71,18 @@ static void rtl8139_irq_handler(trapframe* tf)
     // Acknowledge IRQ
     outw(dev.io_base + RTL8139_ISR, int_reg);
 
+    if(int_reg & RTL8139_IxR_TOK) {
+        // Transmit Status of descriptor
+        for(;dev.packet_sent < dev.packet_to_send;dev.packet_sent++) {
+            uint32_t tsd = inl(dev.io_base + RTL8139_TSD_n(dev.packet_sent % 4));
+            if(tsd & (RTL8139_TSD_OWN | RTL8139_TSD_TOK)) {
+                printf("RTL8139 IRQ: Transmit OK (TOK), TSD[0x%x]\n", tsd);
+            } else {
+                printf("RTL8139 IRQ: Transmit Error, TSD[0x%x]\n", tsd);
+            }
+        }
+    }
+
     if(int_reg & RTL8139_IxR_ROK) {
         printf("RTL8139 IRQ: Receive OK (ROK)\n");
 
@@ -99,18 +111,6 @@ static void rtl8139_irq_handler(trapframe* tf)
                 dev.rx_offset -= RTL8139_RECEIVE_BUF_SIZE;
             }
             outw(dev.io_base + RTL8139_CAPR, dev.rx_offset - 0x10); //-0x10 to avoid overflow 
-        }
-    }
-
-    if(int_reg & RTL8139_IxR_TOK) {
-        // Transmit Status of descriptor
-        for(;dev.packet_sent < dev.packet_to_send;dev.packet_sent++) {
-            uint32_t tsd = inl(dev.io_base + RTL8139_TSD_n(dev.packet_sent % 4));
-            if(tsd & (RTL8139_TSD_OWN | RTL8139_TSD_TOK)) {
-                printf("RTL8139 IRQ: Transmit OK (TOK), TSD[0x%x]\n", tsd);
-            } else {
-                printf("RTL8139 IRQ: Transmit Error, TSD[0x%x]\n", tsd);
-            }
         }
     }
 }
