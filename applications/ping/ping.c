@@ -25,6 +25,7 @@ int main(int argc, char* argv[]) {
 	"\x26\x27\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f\x30\x31\x32\x33\x34\x35" \
 	"\x36\x37";
 	// sys_send_network_packet(buf, 0x62);
+	UNUSED_ARG(buf);
 
 	// Ethernet payload extracted from the full packet above
     char eth_payload[] = "\x45\x00" \

@@ -157,9 +157,12 @@ int main(int argc, char* argv[]) {
     printf("Hello User World!\n");
 
     // Perform tests of user space features
-    test_multi_process();
-    test_libc();
-    test_file_system();
+    // test_multi_process();
+    // test_libc();
+    // test_file_system();
+    UNUSED_ARG(test_multi_process);
+    UNUSED_ARG(test_libc);
+    UNUSED_ARG(test_file_system);
 
     // Execute the shell
     char* shell_argv[] = {"/usr/bin/shell.elf", NULL};

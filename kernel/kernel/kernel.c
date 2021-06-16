@@ -98,10 +98,14 @@ void kernel_main(uint32_t mbt_physical_addr) {
 	printf("CMOS Time: %u-%u-%u %u:%u:%u\n", dt.tm_year + 1900, dt.tm_mon, dt.tm_mday, dt.tm_hour, dt.tm_min, dt.tm_sec);
 	terminal_set_font_attr(TTY_FONT_ATTR_CLEAR);
 
-	test_malloc();
-	test_ata();
+	// Kernel tests
+	// test_malloc();
+	// test_ata();
+	// test_paging();
 
 	// unused tests
+	UNUSED_ARG(test_malloc);
+	UNUSED_ARG(test_ata);
 	UNUSED_ARG(test_paging);
 
 	// Enter user space and running init
