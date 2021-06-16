@@ -39,6 +39,8 @@ vfs/vfs.o \
 fat/fat.o \
 console/console.o \
 kernel/kernel.o \
+network/ethernet.o \
+
 
 OBJS=\
 $(ARCHDIR)/crt/crti.o \

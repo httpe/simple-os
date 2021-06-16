@@ -3,7 +3,7 @@
 #include <kernel/panic.h>
 #include <kernel/pci.h>
 #include <arch/i386/kernel/port_io.h>
-#include <arch/i386/kernel/rtl8139.h>
+#include <kernel/rtl8139.h>
 
 // Ref: https://wiki.osdev.org/PCI
 

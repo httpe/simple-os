@@ -1,10 +1,25 @@
-#ifndef _ARCH_I386_RTL8139_H
-#define _ARCH_I386_RTL8139_H
+#ifndef _KERNEL_RTL8139_H
+#define _KERNEL_RTL8139_H
 
 #include <stdint.h>
+#include <common.h>
+#include <kernel/ethernet.h>
+
+// Receive buffer size, actual size is below + 1500 to allow WRAP=1 in Rx Configuration Register
+#define RTL8139_RECEIVE_BUF_SIZE (8192+16)
+#define RTL8139_TRANSMIT_BUF_SIZE 1792
+
+// typedef struct packet {
+//     uint8_t id;
+//     uint32_t size;
+//     char buf[RTL8139_TRANSMIT_BUF_SIZE];
+// } packet;
+
 
 void init_rtl8139(uint8_t bus, uint8_t device, uint8_t function);
+// packet* rtl8139_get_empty_packet();
 int rtl8139_send_packet(void* buf, uint size);
+mac_addr rtl8139_mac();
 
 // Source: https://github.com/doug65536/dgos/blob/master/kernel/device/rtl8139/rtl8139.bits.h
 

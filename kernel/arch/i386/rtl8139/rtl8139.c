@@ -4,7 +4,7 @@
 #include <common.h>
 #include <kernel/panic.h>
 #include <kernel/pci.h>
-#include <arch/i386/kernel/rtl8139.h>
+#include <kernel/rtl8139.h>
 #include <arch/i386/kernel/port_io.h>
 #include <kernel/paging.h>
 #include <arch/i386/kernel/isr.h>
@@ -13,13 +13,10 @@
 // Ref: https://wiki.osdev.org/RTL8139
 // Ref: https://www.cs.usfca.edu/~cruse/cs326f04/RTL8139D_DataSheet.pdf
 
-// Receive buffer size, actual size is below + 1500 to allow WRAP=1 in Rx Configuration Register
-#define RTL8139_RECEIVE_BUF_SIZE (8192+16)
-#define RTL8139_TRANSMIT_BUF_SIZE 1792
 
 typedef struct rtl8139 {
     uint16_t io_base;
-    uint8_t mac[6];
+    mac_addr mac;
     void* receive_buff;
     uint32_t receive_buff_phy_addr;
     uint16_t rx_offset;
@@ -147,10 +144,10 @@ void init_rtl8139(uint8_t bus, uint8_t device, uint8_t function)
     // Read MAC
     uint32_t mac_lo = inl(dev.io_base + RTL8139_IDR_HI);
     uint16_t mac_hi = inw(dev.io_base + RTL8139_IDR_LO);
-    memmove(dev.mac, &mac_lo, 4);
-    memmove(dev.mac + 4, &mac_hi, 2);
+    memmove(dev.mac.addr, &mac_lo, 4);
+    memmove(dev.mac.addr + 4, &mac_hi, 2);
 
-    printf("RTL8139 MAC: %x:%x:%x:%x:%x:%x\n", dev.mac[0],dev.mac[1],dev.mac[2],dev.mac[3],dev.mac[4],dev.mac[5]);
+    printf("RTL8139 MAC: %x:%x:%x:%x:%x:%x\n", dev.mac.addr[0],dev.mac.addr[1],dev.mac.addr[2],dev.mac.addr[3],dev.mac.addr[4],dev.mac.addr[5]);
 
     // Init Receive buffer
     uint page_count = PAGE_COUNT_FROM_BYTES(RTL8139_RECEIVE_BUF_SIZE);
@@ -183,7 +180,12 @@ void init_rtl8139(uint8_t bus, uint8_t device, uint8_t function)
     outl(dev.io_base + RTL8139_RCR, RTL8139_RCR_AB | RTL8139_RCR_AM | RTL8139_RCR_APM | RTL8139_RCR_WRAP);
 
     // Transimit configuration (TCR)
-    printf("RTL8139 TCR[0x%x]\n", inl(dev.io_base + RTL8139_TCR));
+    uint32_t tcr = inl(dev.io_base + RTL8139_TCR);
+    tcr &= ~RTL8139_TCR_CRC; // the driver does not provide CRC when sending packet
+    outl(dev.io_base + RTL8139_TCR, tcr);
+    tcr = inl(dev.io_base + RTL8139_TCR);
+    PANIC_ASSERT(!(tcr & RTL8139_TCR_CRC));
+    printf("RTL8139 TCR[0x%x]: Append CRC[%d]\n", tcr, tcr & RTL8139_TCR_CRC);
 
     // Set IMR + ISR
     // To set the RTL8139 to accept only the Transmit OK (TOK) and Receive OK (ROK) interrupts
@@ -213,4 +215,9 @@ int rtl8139_send_packet(void* buf, uint size)
     dev.packet_to_send++;
     
     return 0;
+}
+
+mac_addr rtl8139_mac()
+{
+    return dev.mac;
 }
