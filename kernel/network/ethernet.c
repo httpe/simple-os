@@ -43,7 +43,7 @@ int send_ethernet_packet(mac_addr dest_mac, enum ether_type type, void* buf, uin
     if(ethernet_transmit_buffer == NULL) {
         // Initialization
         ethernet_transmit_buffer = malloc(RTL8139_TRANSMIT_BUF_SIZE);
-        // Announce our harcoded ip address before sending out any packet
+        // Announce our hardcoded ip address before sending out any packet
         arp_announce_ip(MY_IP);
     }
     uint pkt_len = sizeof(eth_header) + len;
