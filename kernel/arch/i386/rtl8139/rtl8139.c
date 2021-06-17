@@ -95,14 +95,9 @@ static void rtl8139_irq_handler(trapframe* tf)
             if(!packet_ok(header)) {
                 printf("RTL8139 IRQ: Packet status not valid, dropped\n");
             } else {
-                unsigned char* buf = dev.receive_buff + dev.rx_offset + sizeof(rtl18139_packet_header);
-                for(int i=0; i<header->packet_len - 4; i++) { // there is a 4 bytes CRC trailing the packet data
-                    if(i % 16 == 0 && i != 0) {
-                        printf("\n");
-                    }
-                    printf("0x%x ", buf[i]);
-                }
-                printf("\nCRC[0x%x]\n", *(uint32_t*) &buf[header->packet_len - 4]);
+                void* buf = dev.receive_buff + dev.rx_offset + sizeof(rtl18139_packet_header);
+                // there is a 4 bytes CRC trailing the packet data
+                process_ethernet_packet(buf, header->packet_len - 4, *(uint32_t*) &buf[header->packet_len - 4]);
             }
 
             // +3 and then &~3 to align with dword boundary

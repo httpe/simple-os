@@ -1,6 +1,7 @@
 #include <string.h>
 #include <common.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <kernel/panic.h>
 #include <kernel/ethernet.h>
 #include <kernel/rtl8139.h>
@@ -62,4 +63,20 @@ int send_ethernet_packet(mac_addr dest_mac, enum ether_type type, void* buf, uin
     // return rtl8139_send_packet(pkt, len + sizeof(pkt->crc));
     int res = rtl8139_send_packet(ethernet_transmit_buffer, pkt_len);
     return res;
+}
+
+
+int process_ethernet_packet(void* buf, uint16_t len, uint32_t crc)
+{
+    uint8_t* buff = (uint8_t*) buf;
+    for(int i=0; i<len; i++) {
+        if(i % 16 == 0 && i != 0) {
+            printf("\n");
+        }
+        printf("0x%x ", buff[i]);
+    }
+    uint32_t our_crc = crc32(buff, len);
+    char* eq = (crc == our_crc) ? "==":"!=";
+    printf("\nCRC: Received[0x%x] %s Calculated[0x%x]\n", crc, eq, eq,our_crc);
+    return 0;
 }
