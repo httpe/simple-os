@@ -40,6 +40,7 @@ fat/fat.o \
 console/console.o \
 kernel/kernel.o \
 network/ethernet.o \
+network/arp.o \
 
 
 OBJS=\

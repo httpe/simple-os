@@ -95,7 +95,7 @@ static void rtl8139_irq_handler(trapframe* tf)
             if(!packet_ok(header)) {
                 printf("RTL8139 IRQ: Packet status not valid, dropped\n");
             } else {
-                void* buf = dev.receive_buff + dev.rx_offset + sizeof(rtl18139_packet_header);
+                char* buf = dev.receive_buff + dev.rx_offset + sizeof(rtl18139_packet_header);
                 // there is a 4 bytes CRC trailing the packet data
                 process_ethernet_packet(buf, header->packet_len - 4, *(uint32_t*) &buf[header->packet_len - 4]);
             }

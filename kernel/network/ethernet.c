@@ -2,8 +2,10 @@
 #include <common.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <network.h>
 #include <kernel/panic.h>
 #include <kernel/ethernet.h>
+#include <kernel/arp.h>
 #include <kernel/rtl8139.h>
 
 #define CRC_POLY    0xEDB88320
@@ -35,22 +37,14 @@ static uint32_t crc32(uint8_t *data, uint len)
     return (crc ^ 0xFFFFFFFF);
 }
 
-static uint16_t switch_endian16(uint16_t nb) {
-    return (nb>>8) | (nb<<8);
-}
-
-static uint32_t switch_endian32(uint32_t nb) {
-    return ((nb>>24)&0xff)      |
-            ((nb<<8)&0xff0000)   |
-            ((nb>>8)&0xff00)     |
-            ((nb<<24)&0xff000000);
-}
-
 int send_ethernet_packet(mac_addr dest_mac, enum ether_type type, void* buf, uint16_t len)
 {
     // TODO: very inefficient, should implement a buffer queue 
     if(ethernet_transmit_buffer == NULL) {
+        // Initialization
         ethernet_transmit_buffer = malloc(RTL8139_TRANSMIT_BUF_SIZE);
+        // Announce our harcoded ip address before sending out any packet
+        arp_announce_ip(MY_IP);
     }
     uint pkt_len = sizeof(eth_header) + len;
     PANIC_ASSERT(pkt_len <= RTL8139_TRANSMIT_BUF_SIZE);
