@@ -11,6 +11,7 @@
 #include <arch/i386/kernel/cpu.h>
 #include <kernel/ethernet.h>
 #include <kernel/ipv4.h>
+#include <network.h>
 
 int sys_exec(trapframe* r)
 {
@@ -271,13 +272,8 @@ int sys_getcwd(trapframe* r)
 
 int sys_test(trapframe* r)
 {
-    uint8_t ttl = *(uint8_t*) (r->esp + 4);
-    int protocol = *(int *) (r->esp + 8);
-    ip_addr* dst = *(ip_addr**) (r->esp + 12);
-    char * buf = *(char**) (r->esp + 16);
-    uint buf_size = *(uint *) (r->esp + 20);
-    int res = send_ipv4_packet(ttl, protocol, *dst, buf, buf_size);
-    return res;
+    UNUSED_ARG(r);
+    return 0;
 }
 
 int sys_mkdir(trapframe* r)
@@ -299,6 +295,17 @@ int sys_rmdir(trapframe* r)
         return -ENOENT;
     }
     return fs_rmdir(abs_path);
+}
+
+int sys_network_send_ipv4_pkt(trapframe* r)
+{
+    uint8_t ttl = *(uint8_t*) (r->esp + 4);
+    int protocol = *(int *) (r->esp + 8);
+    ip_addr* dst = *(ip_addr**) (r->esp + 12);
+    char * buf = *(char**) (r->esp + 16);
+    uint buf_size = *(uint *) (r->esp + 20);
+    int res = send_ipv4_packet(ttl, protocol, *dst, buf, buf_size);
+    return res;
 }
 
 void syscall_handler(trapframe* r)
@@ -394,6 +401,9 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_RMDIR:
         r->eax = sys_rmdir(r);
+        break;
+    case SYS_NETWORK_SEND_IPv4_PKT:
+        r->eax = sys_network_send_ipv4_pkt(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);

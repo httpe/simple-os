@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <common.h>
+#include <syscall.h>
 
 typedef struct mac_addr {
     uint8_t addr[6]; // store as big endian
@@ -123,6 +124,8 @@ enum icmp_type {
 enum icmp_code {
     ICMP_CODE_ECHO = 0
 };
+
+static inline _syscall5(SYS_NETWORK_SEND_IPv4_PKT, int, syscall_send_ipv4_packet, uint, ttl, enum ipv4_protocal, protocol, ip_addr*, dst, void*, buf, uint, len)
 
 
 #endif

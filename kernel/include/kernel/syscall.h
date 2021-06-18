@@ -32,6 +32,7 @@
 #define SYS_TRUNCATE_FD 25
 #define SYS_MKDIR 26
 #define SYS_RMDIR 27
+#define SYS_NETWORK_SEND_IPv4_PKT 28
 
 // defined in interrupt.asm
 extern void int88();
