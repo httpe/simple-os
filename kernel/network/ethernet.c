@@ -7,6 +7,7 @@
 #include <kernel/ethernet.h>
 #include <kernel/arp.h>
 #include <kernel/rtl8139.h>
+#include <kernel/arp.h>
 
 #define CRC_POLY    0xEDB88320
 
@@ -43,9 +44,16 @@ int send_ethernet_packet(mac_addr dest_mac, enum ether_type type, void* buf, uin
     if(ethernet_transmit_buffer == NULL) {
         // Initialization
         ethernet_transmit_buffer = malloc(RTL8139_TRANSMIT_BUF_SIZE);
+        // Find gateway MAC
+        arp_probe(GATEWAY_IP);
         // Announce our hardcoded ip address before sending out any packet
         arp_announce_ip(MY_IP);
     }
+
+    if(buf == NULL || len == 0) {
+        return 0;
+    }
+
     uint pkt_len = sizeof(eth_header) + len;
     PANIC_ASSERT(pkt_len <= RTL8139_TRANSMIT_BUF_SIZE);
     eth_header* header = (eth_header*) ethernet_transmit_buffer;
@@ -62,15 +70,23 @@ int send_ethernet_packet(mac_addr dest_mac, enum ether_type type, void* buf, uin
 
 int process_ethernet_packet(void* buf, uint16_t len, uint32_t crc)
 {
+    eth_header* head = (eth_header*) buf;
+
     uint8_t* buff = (uint8_t*) buf;
+    uint32_t our_crc = crc32(buff, len);
+    char* eq = (crc == our_crc) ? "==":"!=";
+    printf("Ethernet Pkt Received, CRC: Received[0x%x] %s Calculated[0x%x]:\n", crc, eq, eq,our_crc);
     for(int i=0; i<len; i++) {
         if(i % 16 == 0 && i != 0) {
             printf("\n");
         }
         printf("0x%x ", buff[i]);
     }
-    uint32_t our_crc = crc32(buff, len);
-    char* eq = (crc == our_crc) ? "==":"!=";
-    printf("\nCRC: Received[0x%x] %s Calculated[0x%x]\n", crc, eq, eq,our_crc);
+    printf("\n");
+
+    if(head->ethertype == switch_endian16(ETHER_TYPE_ARP)) {
+        arp_process_packet(buf + sizeof(eth_header), len - sizeof(eth_header));
+    }
+
     return 0;
 }

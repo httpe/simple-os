@@ -23,8 +23,9 @@ typedef struct ip_addr {
     uint8_t addr[4]; // store as big endian
 } ip_addr;
 
-// Hardcode IP addr before we implement DHCP
+// Hardcode IP addrs before we implement DHCP
 #define MY_IP ((ip_addr) {.addr = {10,0,2,16}})
+#define GATEWAY_IP ((ip_addr) {.addr = {10,0,2,2}})
 
 static inline uint16_t switch_endian16(uint16_t nb) {
     return (nb>>8) | (nb<<8);
