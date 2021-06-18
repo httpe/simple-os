@@ -304,7 +304,7 @@ int sys_network_send_ipv4_pkt(trapframe* r)
     ip_addr* dst = *(ip_addr**) (r->esp + 12);
     char * buf = *(char**) (r->esp + 16);
     uint buf_size = *(uint *) (r->esp + 20);
-    int res = send_ipv4_packet(ttl, protocol, *dst, buf, buf_size);
+    int res = ipv4_send_packet(ttl, protocol, *dst, buf, buf_size);
     return res;
 }
 

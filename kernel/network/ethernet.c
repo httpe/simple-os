@@ -8,6 +8,7 @@
 #include <kernel/arp.h>
 #include <kernel/rtl8139.h>
 #include <kernel/arp.h>
+#include <kernel/ipv4.h>
 
 #define CRC_POLY    0xEDB88320
 
@@ -73,17 +74,12 @@ int process_ethernet_packet(void* buf, uint16_t len, uint32_t crc)
     uint8_t* buff = (uint8_t*) buf;
     uint32_t our_crc = crc32(buff, len);
     char* eq = (crc == our_crc) ? "==":"!=";
-    printf("Ethernet Pkt Received, CRC: Received[0x%x] %s Calculated[0x%x]:\n", crc, eq, eq,our_crc);
-    for(int i=0; i<len; i++) {
-        if(i % 16 == 0 && i != 0) {
-            printf("\n");
-        }
-        printf("0x%x ", buff[i]);
-    }
-    printf("\n");
+    printf("Ethernet Pkt Received, CRC: Received[0x%x] %s Calculated[0x%x]:\n", crc, eq, our_crc);
 
     if(head->ethertype == switch_endian16(ETHER_TYPE_ARP)) {
         arp_process_packet(buf + sizeof(eth_header), len - sizeof(eth_header));
+    } else if(head->ethertype == switch_endian16(ETHER_TYPE_IPv4)) {
+        ipv4_process_packet(buf + sizeof(eth_header), len - sizeof(eth_header));
     }
 
     return 0;
