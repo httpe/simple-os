@@ -10,13 +10,15 @@
 // static inline _syscall4(SYS_TEST, int, send_ethernet_packet, mac_addr*, dest, enum ether_type, type, void*, buf, uint, size)
 // static inline _syscall5(SYS_TEST, int, send_ipv4_packet, uint, ttl, enum ipv4_protocol, protocol, ip_addr*, dst, void*, buf, uint, len)
 
+#define PING_DATA_SIZE 56
+
 typedef struct ping {
 	uint8_t type;
 	uint8_t code;
 	uint16_t checksum;
 	uint16_t identifier;
 	uint16_t sequence_number;
-	char data[56];
+	char data[PING_DATA_SIZE];
 } ping;
 
 int main(int argc, char* argv[]) {
@@ -37,14 +39,60 @@ int main(int argc, char* argv[]) {
 	ping pkt = (ping) {
 		.type = ICMP_TYPE_ECHO,
 		.code = ICMP_CODE_ECHO,
-		.identifier = getpid(),
+		.identifier = switch_endian16(getpid()),
 		.sequence_number = 0,
 		.data = "A ping packet from Simple-OS!"
 	};
 
 	pkt.checksum = ipv4_icmp_checksum(&pkt, sizeof(ping));
 
-	int r = syscall_send_ipv4_packet(0x40, IPv4_PROTOCAL_ICMP, &dst, &pkt, sizeof(ping));
+	uint8_t* receive_buff = malloc(65535);
 
-    exit(r);
+	int r = syscall_send_ipv4_packet(0x40, IPv4_PROTOCAL_ICMP, &dst, &pkt, sizeof(ping));
+	if(r < 0) {
+		printf("Ping: Send error\n");
+		exit(-r);
+	}
+
+	while(1) {
+		int received = syscall_receive_ipv4_packet(receive_buff, 65535);
+		if(received < 0) {
+			printf("Ping: Receive error\n");
+			exit(-r);
+		}
+
+		ipv4_header* hdr = (ipv4_header*) receive_buff;
+		if(memcmp(hdr->src.addr,  dst.addr, sizeof(dst.addr)) != 0) {
+			printf("Ping: Skipping packet not from target\n");
+			continue;
+		}
+		if(hdr->protocol != IPv4_PROTOCAL_ICMP) {
+			printf("Ping: Skipping non-ICMP packet\n");
+			continue;
+		}
+
+		if(received < (int) (sizeof(ipv4_header) + sizeof(ping))) {
+			printf("Ping: Skipping packet too small\n");
+			continue;
+		}
+
+		ping* p = (ping*) (receive_buff + sizeof(ipv4_header));
+		if(p->type != ICMP_TYPE_ECHO_REPLY || p->code != ICMP_CODE_ECHO || 
+			p->identifier != pkt.identifier || p->sequence_number != pkt.sequence_number
+		) {
+			printf("Ping: Skipping other ICMP packet\n");
+			continue;
+		}
+		
+		if(memcmp(p->data, pkt.data, PING_DATA_SIZE) == 0) {
+			printf("Ping: GOOD respond received!\n");
+			exit(0);
+		} else {
+			printf("Ping: reply corrupted!\n");
+			exit(1);
+		}
+		
+	}
+
+	
 }
