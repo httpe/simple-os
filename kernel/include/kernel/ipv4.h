@@ -5,7 +5,7 @@
 #include <common.h>
 #include <stdint.h>
 
-
+int init_ipv4();
 int send_ipv4_packet(uint8_t ttl, enum ipv4_protocal protocol, ip_addr dst, void* buf, uint16_t len);
 
 

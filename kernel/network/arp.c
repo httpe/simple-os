@@ -18,6 +18,14 @@ static arp_record* arp_cache = NULL;
 static arp_record* next_free_record = NULL;
 static uint cached_records = 0;
 
+int init_arp()
+{
+    arp_cache = (arp_record*) malloc(sizeof(arp_record) * ARP_CACHE_N_RECORD);
+    memset(arp_cache, 0, sizeof(arp_record) * ARP_CACHE_N_RECORD);
+    next_free_record = arp_cache;
+    return 0;
+}
+
 int arp_announce_ip(ip_addr ip)
 {
     arp pl = {
@@ -55,11 +63,8 @@ int arp_probe(ip_addr ip)
 int arp_process_packet(void* buf, uint16_t len)
 {
     UNUSED_ARG(len);
-    if(arp_cache == NULL) {
-        arp_cache = (arp_record*) malloc(sizeof(arp_record) * ARP_CACHE_N_RECORD);
-        memset(arp_cache, 0, sizeof(arp_record) * ARP_CACHE_N_RECORD);
-        next_free_record = arp_cache;
-    }
+    PANIC_ASSERT(arp_cache != NULL);
+    
     arp* head = (arp*) buf;
     if(head->opcode == switch_endian16(ARP_OP_CODE_REPLY)) {
         // Record any ARP reply to cache

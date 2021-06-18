@@ -38,14 +38,16 @@ static uint32_t crc32(uint8_t *data, uint len)
     return (crc ^ 0xFFFFFFFF);
 }
 
+int init_ethernet()
+{
+    ethernet_transmit_buffer = malloc(RTL8139_TRANSMIT_BUF_SIZE);
+    memset(ethernet_transmit_buffer, 0, RTL8139_TRANSMIT_BUF_SIZE);
+    return 0;
+}
+
 int send_ethernet_packet(mac_addr dest_mac, enum ether_type type, void* buf, uint16_t len)
 {
-    // TODO: very inefficient, should implement a buffer queue 
-    if(ethernet_transmit_buffer == NULL) {
-        // Initialization
-        ethernet_transmit_buffer = malloc(RTL8139_TRANSMIT_BUF_SIZE);
-        memset(ethernet_transmit_buffer, 0, RTL8139_TRANSMIT_BUF_SIZE);
-    }
+    PANIC_ASSERT(ethernet_transmit_buffer != NULL);
 
     if(buf == NULL || len == 0) {
         return 0;
@@ -57,6 +59,7 @@ int send_ethernet_packet(mac_addr dest_mac, enum ether_type type, void* buf, uin
     header->dest = dest_mac;
     header->src = rtl8139_mac();
     header->ethertype = switch_endian16(type);
+    // TODO: very inefficient, should implement a buffer queue 
     memmove(ethernet_transmit_buffer + sizeof(eth_header), buf, len);
     int res = rtl8139_send_packet(ethernet_transmit_buffer, pkt_len);
     return res;

@@ -7,6 +7,7 @@
 // Number of cached IP-MAC mapping
 #define ARP_CACHE_N_RECORD 512
 
+int init_arp();
 int arp_announce_ip(ip_addr ip);
 int arp_probe(ip_addr ip);
 int arp_process_packet(void* buf, uint16_t len);

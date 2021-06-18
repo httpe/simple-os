@@ -12,7 +12,7 @@
 #include <kernel/process.h>
 #include <kernel/block_io.h>
 #include <kernel/vfs.h>
-
+#include <kernel/network.h>
 
 typedef void entry_main(void);
 
@@ -82,6 +82,7 @@ void init()
 {
 	initialize_block_storage();
 	init_vfs();
+	init_network();
 }
 
 void kernel_main(uint32_t mbt_physical_addr) {

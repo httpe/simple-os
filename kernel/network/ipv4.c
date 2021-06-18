@@ -30,28 +30,37 @@ static uint16_t ipv4_checksum(void* buff, uint16_t len)
     return (uint16_t) checksum;
 }
 
+int init_ipv4()
+{
+    ipv4_transmit_buffer = malloc(RTL8139_TRANSMIT_BUF_SIZE);
+    memset(ipv4_transmit_buffer, 0, RTL8139_TRANSMIT_BUF_SIZE);
+    // Announce our hardcoded ip address before sending out any packet
+    arp_announce_ip(MY_IP);
+    // Get default gateway MAC address
+    arp_probe(DEFAULT_GATEWAY_IP);
+    return 0;
+}
+
 int send_ipv4_packet(uint8_t ttl, enum ipv4_protocal protocol, ip_addr dst, void* buf, uint16_t len)
 {
-    if(ipv4_transmit_buffer == NULL) {
-        ipv4_transmit_buffer = malloc(RTL8139_TRANSMIT_BUF_SIZE);
-        memset(ipv4_transmit_buffer, 0, RTL8139_TRANSMIT_BUF_SIZE);
-        // Announce our hardcoded ip address before sending out any packet
-        arp_announce_ip(MY_IP);
-    }
+    PANIC_ASSERT(ipv4_transmit_buffer != NULL);
 
     PANIC_ASSERT(len + sizeof(ipv4_header) <= RTL8139_TRANSMIT_BUF_SIZE);
 
+    // Hardcoded type of IP routing table
+    // If local (determined by SUBNET_MASK), send to the target machine
+    // Otherwise, send to default gateway
     mac_addr mac_dst = {0};
-    if((SUBNET_MASK & *(uint32_t*) dst.addr) == (SUBNET_MASK & *(uint32_t*) GATEWAY_IP.addr)) {
+    if((SUBNET_MASK & *(uint32_t*) dst.addr) == (SUBNET_MASK & *(uint32_t*) DEFAULT_GATEWAY_IP.addr)) {
         int r = arp_ip2mac(dst, &mac_dst);
         if(r < 0) {
             arp_probe(dst);
             return -1;
         }
     } else {
-        int r = arp_ip2mac(GATEWAY_IP, &mac_dst);
+        int r = arp_ip2mac(DEFAULT_GATEWAY_IP, &mac_dst);
         if(r < 0) {
-            arp_probe(GATEWAY_IP);
+            arp_probe(DEFAULT_GATEWAY_IP);
             return -1;
         }
     }

@@ -2,6 +2,7 @@
 #define _NETWORK_H
 
 #include <stdint.h>
+#include <common.h>
 
 typedef struct mac_addr {
     uint8_t addr[6]; // store as big endian
@@ -25,7 +26,7 @@ typedef struct ip_addr {
 
 // Hardcode IP addrs before we implement DHCP
 #define MY_IP ((ip_addr) {.addr = {10,0,2,16}})
-#define GATEWAY_IP ((ip_addr) {.addr = {10,0,2,2}})
+#define DEFAULT_GATEWAY_IP ((ip_addr) {.addr = {10,0,2,2}})
 #define SUBNET_MASK 0xFFFFFF00
 
 static inline uint16_t switch_endian16(uint16_t nb) {

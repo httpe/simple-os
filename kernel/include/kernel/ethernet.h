@@ -5,6 +5,7 @@
 #include <common.h>
 #include <network.h>
 
+int init_ethernet();
 int send_ethernet_packet(mac_addr dest_mac, enum ether_type type, void* buf, uint16_t len);
 int process_ethernet_packet(void* buf, uint16_t len, uint32_t crc);
 
