@@ -49,8 +49,8 @@ int main(int argc, char* argv[]) {
 	"\x26\x27\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f\x30\x31\x32\x33\x34\x35" \
 	"\x36\x37";
 	ip_addr dst = {.addr = {8,8,8,8}};
-	// Send packet until successful
-	while(send_ipv4_packet(0x40, IPv4_PROTOCAL_ICMP, &dst, icmp_payload, sizeof(icmp_payload) - 1) != 0);
 
-    exit(0);
+	int r = send_ipv4_packet(0x40, IPv4_PROTOCAL_ICMP, &dst, icmp_payload, sizeof(icmp_payload) - 1);
+
+    exit(r);
 }
