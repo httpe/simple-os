@@ -8,10 +8,11 @@
 #include <kernel/panic.h>
 #include <kernel/vfs.h>
 #include <kernel/process.h>
-#include <arch/i386/kernel/isr.h>
-#include <arch/i386/kernel/cpu.h>
 #include <kernel/ethernet.h>
 #include <kernel/ipv4.h>
+#include <arch/i386/kernel/isr.h>
+#include <arch/i386/kernel/cpu.h>
+
 
 
 int sys_exec(trapframe* r)
@@ -274,6 +275,14 @@ int sys_getcwd(trapframe* r)
 int sys_test(trapframe* r)
 {
     UNUSED_ARG(r);
+
+    printf("Halting...\n");
+
+    while(1) {
+        process_IRQ(1);
+        PANIC_ASSERT(!is_interrupt_enabled());
+    }    
+
     return 0;
 }
 

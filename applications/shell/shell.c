@@ -9,6 +9,8 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
+_syscall0(SYS_TEST, int, sys_halt)
+
 #define MAX_COMMAND_LEN 255
 #define MAX_PATH_LEN 4096
 #define MAX_ARGC 10
@@ -186,6 +188,9 @@ int main(int argc, char* argv[]) {
             if(r < 0) {
                 printf("cd error(%d): %s\n", r, strerror(-r));
             }
+
+        } else if(strcmp(part, "halt") == 0) {
+            sys_halt();
         } else {
             // try execute programs
             struct stat st = {0};

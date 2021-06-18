@@ -199,15 +199,38 @@ void exit(int exit_code)
     PANIC("Return from scheduler after exiting");
 }
 
+void process_IRQ(uint no_schedule)
+{
+    PANIC_ASSERT(!is_interrupt_enabled());
+
+    proc* p = curr_proc();
+    // disable scheduling
+    uint no_schedule_orig = p->no_schedule;
+    p->no_schedule = no_schedule;
+
+    enable_interrupt();
+    // an IRQ can be processed before halt
+    // so we are relying on at lease the timer IRQ will let use resume from halt
+    // halt();
+    disable_interrupt();
+
+    p->no_schedule = no_schedule_orig;
+}
+
 void yield()
 {
+    PANIC_ASSERT(!is_interrupt_enabled());
+
     proc* p = curr_proc();
-    // printf("PID %u yield\n", p->pid);
 
-    p->state = PROC_STATE_RUNNABLE;
-    switch_kernel_context(&p->context, curr_cpu()->scheduler_context);
+    if(!p->no_schedule) {
+        printf("PID %u yield\n", p->pid);
+        p->state = PROC_STATE_RUNNABLE;
+        switch_kernel_context(&p->context, curr_cpu()->scheduler_context);
+        printf("PID %u back from yield\n", p->pid);
+    }
 
-    // printf("PID %u back from yield\n", p->pid);
+
 }
 
 // From Newlib sys/wait.h

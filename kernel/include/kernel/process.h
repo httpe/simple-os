@@ -41,12 +41,14 @@ typedef struct proc {
   int32_t exit_code;                  // exit code for zombie process
   file *files[N_FILE_DESCRIPTOR_PER_PROCESS];  // Opened files
   char* cwd;                          // Current working directory
+  uint no_schedule;                   // if non zero, will not be scheduled to other process
 } proc;
 
 proc* create_process();
 void init_first_process();
 void scheduler();
 proc* curr_proc();
+void process_IRQ(uint no_schedule);
 void yield();
 int fork();
 void exit(int exit_code);
