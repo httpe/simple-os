@@ -7,6 +7,7 @@
 #include <kernel/ethernet.h>
 #include <kernel/rtl8139.h>
 #include <kernel/arp.h>
+#include <kernel/process.h>
 
 typedef struct arp_record {
     ip_addr ip;
@@ -15,6 +16,7 @@ typedef struct arp_record {
 
 static arp_record* arp_cache = NULL;
 static arp_record* next_free_record = NULL;
+static uint cached_records = 0;
 
 int arp_announce_ip(ip_addr ip)
 {
@@ -52,6 +54,7 @@ int arp_probe(ip_addr ip)
 
 int arp_process_packet(void* buf, uint16_t len)
 {
+    UNUSED_ARG(len);
     if(arp_cache == NULL) {
         arp_cache = (arp_record*) malloc(sizeof(arp_record) * ARP_CACHE_N_RECORD);
         memset(arp_cache, 0, sizeof(arp_record) * ARP_CACHE_N_RECORD);
@@ -63,6 +66,9 @@ int arp_process_packet(void* buf, uint16_t len)
         next_free_record->ip = head->spa;
         next_free_record->mac = head->sha;
         next_free_record++;
+        if(cached_records < ARP_CACHE_N_RECORD) {
+            cached_records++;
+        }
         if(next_free_record - arp_cache == ARP_CACHE_N_RECORD) {
             // circular buffer
             next_free_record = arp_cache;
@@ -82,3 +88,16 @@ int arp_process_packet(void* buf, uint16_t len)
     }
     return 0;
 }
+
+
+int arp_ip2mac(ip_addr ip, mac_addr* mac)
+{
+    for(uint i=0; i<cached_records; i++) {
+        if(memcmp(arp_cache[i].ip.addr, ip.addr, 4) == 0) {
+            *mac = arp_cache[i].mac;
+            return 0;
+        }
+    }
+    return -1;
+}
+
