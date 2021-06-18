@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <syscall.h>
 #include <common.h>
@@ -9,48 +10,41 @@
 // static inline _syscall4(SYS_TEST, int, send_ethernet_packet, mac_addr*, dest, enum ether_type, type, void*, buf, uint, size)
 static inline _syscall5(SYS_TEST, int, send_ipv4_packet, uint, ttl, enum ipv4_protocal, protocol, ip_addr*, dst, void*, buf, uint, len)
 
+typedef struct ping {
+	uint8_t type;
+	uint8_t code;
+	uint16_t checksum;
+	uint16_t identifier;
+	uint16_t sequence_number;
+	char data[56];
+} ping;
+
 int main(int argc, char* argv[]) {
 
-    UNUSED_ARG(argc);
-    UNUSED_ARG(argv);
-
-    // A real ping packet captured by wireshark
-	char* buf = 
-	"\x52\x54\x00\x12\x35\x02"\
-	"\x06\x32\x84\x35\x65\xe2"\
-	"\x08\x00"\
-	"\x45\x00"\
-	"\x00\x54\x8b\xb4\x40\x00\x40\x01\x92\xd5\x0a\x00\x02\x10\x08\x08" \
-	"\x08\x08\x08\x00\xec\x3e\x00\x08\x00\x03\x0f\xff\xb6\x60\x00\x00" \
-	"\x00\x00\x85\x83\x01\x00\x00\x00\x00\x00\x10\x11\x12\x13\x14\x15" \
-	"\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x20\x21\x22\x23\x24\x25" \
-	"\x26\x27\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f\x30\x31\x32\x33\x34\x35" \
-	"\x36\x37";
-	// sys_send_network_packet(buf, 0x62);
-	UNUSED_ARG(buf);
-
-	// Ethernet payload extracted from the full packet above
-    char eth_payload[] = "\x45\x00" \
-	"\x00\x54\x8b\xb4\x40\x00\x40\x01\x92\xd5\x0a\x00\x02\x10\x08\x08" \
-	"\x08\x08"\
-	"\x08\x00\xec\x3e\x00\x08\x00\x03\x0f\xff\xb6\x60\x00\x00" \
-	"\x00\x00\x85\x83\x01\x00\x00\x00\x00\x00\x10\x11\x12\x13\x14\x15" \
-	"\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x20\x21\x22\x23\x24\x25" \
-	"\x26\x27\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f\x30\x31\x32\x33\x34\x35" \
-	"\x36\x37";
-	// send_ethernet_packet(&(mac_addr) {.addr = "\x52\x54\x00\x12\x35\x02"}, ETHER_TYPE_IPv4, eth_payload, sizeof(eth_payload) - 1);
-	UNUSED_ARG(eth_payload);
-
-
-	char icmp_payload[] = 
-	"\x08\x00\xec\x3e\x00\x08\x00\x03\x0f\xff\xb6\x60\x00\x00" \
-	"\x00\x00\x85\x83\x01\x00\x00\x00\x00\x00\x10\x11\x12\x13\x14\x15" \
-	"\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x20\x21\x22\x23\x24\x25" \
-	"\x26\x27\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f\x30\x31\x32\x33\x34\x35" \
-	"\x36\x37";
 	ip_addr dst = {.addr = {8,8,8,8}};
 
-	int r = send_ipv4_packet(0x40, IPv4_PROTOCAL_ICMP, &dst, icmp_payload, sizeof(icmp_payload) - 1);
+	if(argc > 1) {
+		char* part = strtok(argv[1],".");
+		for(int i=0; i<4; i++) {
+			if(part == NULL) {
+				exit(1);
+			}
+			dst.addr[i] = atoi(part);
+			part = strtok(NULL,".");
+		}
+	}
+
+	ping pkt = (ping) {
+		.type = ICMP_TYPE_ECHO,
+		.code = ICMP_CODE_ECHO,
+		.identifier = getpid(),
+		.sequence_number = 0,
+		.data = "A ping packet from Simple-OS!"
+	};
+
+	pkt.checksum = ipv4_icmp_checksum(&pkt, sizeof(ping));
+
+	int r = send_ipv4_packet(0x40, IPv4_PROTOCAL_ICMP, &dst, &pkt, sizeof(ping));
 
     exit(r);
 }

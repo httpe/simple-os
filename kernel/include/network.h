@@ -93,5 +93,36 @@ typedef struct ipv4_header
     ip_addr dst;
 }  __attribute__((packed)) ipv4_header;
 
+// 16-bit ones' complement of the ones' complement sum of all 16-bit words
+static inline uint16_t ipv4_icmp_checksum(void* buff, uint16_t len)
+{
+    uint32_t checksum = 0;
+    uint16_t* buf = (uint16_t*) buff;
+    while (len > 1) {
+        checksum += * buf++;
+        len -= 2;
+    }
+    //if any bytes left, pad the bytes and add
+    if(len > 0) {
+        checksum += *((uint8_t*) buf);
+    }
+    //Fold sum to 16 bits: add carrier to result
+    while (checksum>>16) {
+        checksum = (checksum & 0xffff) + (checksum >> 16);
+    }
+    //one's complement
+    checksum = ~checksum;
+
+    return (uint16_t) checksum;
+}
+
+enum icmp_type {
+    ICMP_TYPE_ECHO = 8
+};
+
+enum icmp_code {
+    ICMP_CODE_ECHO = 0
+};
+
 
 #endif

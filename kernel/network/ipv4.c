@@ -8,28 +8,6 @@
 static void* ipv4_transmit_buffer = NULL;
 static uint16_t id_counter = 0x8bb4;
 
-static uint16_t ipv4_checksum(void* buff, uint16_t len)
-{
-    uint32_t checksum = 0;
-    uint16_t* buf = (uint16_t*) buff;
-    while (len > 1) {
-        checksum += * buf++;
-        len -= 2;
-    }
-    //if any bytes left, pad the bytes and add
-    if(len > 0) {
-        checksum += *((uint8_t*) buf);
-    }
-    //Fold sum to 16 bits: add carrier to result
-    while (checksum>>16) {
-        checksum = (checksum & 0xffff) + (checksum >> 16);
-    }
-    //one's complement
-    checksum = ~checksum;
-
-    return (uint16_t) checksum;
-}
-
 int init_ipv4()
 {
     ipv4_transmit_buffer = malloc(RTL8139_TRANSMIT_BUF_SIZE);
@@ -85,7 +63,7 @@ int send_ipv4_packet(uint8_t ttl, enum ipv4_protocal protocol, ip_addr dst, void
     hdr->flags_fragoffset =  switch_endian16(hdr->flags_fragoffset);
     
     // the checksum is already in the right endianess
-    hdr->hdr_checksum = ipv4_checksum(hdr, sizeof(ipv4_header));
+    hdr->hdr_checksum = ipv4_icmp_checksum(hdr, sizeof(ipv4_header));
 
     memmove(ipv4_transmit_buffer + sizeof(ipv4_header), buf, len);
 
