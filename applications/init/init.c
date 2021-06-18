@@ -165,7 +165,19 @@ int main(int argc, char* argv[]) {
     UNUSED_ARG(test_file_system);
 
     // Execute the shell
-    char* shell_argv[] = {"/usr/bin/shell.elf", NULL};
-    printf("EXEC Shell\n");
-    execve("/usr/bin/shell.elf", shell_argv, NULL);
+    int fork_ret = fork();
+    int child_exit_status;
+
+    if(fork_ret) {
+        // parent
+        while(1) {
+            sys_yield();
+        }
+    } else {
+        // child
+        char* shell_argv[] = {"/usr/bin/shell.elf", NULL};
+        printf("EXEC Shell\n");
+        execve("/usr/bin/shell.elf", shell_argv, NULL);
+    }
+
 }

@@ -224,10 +224,10 @@ void yield()
     proc* p = curr_proc();
 
     if(!p->no_schedule) {
-        printf("PID %u yield\n", p->pid);
+        // printf("PID %u yield\n", p->pid);
         p->state = PROC_STATE_RUNNABLE;
         switch_kernel_context(&p->context, curr_cpu()->scheduler_context);
-        printf("PID %u back from yield\n", p->pid);
+        // printf("PID %u back from yield\n", p->pid);
     }
 
 
