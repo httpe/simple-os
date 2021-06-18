@@ -48,7 +48,7 @@ proc* create_process();
 void init_first_process();
 void scheduler();
 proc* curr_proc();
-void process_IRQ(uint no_schedule);
+// void process_IRQ(uint no_schedule);
 void yield();
 int fork();
 void exit(int exit_code);

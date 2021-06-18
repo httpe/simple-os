@@ -279,7 +279,8 @@ int sys_test(trapframe* r)
     printf("Halting...\n");
 
     while(1) {
-        process_IRQ(1);
+        // process_IRQ(1);
+        yield();
         PANIC_ASSERT(!is_interrupt_enabled());
     }    
 

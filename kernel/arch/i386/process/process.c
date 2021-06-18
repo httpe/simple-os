@@ -199,23 +199,23 @@ void exit(int exit_code)
     PANIC("Return from scheduler after exiting");
 }
 
-void process_IRQ(uint no_schedule)
-{
-    PANIC_ASSERT(!is_interrupt_enabled());
+// void process_IRQ(uint no_schedule)
+// {
+//     PANIC_ASSERT(!is_interrupt_enabled());
 
-    proc* p = curr_proc();
-    // disable scheduling
-    uint no_schedule_orig = p->no_schedule;
-    p->no_schedule = no_schedule;
+//     proc* p = curr_proc();
+//     // disable scheduling
+//     uint no_schedule_orig = p->no_schedule;
+//     p->no_schedule = no_schedule;
 
-    enable_interrupt();
-    // an IRQ can be processed before halt
-    // so we are relying on at lease the timer IRQ will let use resume from halt
-    // halt();
-    disable_interrupt();
+//     enable_interrupt();
+//     // an IRQ can be processed before halt
+//     // so we are relying on at lease the timer IRQ will let use resume from halt
+//     // halt();
+//     disable_interrupt();
 
-    p->no_schedule = no_schedule_orig;
-}
+//     p->no_schedule = no_schedule_orig;
+// }
 
 void yield()
 {
