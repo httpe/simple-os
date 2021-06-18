@@ -26,6 +26,7 @@ typedef struct ip_addr {
 // Hardcode IP addrs before we implement DHCP
 #define MY_IP ((ip_addr) {.addr = {10,0,2,16}})
 #define GATEWAY_IP ((ip_addr) {.addr = {10,0,2,2}})
+#define SUBNET_MASK 0xFFFFFF00
 
 static inline uint16_t switch_endian16(uint16_t nb) {
     return (nb>>8) | (nb<<8);
@@ -36,6 +37,14 @@ static inline uint32_t switch_endian32(uint32_t nb) {
             ((nb<<8)&0xff0000)   |
             ((nb>>8)&0xff00)     |
             ((nb<<24)&0xff000000);
+}
+
+static inline void switch_endian(uint8_t* buf, uint32_t n) {
+    for(uint i=0; i<n/2; i++) {
+        uint8_t b = buf[i];
+        buf[i] = buf[n-1-i];
+        buf[n-1-i] = b;
+    }
 }
 
 #define ARP_HARDWARE_TYPE_ETHERNET 0x1
@@ -57,5 +66,31 @@ typedef struct arp
     mac_addr  tha; // Destination hardware address - hlen bytes (see above)
     ip_addr  tpa; // Destination protocol address - plen bytes (see above). If IPv4 can just be a "u32" type.
 }  __attribute__((packed)) arp;
+
+// version = 4, IHL (header length) = 20 bytes
+#define IPv4_VER_IHL 0x45
+// DSCP (Differentiated Services Codepoint) = default, ECN (Explicit Congestion Notification) = No
+#define IPv4_DSCP_ECN 0
+// flags_fragoffset: no frag
+#define IPv4_NO_FRAG 0x4000
+
+enum ipv4_protocal {
+    IPv4_PROTOCAL_ICMP = 1
+};
+
+typedef struct ipv4_header
+{
+    uint8_t ver_ihl;
+    uint8_t dscp_ecn;
+    uint16_t len;
+    uint16_t id;
+    uint16_t flags_fragoffset;
+    uint8_t ttl;
+    uint8_t protocol;
+    uint16_t hdr_checksum;
+    ip_addr src;
+    ip_addr dst;
+}  __attribute__((packed)) ipv4_header;
+
 
 #endif

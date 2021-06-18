@@ -41,7 +41,7 @@ console/console.o \
 kernel/kernel.o \
 network/ethernet.o \
 network/arp.o \
-
+network/ipv4.o \
 
 OBJS=\
 $(ARCHDIR)/crt/crti.o \

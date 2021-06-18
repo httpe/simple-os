@@ -10,6 +10,7 @@
 #include <arch/i386/kernel/isr.h>
 #include <arch/i386/kernel/cpu.h>
 #include <kernel/ethernet.h>
+#include <kernel/ipv4.h>
 
 int sys_exec(trapframe* r)
 {
@@ -270,12 +271,12 @@ int sys_getcwd(trapframe* r)
 
 int sys_test(trapframe* r)
 {
-    mac_addr* dest = *(mac_addr**) (r->esp + 4);
-    int type = *(int *) (r->esp + 8);
-    char * buf = *(char**) (r->esp + 12);
-    uint buf_size = *(uint *) (r->esp + 16);
-    // rtl8139_send_packet(buf, buf_size);
-    int res = send_ethernet_packet(*dest, type, buf, buf_size);
+    uint8_t ttl = *(uint8_t*) (r->esp + 4);
+    int protocol = *(int *) (r->esp + 8);
+    ip_addr* dst = *(ip_addr**) (r->esp + 12);
+    char * buf = *(char**) (r->esp + 16);
+    uint buf_size = *(uint *) (r->esp + 20);
+    int res = send_ipv4_packet(ttl, protocol, *dst, buf, buf_size);
     return res;
 }
 

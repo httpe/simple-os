@@ -44,10 +44,7 @@ int send_ethernet_packet(mac_addr dest_mac, enum ether_type type, void* buf, uin
     if(ethernet_transmit_buffer == NULL) {
         // Initialization
         ethernet_transmit_buffer = malloc(RTL8139_TRANSMIT_BUF_SIZE);
-        // Find gateway MAC
-        arp_probe(GATEWAY_IP);
-        // Announce our hardcoded ip address before sending out any packet
-        arp_announce_ip(MY_IP);
+        memset(ethernet_transmit_buffer, 0, RTL8139_TRANSMIT_BUF_SIZE);
     }
 
     if(buf == NULL || len == 0) {
@@ -61,8 +58,6 @@ int send_ethernet_packet(mac_addr dest_mac, enum ether_type type, void* buf, uin
     header->src = rtl8139_mac();
     header->ethertype = switch_endian16(type);
     memmove(ethernet_transmit_buffer + sizeof(eth_header), buf, len);
-    // pkt->crc = crc32((uint8_t*) pkt, len);
-    // return rtl8139_send_packet(pkt, len + sizeof(pkt->crc));
     int res = rtl8139_send_packet(ethernet_transmit_buffer, pkt_len);
     return res;
 }
