@@ -30,3 +30,8 @@ void enable_interrupt()
     assert(!is_interrupt_enabled());
     asm volatile("sti");
 }
+
+void halt()
+{
+    asm volatile("hlt");
+}
