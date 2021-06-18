@@ -319,6 +319,14 @@ int sys_network_send_ipv4_pkt(trapframe* r)
     return res;
 }
 
+int sys_network_receive_ipv4_pkt(trapframe* r)
+{
+    char * buf = *(char**) (r->esp + 4);
+    uint buf_size = *(uint *) (r->esp + 8);
+    int res = ipv4_wait_for_next_packet(buf, buf_size);
+    return res;
+}
+
 void syscall_handler(trapframe* r)
 {
     // Avoid scheduling when in syscall/kernel space
@@ -415,6 +423,9 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_NETWORK_SEND_IPv4_PKT:
         r->eax = sys_network_send_ipv4_pkt(r);
+        break;
+    case SYS_NETWORK_RECEIVE_IPv4_PKT:
+        r->eax = sys_network_receive_ipv4_pkt(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);

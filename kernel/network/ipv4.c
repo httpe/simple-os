@@ -5,14 +5,20 @@
 #include <kernel/rtl8139.h>
 #include <kernel/arp.h>
 #include <kernel/ipv4.h>
+#include <kernel/process.h>
 
 static void* ipv4_transmit_buffer = NULL;
 static uint16_t id_counter = 0x8bb4;
+static uint64_t pkt_received = 0;
+static void* ipv4_receive_buffer = NULL;
+static uint16_t last_received_pkt_len = 0;
 
 int init_ipv4()
 {
     ipv4_transmit_buffer = malloc(RTL8139_TRANSMIT_BUF_SIZE);
     memset(ipv4_transmit_buffer, 0, RTL8139_TRANSMIT_BUF_SIZE);
+    ipv4_receive_buffer = malloc(RTL8139_TRANSMIT_BUF_SIZE);
+    memset(ipv4_receive_buffer, 0, RTL8139_TRANSMIT_BUF_SIZE);
     // Announce our hardcoded ip address before sending out any packet
     arp_announce_ip(MY_IP);
     // Get default gateway MAC address
@@ -85,7 +91,7 @@ int ipv4_process_packet(void* buf, uint len)
     char* eq = (orig_checksum == our_checksum) ? "==":"!=";
     
     printf("IPv4 Pkt Received, Chksum: Received[0x%x] %s Calculated[0x%x]:\n", orig_checksum, eq, our_checksum);
- 
+    
     uint8_t* buff = (uint8_t*) buf;
     for(uint i=0; i<len; i++) {
         if(i % 16 == 0 && i != 0) {
@@ -95,5 +101,23 @@ int ipv4_process_packet(void* buf, uint len)
     }
     printf("\n");
 
+    last_received_pkt_len = len;
+    memmove(ipv4_receive_buffer, buf, len);
+    pkt_received++;
+
     return 0;
+}
+
+
+int ipv4_wait_for_next_packet(void* buf, uint buf_size)
+{
+    uint64_t n = pkt_received;
+    while(pkt_received == n) {
+        yield();
+    }
+    if(buf_size < last_received_pkt_len) {
+        return -1;
+    }
+    memmove(buf, ipv4_receive_buffer, last_received_pkt_len);
+    return last_received_pkt_len;
 }

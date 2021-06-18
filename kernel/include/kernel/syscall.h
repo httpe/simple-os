@@ -33,6 +33,7 @@
 #define SYS_MKDIR 26
 #define SYS_RMDIR 27
 #define SYS_NETWORK_SEND_IPv4_PKT 28
+#define SYS_NETWORK_RECEIVE_IPv4_PKT 29
 
 // defined in interrupt.asm
 extern void int88();

@@ -118,6 +118,7 @@ static inline uint16_t ipv4_icmp_checksum(void* buff, uint16_t len)
 }
 
 enum icmp_type {
+    ICMP_TYPE_ECHO_REPLY = 0,
     ICMP_TYPE_ECHO = 8
 };
 
@@ -126,6 +127,7 @@ enum icmp_code {
 };
 
 static inline _syscall5(SYS_NETWORK_SEND_IPv4_PKT, int, syscall_send_ipv4_packet, uint, ttl, enum ipv4_protocol, protocol, ip_addr*, dst, void*, buf, uint, len)
+static inline _syscall2(SYS_NETWORK_RECEIVE_IPv4_PKT, int, syscall_receive_ipv4_packet, void*, buf, uint, len)
 
 
 #endif
