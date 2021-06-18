@@ -12,7 +12,7 @@ NET_INTERFACE=enp0s3
 TAP=tap0
 
 sudo ip link add $BRIDGE type bridge
-sudo up link set $BRIDGE up
+sudo ip link set $BRIDGE up
 
 sudo ip link set $NET_INTERFACE up
 sudo ip addr flush dev $NET_INTERFACE
