@@ -32,8 +32,8 @@
         {
             "name": "i686-elf",
             "includePath": [
-                "${workspaceFolder}/kernel/include/**",
-                "${workspaceFolder}/libc/include/**"
+                "${workspaceFolder}/kernel/include/*",
+                "${workspaceFolder}/libc/include/*"
             ],
             "defines": [],
             "compilerPath": "${workspaceFolder}/toolchain/usr/bin/i686-elf-gcc",
