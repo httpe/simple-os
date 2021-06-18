@@ -20,7 +20,7 @@ int init_ipv4()
     return 0;
 }
 
-int ipv4_send_packet(uint8_t ttl, enum ipv4_protocal protocol, ip_addr dst, void* buf, uint16_t len)
+int ipv4_send_packet(uint8_t ttl, enum ipv4_protocol protocol, ip_addr dst, void* buf, uint16_t len)
 {
     PANIC_ASSERT(ipv4_transmit_buffer != NULL);
 

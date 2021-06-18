@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <syscall.h>
 #include <common.h>
+#include <network.h>
 #include <kernel/errno.h>
 #include <kernel/panic.h>
 #include <kernel/vfs.h>
@@ -11,7 +12,7 @@
 #include <arch/i386/kernel/cpu.h>
 #include <kernel/ethernet.h>
 #include <kernel/ipv4.h>
-#include <network.h>
+
 
 int sys_exec(trapframe* r)
 {

@@ -76,7 +76,7 @@ typedef struct arp
 // flags_fragoffset: no frag
 #define IPv4_NO_FRAG 0x4000
 
-enum ipv4_protocal {
+enum ipv4_protocol {
     IPv4_PROTOCAL_ICMP = 1
 };
 
@@ -125,7 +125,7 @@ enum icmp_code {
     ICMP_CODE_ECHO = 0
 };
 
-static inline _syscall5(SYS_NETWORK_SEND_IPv4_PKT, int, syscall_send_ipv4_packet, uint, ttl, enum ipv4_protocal, protocol, ip_addr*, dst, void*, buf, uint, len)
+static inline _syscall5(SYS_NETWORK_SEND_IPv4_PKT, int, syscall_send_ipv4_packet, uint, ttl, enum ipv4_protocol, protocol, ip_addr*, dst, void*, buf, uint, len)
 
 
 #endif

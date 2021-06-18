@@ -8,7 +8,7 @@
 
 // static inline _syscall2(SYS_TEST, int, sys_send_network_packet, void*, buf, uint, size)
 // static inline _syscall4(SYS_TEST, int, send_ethernet_packet, mac_addr*, dest, enum ether_type, type, void*, buf, uint, size)
-// static inline _syscall5(SYS_TEST, int, send_ipv4_packet, uint, ttl, enum ipv4_protocal, protocol, ip_addr*, dst, void*, buf, uint, len)
+// static inline _syscall5(SYS_TEST, int, send_ipv4_packet, uint, ttl, enum ipv4_protocol, protocol, ip_addr*, dst, void*, buf, uint, len)
 
 typedef struct ping {
 	uint8_t type;
