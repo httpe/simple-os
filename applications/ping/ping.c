@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	ping pkt = (ping) {
-		.type = ICMP_TYPE_ECHO,
+		.type = ICMP_TYPE_ECHO_REQUEST,
 		.code = ICMP_CODE_ECHO,
 		.identifier = switch_endian16(getpid()),
 		.sequence_number = 0,
@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
 		}
 		
 		if(memcmp(p->data, pkt.data, PING_DATA_SIZE) == 0) {
-			printf("Ping: GOOD respond received!\n");
+			printf("Ping: GOOD reply received!\n");
 			exit(0);
 		} else {
 			printf("Ping: reply corrupted!\n");

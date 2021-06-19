@@ -166,7 +166,6 @@ int main(int argc, char* argv[]) {
 
     // Execute the shell
     int fork_ret = fork();
-    int child_exit_status;
 
     if(fork_ret) {
         // parent

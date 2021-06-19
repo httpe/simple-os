@@ -119,7 +119,7 @@ static inline uint16_t ipv4_icmp_checksum(void* buff, uint16_t len)
 
 enum icmp_type {
     ICMP_TYPE_ECHO_REPLY = 0,
-    ICMP_TYPE_ECHO = 8
+    ICMP_TYPE_ECHO_REQUEST = 8
 };
 
 enum icmp_code {
