@@ -64,7 +64,13 @@ Although the final goal is to make the system self-hosting, we have planned for 
 1. **Milestone Seven: Networking**
     - Allow connecting to the Internet
     - Implement DNS query and ping command
+    - Implement [Ethernet](https://en.wikipedia.org/wiki/Ethernet_frame), [ARP](https://en.wikipedia.org/wiki/Address_Resolution_Protocol), [IPv4](https://en.wikipedia.org/wiki/IPv4), [ICMP](https://en.wikipedia.org/wiki/Internet_Control_Message_Protocol)/[ping](https://en.wikipedia.org/wiki/Ping_(networking_utility)) and [UDP](https://en.wikipedia.org/wiki/User_Datagram_Protocol) protocol
     - **In Progress**
+      - `RTL8139` NIC driver implemented
+      - Ethernet layer implemented (no caching)
+      - ARP probe/announcement implemented
+      - IPv4 layer implemented
+      - Ping utility implemented (ICMP protocol)
 
 1. **Final Goal: Self-hosting**
     - Port a sophisticate enough compiler to the system
