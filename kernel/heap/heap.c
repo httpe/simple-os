@@ -210,6 +210,7 @@ void heap_free(heap_t* heap, uint32_t vaddr) {
     ASSERT_VALID_HEAP_FOOTER(unified_free_footer);
     uint32_t total_size = sizeof(heap_header_t) + unified_free_header->size + sizeof(heap_footer_t);
     uint32_t page_count = total_size / PAGE_SIZE; // we need round down page count here, not PAGE_COUNT_FROM_BYTES, which is round up
+    // printf("heap_free: %x[%u]\n", vaddr, total_size);
     // contract heap size
     if (unified_free_header->magic == HEAP_HEADER_MAGIC_LEFT && unified_free_footer->magic == HEAP_FOOTER_MAGIC_RIGHT) {
         // if the unified free block is the whole block allocated when doing expansion:
@@ -329,6 +330,7 @@ void* heap_alloc(heap_t* heap, size_t size) {
         header = expand_heap(heap, header, size);
         if (header == NULL) {
             // allocation failed because of expansion failure 
+            PANIC("Heap expansion failed");
             return 0;
         }
         ASSERT_VALID_HEAP_HEADER(header);
@@ -339,7 +341,9 @@ void* heap_alloc(heap_t* heap, size_t size) {
     claim_free_space(heap, header);
 
     if (header->size <= size + sizeof(heap_header_t) + sizeof(heap_footer_t)) {
-        return (void*)header + sizeof(heap_header_t);
+        void* m = (void*)header + sizeof(heap_header_t);
+        // printf("heap alloc: %x[%u]\n", (uint32_t) m, size);
+        return m;
     }
 
     // If have space to store another set of header/footer, split
@@ -362,7 +366,9 @@ void* heap_alloc(heap_t* heap, size_t size) {
 
     insert_free_space(heap, new_header);
 
-    return (void*)header + sizeof(heap_header_t);
+    void* m = (void*)header + sizeof(heap_header_t);
+    // printf("heap alloc: %x[%u]\n", (uint32_t) m, size);
+    return m;
 }
 
 void* kmalloc(size_t size) {
