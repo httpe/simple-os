@@ -60,6 +60,8 @@ Although the final goal is to make the system self-hosting, we have planned for 
     - Support multi-core CPU through [APCI](https://wiki.osdev.org/APIC)
     - Provide [synchronization mechanism](https://wiki.osdev.org/Synchronization_Primitives) for multi-tasking environment, like locks
     - Provide inter process communication ([IPC](https://wiki.osdev.org/Category:IPC)) mechanism like pipe and signal
+    - **In Progress**
+      - Pipe is implemented as an in memory circular buffer FS
 
 1. **Milestone Seven: Networking**
     - Allow connecting to the Internet
