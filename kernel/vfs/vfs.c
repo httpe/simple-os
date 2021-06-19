@@ -12,6 +12,7 @@
 #include <kernel/tar.h>
 #include <kernel/process.h>
 #include <kernel/console.h>
+#include <kernel/pipe.h>
 
 static uint next_mount_point_id = 1;
 
@@ -628,6 +629,10 @@ int init_vfs()
     res = console_init(&fs[2]);
     assert(res == 0);
 
+    fs[3] = (struct file_system) {.type = FILE_SYSTEM_PIPE};
+    res = pipe_init(&fs[3]);
+    assert(res == 0);
+
     // mount hda (IDE master drive) to be the root dir (assumed to be US-TAR formated)
 	block_storage* storage = get_block_storage(IDE_MASTER_DRIVE);
     tar_mount_option tar_opt = (tar_mount_option) {
@@ -653,6 +658,13 @@ int init_vfs()
     mount_option = (fs_mount_option) {.mode = S_IFREG | S_IRWXU | S_IRWXG | S_IRWXO};
     mount_res = fs_mount("/console", FILE_SYSTEM_CONSOLE, mount_option, NULL, &mp);
     assert(mount_res == 0);
+    
+    // mount pipe
+    // the existence of /pipe is guaranteed by the install-reserved-path target of kernel Makefile 
+    mount_option = (fs_mount_option) {.mode = S_IFREG | S_IRWXU | S_IRWXG | S_IRWXO};
+    mount_res = fs_mount("/pipe", FILE_SYSTEM_PIPE, mount_option, NULL, &mp);
+    assert(mount_res == 0);
+
     
     return 0;
 }

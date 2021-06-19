@@ -141,6 +141,36 @@ static void test_file_system() {
     printf("Unlink(%d)\n", res_unlink);
 }
 
+void pipe_test() {
+    // Pipe FS uses high byte of the open flag to determine the pipe buffer size
+    int fd_pipe = open("/pipe", (255 << 4) | O_RDWR);
+    if(fd_pipe < 0) {
+        printf("Open pipe error (%d)\n", fd_pipe);
+    }
+
+    int fork_ret = fork();
+    int child_exit_status;
+    if(fork_ret) {
+        // parent
+        char buf[255] = {0};
+        int read_in = read(fd_pipe, buf, 10);
+        printf("PIPE read [%d/10]: %s\n", read_in, buf);
+        int wait_ret = wait(&child_exit_status);
+        if(wait_ret < 0) {
+            printf("No child exited\n");
+        } else {
+            printf("Child %u exited, exit code = %d\n", wait_ret, WEXITSTATUS(child_exit_status));
+        }
+    } else {
+        // child
+        char* to_write = "Hello PIPE world!";
+        int written = write(fd_pipe, to_write, strlen(to_write) + 1);
+        printf("PIPE write[%d/%ld]: %s\n", written, strlen(to_write) + 1, to_write);
+        exit(0);
+    }
+    close(fd_pipe);
+}
+
 
 int main(int argc, char* argv[]) {
     (void) argc;
@@ -160,6 +190,7 @@ int main(int argc, char* argv[]) {
     // test_multi_process();
     // test_libc();
     // test_file_system();
+    pipe_test();
     UNUSED_ARG(test_multi_process);
     UNUSED_ARG(test_libc);
     UNUSED_ARG(test_file_system);

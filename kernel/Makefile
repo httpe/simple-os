@@ -43,6 +43,8 @@ network/ethernet.o \
 network/arp.o \
 network/ipv4.o \
 network/network.o \
+pipe/pipe.o \
+
 
 
 OBJS=\
@@ -103,5 +105,6 @@ install-kernel: simple_os.kernel
 install-reserved-path:
 	mkdir -p $(DESTDIR)/home
 	touch $(DESTDIR)/console
+	touch $(DESTDIR)/pipe
 
 -include $(OBJS:.o=.d)
