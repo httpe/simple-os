@@ -1,5 +1,8 @@
 ; Modified from https://github.com/cfenollosa/os-tutorial/blob/master/13-kernel-barebones/bootsect.asm
 
+; magic number to check after loading the non-MBR sectors from disk
+DISK_LOAD_MAGIC equ 0x1234
+
 section .boot
 ; Note that .boot section will not generate debug symbol
 ;   so you cannot debug this section in gdb without using absolute address
@@ -24,7 +27,7 @@ boot:
     call print ; This will be written after the BIOS messages
     call print_nl
 
-    ; the boot loader is assume to have 16 sectors, load the other 15 sectors here
+    ; the boot loader is assumed to have 16 sectors, load the other 15 sectors here
     ; This file will yield 4 sectors (the assembly part), and the C part will yield the other 12 sectors
     ; load to right after this MBR sector
     ; real mode addressing is segment*16 + offset, so the 512 bytes MBR take 0x200 bytes
@@ -34,14 +37,18 @@ boot:
     mov bx, 0x7e00
     call disk_load  ; dl shall be loaded automatically during system boot to point to the current disk/media of this MBR
 
+    ; ensure the disk is loaded successfully by comparing the magic number
+    mov dx, [0x7e00]
+    cmp dx, DISK_LOAD_MAGIC
+    je disk_load_success
+    mov bx, MSG_LOAD_FROM_DISK_FAILED
+    call print
+    jmp $
+disk_load_success:
     mov bx, MSG_LOAD_FROM_DISK
     call print
     call print_nl
 
-    ; ensure the disk is loaded successfully
-    mov dx, [0x7e00]
-    call print_hex
-    ; jmp $ ; should print Ox0500
 
     ; Detect memory layout using BIOS interrupt 0x15, eax=0xE820 
     ; The entry count will be stored at 0x0500
@@ -53,7 +60,8 @@ boot:
 
 
 MSG_REAL_MODE db "Started in 16-bit real mode", 0
-MSG_LOAD_FROM_DISK db "Loaded remaining sectors", 0
+MSG_LOAD_FROM_DISK db "Remaining sectors loaded successfully", 0
+MSG_LOAD_FROM_DISK_FAILED db "Failed loading remaining sectors, hanged", 0
 
 ; 16-bit printing utility functions
 ; symbol provided: print, print_nl
@@ -74,6 +82,9 @@ dw 0xaa55 ; write 0xaa55 in 511 and 512 bytes
 
 ; switch to .text section so the symbol are exported
 section .text
+
+; first two magic bytes of the first sector to be loaded from disk dynamically 
+dw DISK_LOAD_MAGIC
 
 ; utility to detect memory layout
 %include "memory.asm"
