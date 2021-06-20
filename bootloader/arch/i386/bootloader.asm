@@ -50,11 +50,7 @@ disk_load_success:
     call print_nl
 
     ; Detect memory layout and store the memory map at variable ADDR_MMAP_ADDR
-    call detect_memory
-
-    ; Find the next available free space
-    mov di, [ADDR_MMAP_COUNT]
-    add di, 0x1000
+    call detect_memory_map_by_e820
 
     ; Detect and switch to desired VESA/VGA mode before entering protected mode
     call switch_vesa_mode

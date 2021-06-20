@@ -17,8 +17,8 @@
 #define KERNEL_BOOT_IMG "/boot/simple_os.kernel"
 
 // Defined in memory.asm
-extern uint32_t ADDR_MMAP_ADDR; // address of the memory map structure
-extern uint32_t ADDR_MMAP_COUNT; // count of the memory map entries
+extern uint16_t MMAP_COUNT;
+extern multiboot_memory_map_t MMAP[];
 
 extern uint16_t VESA_MODE, VESA_WIDTH, VESA_HEIGHT, VESA_PITCH, VESA_FRAME_BUFFER_LO, VESA_FRAME_BUFFER_HI, VGA_FONT_ADDR;
 extern uint8_t VESA_COLOR_DEPTH;
@@ -103,17 +103,17 @@ void bootloader_main(void) {
         drawchar(hello_msg[i], x + 8*i, y, bgcolor, fgcolor);
     }
 
-
-    // TODO: Implement text printing under VGA mode 
-    while(1);
-
     // Init multiboot info structure and memory map info
     // Ref: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html
     // Store the Multiboot info structure at the end of conventional memory space 0x00007E00 - 0x0007FFFF
     multiboot_info_t* ptr_multiboot_info = (multiboot_info_t*)0x00080000 - sizeof(multiboot_info_t);
     ptr_multiboot_info->flags = 0b1000000; // Flag the memory layout info is available
-    ptr_multiboot_info->mmap_length = (*(uint32_t*)ADDR_MMAP_COUNT) * sizeof(multiboot_memory_map_t);
-    ptr_multiboot_info->mmap_addr = ADDR_MMAP_ADDR;
+    // ptr_multiboot_info->mmap_length = (*(uint32_t*)ADDR_MMAP_COUNT) * sizeof(multiboot_memory_map_t);
+    // ptr_multiboot_info->mmap_addr = ADDR_MMAP_ADDR;
+    ptr_multiboot_info->mmap_length = MMAP_COUNT * sizeof(multiboot_memory_map_t);
+    ptr_multiboot_info->mmap_addr = (uint32_t) MMAP;
+
+    while(1);
 
     // Load kernel from tar file system to this address
     char* kernel_buffer = (char*)0x01000000;

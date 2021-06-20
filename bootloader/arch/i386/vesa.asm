@@ -16,7 +16,7 @@ VESA_PITCH dw 0
 VESA_COLOR_DEPTH db 0
 VESA_FRAME_BUFFER_LO dw 0
 VESA_FRAME_BUFFER_HI dw 0
-VGA_FONT_ADDR dw 0
+VGA_FONT_ADDR dw 0x0500 ; use conventional memory to store BIOS VGA fonts
 
 ; Switch to specified VESA video modes
 ; Ref: https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial
@@ -24,6 +24,8 @@ VGA_FONT_ADDR dw 0
 switch_vesa_mode:
     pusha
     push ds
+
+    mov di, VESA_BIOS_INFO
 
     ; Add signature to the structure before call
     ; telling the BIOS that we support VBE 2.0+
@@ -86,7 +88,8 @@ switch_vesa_mode:
 
     ; + 512 bytes to get to a free space to store VESA mode info
     ; since struct vbe_info_structure is of size 512 bytes
-    add di, 0x200
+    ; add di, 0x200
+    mov di, VESA_MODE_INFO
 
     ; mov cx, 256
     ; call print_hex_cx
@@ -249,8 +252,7 @@ switch_vesa_mode:
 
     ; Get BIOS VGA font
     ; Ref: https://wiki.osdev.org/VGA_Fonts
-    add di, 0x200
-    mov [VGA_FONT_ADDR], di
+    mov di, [VGA_FONT_ADDR]
     ;in: es:di=4k buffer
     ;out: buffer filled with font
     push			ds
@@ -272,6 +274,8 @@ switch_vesa_mode:
     popa
     ret
 
+VESA_BIOS_INFO times 512 db 0
+VESA_MODE_INFO times 256 db 0
 
 STR_VBE2 db "VBE2"
 STR_VESA db "VESA"
