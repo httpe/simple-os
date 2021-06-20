@@ -83,6 +83,6 @@ clean:
 	rm -f *.o
 	rm -f $(OBJS) *.o */*.o */*/*.o
 
-install: bootable_kernel.bin bootloader.elf
+install: bootable_kernel.bin
 	cp bootable_kernel.bin ..
-	cp bootloader.bin ~/mnt/src/share
+

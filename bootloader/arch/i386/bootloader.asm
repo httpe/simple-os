@@ -133,6 +133,6 @@ MSG_PROT_MODE db "Started in 32-bit protected mode", 0
 ; %include "print_pm.asm"
 
 
-; The boot loader shall be exactly 8192 bytes (16 sectors in total, one MBR sector and three utility sectors)
+; The boot loader shall be exactly 8192 bytes (16 sectors in total, one MBR sector and 15 utility sectors)
 ; Must be inline with items related to BOOTLOADER_MAX_SIZE
-times 8192-($-$$) db 0
+times 8190-512-($-$$) db 0
