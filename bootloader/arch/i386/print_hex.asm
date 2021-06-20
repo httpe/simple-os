@@ -62,29 +62,26 @@ print_hex_cx:
     int 0x10
 
     mov dl, [bx]
-    mov dh, dl
     add bx, 1
 
-.step1:
-    ; print MSB
-    shr dh, 4
-    add dh, 0x30 ; add 0x30 to N to convert it to ASCII "N"
-    cmp dh, 0x39 ; if > 9, add extra 8 to represent 'A' to 'F'
-    jle .step2
-    add dh, 7 ; 'A' is ASCII 65 instead of 58, so 65-58=7
+    mov al, dl
 
-.step2:
-    mov al, dh
+    ; print MSB
+    shr al, 4
+    add al, 0x30 ; add 0x30 to N to convert it to ASCII "N"
+    cmp al, 0x39 ; if > 9, add extra 8 to represent 'A' to 'F'
+    jle .print_msb
+    add al, 7 ; 'A' is ASCII 65 instead of 58, so 65-58=7
+.print_msb:
     int 0x10
 
     ; print LSB
     and dl, 0x0f
     add dl, 0x30 ; add 0x30 to N to convert it to ASCII "N"
     cmp dl, 0x39 ; if > 9, add extra 8 to represent 'A' to 'F'
-    jle .step3
+    jle .print_lsb
     add dl, 7 ; 'A' is ASCII 65 instead of 58, so 65-58=7
-
-.step3:
+.print_lsb:
     mov al, dl
     int 0x10
 
