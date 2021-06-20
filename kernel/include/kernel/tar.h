@@ -11,7 +11,7 @@
 // Copied from bootloader
 // The whole bootloader binary is assumed to take the first 16 sectors
 // must be in sync of BOOTLOADER_MAX_SIZE in Makefile (of bootloader)
-#define BOOTLOADER_SECTORS 16
+#define BOOTLOADER_SECTORS 32
 
 #define TAR_SECTOR_SIZE 512
 

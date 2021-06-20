@@ -13,7 +13,7 @@
 
 // The whole bootloader binary is assumed to take the first 16 sectors
 // must be in sync of BOOTLOADER_MAX_SIZE in Makefile
-#define BOOTLOADER_SECTORS 16
+#define BOOTLOADER_SECTORS 32
 #define KERNEL_BOOT_IMG "/boot/simple_os.kernel"
 
 // Defined in memory.asm

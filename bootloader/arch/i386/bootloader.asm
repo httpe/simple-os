@@ -27,13 +27,13 @@ boot:
     call print ; This will be written after the BIOS messages
     call print_nl
 
-    ; the boot loader is assumed to have 16 sectors, load the other 15 sectors here
-    ; This file will yield 4 sectors (the assembly part), and the C part will yield the other 12 sectors
+    ; the boot loader is assumed to have 32 sectors (16KiB), load the other 31 sectors here
+    ; This file will yield 16 sectors (the assembly part), and the C part will yield the other 16 sectors
     ; load to right after this MBR sector
     ; real mode addressing is segment*16 + offset, so the 512 bytes MBR take 0x200 bytes
     ; and thus we choose to load from disk to 0:0x7e00
     ; must be in sync of BOOTLOADER_MAX_SIZE in Makefile
-    mov dh, 15
+    mov dh, 31
     mov bx, 0x7e00
     call disk_load  ; dl shall be loaded automatically during system boot to point to the current disk/media of this MBR
 
@@ -134,5 +134,6 @@ MSG_PROT_MODE db "Started in 32-bit protected mode", 0
 %include "print_pm.asm"
 
 
-; The boot loader shall be exactly 2048 bytes (four sectors in total, one MBR sector and three utility sectors)
-times 2048-($-$$) db 0
+; The boot loader shall be exactly 8192 bytes (16 sectors in total, one MBR sector and three utility sectors)
+; Must be inline with items related to BOOTLOADER_MAX_SIZE
+times 8192-($-$$) db 0
