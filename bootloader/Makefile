@@ -20,6 +20,8 @@ bootloader/main.o \
 string/string.o \
 tar/tar.o \
 elf/elf.o \
+video/video.o \
+
 
 
 # shell assignment operator ‘!=’
@@ -83,6 +85,6 @@ clean:
 	rm -f *.o
 	rm -f $(OBJS) *.o */*.o */*/*.o
 
-install: bootable_kernel.bin
+install: bootable_kernel.bin bootloader.elf
 	cp bootable_kernel.bin ..
-
+	cp bootloader_padded.bin ~/mnt/src/share
