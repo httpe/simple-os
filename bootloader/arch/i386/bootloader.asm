@@ -23,9 +23,9 @@ boot:
     mov sp, bp
 
     ; print a hello world message
-    ; mov bx, MSG_REAL_MODE
-    ; call print ; This will be written after the BIOS messages
-    ; call print_nl
+    mov bx, MSG_REAL_MODE
+    call print ; This will be written after the BIOS messages
+    call print_nl
 
     ; the boot loader is assumed to have 16 sectors, load the other 15 sectors here
     ; This file will yield 4 sectors (the assembly part), and the C part will yield the other 12 sectors
@@ -63,7 +63,7 @@ disk_load_success:
     jmp $       ; infinite loop, shall not reach here
 
 
-MSG_REAL_MODE db "Started in 16-bit real mode", 0
+MSG_REAL_MODE db "Welcome to 16-bit Simple-Bootloader!", 0
 MSG_LOAD_FROM_DISK db "Remaining sectors loaded successfully", 0
 MSG_LOAD_FROM_DISK_FAILED db "Failed loading remaining sectors, hanged", 0
 
