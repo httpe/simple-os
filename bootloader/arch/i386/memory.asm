@@ -6,6 +6,7 @@
 ;           0x0500 will store a dword count of entries;
 ;           starting 0x0504 is the memory layout structure 
 ; mmap_ent equ 0x0500             ; the number of entries will be stored at 0x0500
+; If failed, carry flag will be set
 
 ; declare the address of storing the memory map as global variables
 ; so it can be accessed in C
