@@ -189,6 +189,8 @@ Assuming you are running Simple-OS in a remote (virtual) machine, to setup the r
 1. VSCode extensions [Remote X11](https://marketplace.visualstudio.com/items?itemName=spadin.remote-x11) and [Remote X11 (SSH)](https://marketplace.visualstudio.com/items?itemName=spadin.remote-x11-ssh) to run QEMU (GUI application) through SSH
     - If your host machine is Windows, then a local X-window server is also needed. You can use [vcxsrv](https://sourceforge.net/projects/vcxsrv/).
     - If you SSH into a virtual machine by port forwarding, change `remoteX11.SSH.host` and `remoteX11.SSH.port` in "Remote X11 (SSH)" remote setting (e.g. change to 127.0.0.1 and 5679). Note that the extension does not support password authentication to the remote host, so please add your public key to the serve's `~/.ssh/authorized_keys` (Ref: [How To Set Up SSH Keys](https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys-2))
+1. GDB Init Script
+    - Copy/Append `.gdbinit` to `~/.gdbinit`. The utility GDB functions defined there will be used in `.vscode/launch.json`.
 
 With all of the setup, the debugging process is streamlined to:
 
