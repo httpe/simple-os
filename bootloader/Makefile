@@ -85,3 +85,4 @@ clean:
 
 install: bootable_kernel.bin bootloader.elf
 	cp bootable_kernel.bin ..
+	cp bootloader.bin ~/mnt/src/share

@@ -68,3 +68,41 @@ do_e820:
 .failed:
 	stc			; "function unsupported" error exit
 	ret
+
+
+detect_memory:
+    pusha
+    ; Detect memory layout using BIOS interrupt 0x15, eax=0xE820 
+    ; The entry count will be stored at 0x0500
+    ; The actual memory layout/map entries will be stored starting at 0x0504
+    call do_e820
+    jnc .e820_success
+    mov bx, MSG_E820_FAILED
+    call print
+    jmp $
+.e820_success:
+    ; make sure there are less than 170 segments found
+    ; so the memory after 
+    ; ADDR_MMAP_COUNT + 0x1000 > ADDR_MMAP_COUNT + 170 * 24 
+    ; will be free of use
+    cmp bp, 170
+    jl .e820_size_ok
+    mov bx, MSG_E820_FAILED_TOO_MANY_SEG
+    call print
+    jmp $
+.e820_size_ok:
+    mov bx, MSG_E820_SUCESS0
+    call print
+    mov dx, bp
+    call print_hex
+    mov bx, MSG_E820_SUCESS1
+    call print
+    call print_nl
+
+    popa
+    ret
+
+MSG_E820_FAILED db "E820 memory detection failed, hanged", 0
+MSG_E820_FAILED_TOO_MANY_SEG db "E820 detected too many segments, hanged", 0
+MSG_E820_SUCESS0 db "E820 memory detection success with ", 0
+MSG_E820_SUCESS1 db " memory segments", 0

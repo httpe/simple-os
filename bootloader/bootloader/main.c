@@ -20,6 +20,9 @@
 extern uint32_t ADDR_MMAP_ADDR; // address of the memory map structure
 extern uint32_t ADDR_MMAP_COUNT; // count of the memory map entries
 
+extern uint16_t VESA_MODE, VESA_WIDTH, VESA_HEIGHT, VESA_PITCH, VESA_FRAME_BUFFER_LO, VESA_FRAME_BUFFER_HI, VGA_FONT_ADDR;
+extern uint8_t VESA_COLOR_DEPTH;
+
 // Load a file from the tar file system
 //
 // LBA: 0-based Linear Block Address, 28bit LBA shall be between 0 to 0x0FFFFFFF
@@ -49,9 +52,60 @@ int tar_loopup_lazy(uint32_t LBA, char* filename, unsigned char* buffer) {
 
 }
 
+static void putpixel(uint32_t color, int x, int y) {
+    uint32_t* frame_buff = (void*) ( (((uint32_t) VESA_FRAME_BUFFER_HI) << 16) + (uint32_t) VESA_FRAME_BUFFER_LO);
+    unsigned where = x + y*VESA_PITCH/sizeof(color);
+    frame_buff[where] = color;
+}
+
+static void fillrect(uint32_t color, int x, int y, int w, int h) {
+    uint32_t* frame_buff = (void*) ( (((uint32_t) VESA_FRAME_BUFFER_HI) << 16) + (uint32_t) VESA_FRAME_BUFFER_LO);
+    uint32_t* where = &frame_buff[x + y*VESA_PITCH/sizeof(color)];
+    int i, j;
+ 
+    for (i = 0; i < h; i++) {
+        for (j = 0; j < w; j++) {
+            //putpixel(vram, 64 + j, 64 + i, (r << 16) + (g << 8) + b);
+            *where++ = color;
+        }
+        where += VESA_PITCH/sizeof(color) - w;
+    }
+}
+ 
+void drawchar(unsigned char c, int x, int y, uint32_t bgcolor, uint32_t fgcolor)
+{
+	unsigned char *font = (unsigned char*) (uint32_t) VGA_FONT_ADDR;
+    int cx,cy;
+    int mask[8]={128,64,32,16,8,4,2,1};
+	unsigned char *glyph=font+(int)c*16;
+
+	for(cy=0;cy<16;cy++){
+		for(cx=0;cx<8;cx++){
+			putpixel(glyph[cy]&mask[cx]?fgcolor:bgcolor,x+cx,y+cy-12);
+		}
+	}
+}
+
 void bootloader_main(void) {
     // printing starting at row 16
     uint8_t console_print_row = 16;
+
+    uint32_t bgcolor = 0x0066CCFF;
+    uint32_t fgcolor = 0x00FFFFFF;
+
+    fillrect(bgcolor, 200, 200, 400, 200);
+
+
+    char* hello_msg = "Hello VESA World!";
+    int x = 400 - strlen(hello_msg) / 2 * 8;
+    int y = 300 - 16 / 2;
+    for(unsigned int i=0; i<strlen(hello_msg); i++) {
+        drawchar(hello_msg[i], x + 8*i, y, bgcolor, fgcolor);
+    }
+
+
+    // TODO: Implement text printing under VGA mode 
+    while(1);
 
     // Init multiboot info structure and memory map info
     // Ref: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html

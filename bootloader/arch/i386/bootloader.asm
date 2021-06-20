@@ -23,9 +23,9 @@ boot:
     mov sp, bp
 
     ; print a hello world message
-    mov bx, MSG_REAL_MODE
-    call print ; This will be written after the BIOS messages
-    call print_nl
+    ; mov bx, MSG_REAL_MODE
+    ; call print ; This will be written after the BIOS messages
+    ; call print_nl
 
     ; the boot loader is assumed to have 16 sectors, load the other 15 sectors here
     ; This file will yield 4 sectors (the assembly part), and the C part will yield the other 12 sectors
@@ -48,6 +48,16 @@ disk_load_success:
     mov bx, MSG_LOAD_FROM_DISK
     call print
     call print_nl
+
+    ; Detect memory layout and store the memory map at variable ADDR_MMAP_ADDR
+    call detect_memory
+
+    ; Find the next available free space
+    mov di, [ADDR_MMAP_COUNT]
+    add di, 0x1000
+
+    ; Detect and switch to desired VESA/VGA mode before entering protected mode
+    call switch_vesa_mode
 
     call switch_to_pm
     jmp $       ; infinite loop, shall not reach here
@@ -80,8 +90,12 @@ section .text
 ; first two magic bytes of the first sector to be loaded from disk dynamically 
 dw DISK_LOAD_MAGIC
 
+; Various helper utility functions
+%include "utility.asm"
 ; utility to detect memory layout
 %include "memory.asm"
+; utility to detect and switch to desired VESA/VGA mode
+%include "vesa.asm"
 ; utility to enable A20 address line
 ; symbol provided: enable_a20
 %include "a20.asm"
@@ -90,6 +104,7 @@ dw DISK_LOAD_MAGIC
 ; symbol required: BEGIN_PM
 %include "gdt.asm"
 %include "switch_pm.asm"
+
 
 [bits 32]
 BEGIN_PM: ; after the switch we will get here
