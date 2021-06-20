@@ -139,10 +139,14 @@ static int pipe_write(struct fs_mount_point* mount_point, const char * path, con
 static int pipe_getattr(struct fs_mount_point* mount_point, const char * path, struct fs_stat * st, struct fs_file_info *fi)
 {
     pipe* p;
+    memset(st, 0, sizeof(*st));
     if(fi) {
         // use fi in order to getattr on opened unnamed pipe
         pipe_meta* meta = (pipe_meta*) mount_point->fs_meta;
         p = &meta->all_pipe[fi->fh];
+    } else if(strcmp("/", path) == 0) {
+        st->mode = S_IRWXU | S_IRWXG | S_IRWXO | S_IFIFO;
+        return 0;
     } else {
         p = name2pipe(mount_point, path, NULL);
     }
