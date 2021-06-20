@@ -28,6 +28,19 @@ done:
     popa
     ret
 
+; print cx characters from bx
+print_cx:
+    pusha
+    
+.print_cx_start:
+    mov ah, 0x0e
+    mov al, [bx] ; newline char
+    int 0x10
+    add bx, 1
+    loop .print_cx_start
+
+    popa
+    ret
 
 ; real mode print newline using BIOS interrupt
 ; print at current cursor location
