@@ -108,18 +108,20 @@ dw DISK_LOAD_MAGIC
 
 [bits 32]
 BEGIN_PM: ; after the switch we will get here
-    mov esi, MSG_PROT_MODE
-    mov edi, 14*80 ; write to the start of the 14th row
-    mov ah, WHITE_ON_BLACK
-    call print_pm ; Note that this will be written at the top left corner
+    ; Commenting out the printing because there are
+    ; for 80 * 25 text mode only, no use under VESA/VGA mode
+    ; mov esi, MSG_PROT_MODE
+    ; mov edi, 14*80 ; write to the start of the 14th row
+    ; mov ah, WHITE_ON_BLACK
+    ; call print_pm ; Note that this will be written at the top left corner
     ; jmp $: should print highlighted Started in 32-bit protected mode
 
     ; test print_memory_hex
-    mov esi, 0x7c00 + 0x1FE
-    mov ecx, 2
-    mov ah, WHITE_ON_BLACK
-    mov edi, 15*80              ; print at the start of 15th row
-    call print_memory_hex       ; shall print out the MBR magic number '55 AA '
+    ; mov esi, 0x7c00 + 0x1FE
+    ; mov ecx, 2
+    ; mov ah, WHITE_ON_BLACK
+    ; mov edi, 15*80              ; print at the start of 15th row
+    ; call print_memory_hex       ; shall print out the MBR magic number '55 AA '
 
     ; start switching to C compiled code
     extern bootloader_main
@@ -130,8 +132,9 @@ BEGIN_PM: ; after the switch we will get here
 MSG_PROT_MODE db "Started in 32-bit protected mode", 0
 
 ; 32-bit protected mode print
+; For 80 * 25 text mode only, no use under VESA/VGA mode
 ; symbol provided: print_pm, WHITE_ON_BLACK, print_memory_hex
-%include "print_pm.asm"
+; %include "print_pm.asm"
 
 
 ; The boot loader shall be exactly 8192 bytes (16 sectors in total, one MBR sector and three utility sectors)
