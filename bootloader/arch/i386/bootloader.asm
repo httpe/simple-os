@@ -49,12 +49,6 @@ disk_load_success:
     call print
     call print_nl
 
-
-    ; Detect memory layout using BIOS interrupt 0x15, eax=0xE820 
-    ; The entry count will be stored at 0x0500
-    ; The actual memory layout/map entries will be stored starting at 0x0504
-    call do_e820
-
     call switch_to_pm
     jmp $       ; infinite loop, shall not reach here
 
