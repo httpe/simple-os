@@ -9,7 +9,7 @@
 #include <arch/i386/kernel/isr.h>
 #include <kernel/timer.h>
 #include <kernel/keyboard.h>
-
+#include <kernel/video.h>
 
 
 // x86-32 architecture specific initialization sequence
@@ -18,14 +18,17 @@ void initialize_architecture(uint32_t mbt_physical_addr) {
     // Initialize serial port I/O so we can print debug message out 
     init_serial();
 
-    // Initialize terminal cursor and global variables like default color
-    terminal_initialize();
-
     // Initialize memory bitmap for the physical memory manager (frame allocator)
     initialize_bitmap(mbt_physical_addr);
 
-    // Initialize page frame allocator and install page fault handler
+    // Initialize page frame allocator, install page fault handler, init GDT and map certain pages indicated by the multiboot struct
     initialize_paging();
+
+    // Initialize VESA/VGA video driver
+    init_video(mbt_physical_addr);
+
+    // Initialize terminal cursor and global variables like default color
+    terminal_initialize(mbt_physical_addr);
 
     // Initialize IDT(Interrupt Descriptor Table) with ISR(Interrupt Service Routines) for Interrupts/IRQs
     // Including remapping the IRQs
