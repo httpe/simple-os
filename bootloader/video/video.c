@@ -57,7 +57,7 @@ void drawchar_textmode(unsigned char c, int char_x, int char_y, uint32_t bgcolor
 void get_textmode_screen_size(uint32_t* w_in_char, uint32_t* h_in_char)
 {
     *w_in_char = width / FONT_WIDTH;
-    *h_in_char = height / FONT_WIDTH;
+    *h_in_char = height / FONT_HEIGHT;
 }
 
 int init_video(multiboot_info_t* info) 
