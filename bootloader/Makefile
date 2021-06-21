@@ -87,4 +87,4 @@ clean:
 
 install: bootable_kernel.bin bootloader.elf
 	cp bootable_kernel.bin ..
-	cp bootloader_padded.bin ~/mnt/src/share
+
