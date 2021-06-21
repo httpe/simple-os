@@ -3,7 +3,6 @@
 #include <string.h>
 #include <assert.h>
 
-#include <kernel/tty.h>
 #include <common.h>
 #include <kernel/keyboard.h>
 
@@ -16,9 +15,7 @@
 #define KDB_DATA_PORT         0x60    // kbd data port(I)
 #define KBD_ACK 0xFA
 
-// Buffer size same as TTY screen size
-#define KEYBOARD_BUFFER_SIZE (VGA_HEIGHT*VGA_WIDTH)
-
+#define KEYBOARD_BUFFER_SIZE 2000
 
 #define F(n) KEY_FN(n)
 #define P(c) KEY_KEYPAD(c)
