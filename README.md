@@ -89,9 +89,9 @@ We also use Makefile to automate the compile process. The [Tutorialspoint Unix M
 
 A one-stop shop for OS development knowledge is the [OsDev Wiki](https://wiki.osdev.org/Main_Page). You can find various useful resources there, and there are bunch of [tutorials](https://wiki.osdev.org/Tutorials) to follow. It is highly recommended to take a look at the [Bare Bones](https://wiki.osdev.org/Bare_Bones) tutorial at OsDev Wiki to get some feeling on how to get started with OS development.
 
-## Dependencies
+## Installing Dependencies
 
-Our testing environment is `Ubuntu 20.04 LTS` and `Archlinux`, if you use the same, you can install all the mandatory dependencies (1. through 4.) by running `build-toolchain.sh`.
+Our testing environment is `Ubuntu 20.04 LTS` and `Archlinux`, if you use the same, you can install all the mandatory dependencies (1. through 4.) by running `build-toolchain.sh`. It will run for 30 - 45 minutes depending on your machine's spec. Based on our experience, at least 4GB ram is required in building GCC and 8GB is recommended.
 
 1. [NASM Assembler](https://www.nasm.us/).
 
