@@ -10,9 +10,8 @@
 #include <kernel/process.h>
 #include <kernel/ethernet.h>
 #include <kernel/ipv4.h>
+#include <kernel/cpu.h>
 #include <arch/i386/kernel/isr.h>
-#include <arch/i386/kernel/cpu.h>
-
 
 
 int sys_exec(trapframe* r)

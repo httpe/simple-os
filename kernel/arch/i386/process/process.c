@@ -11,6 +11,7 @@
 #include <kernel/stat.h>
 #include <kernel/errno.h>
 #include <kernel/elf.h>
+#include <kernel/cpu.h>
 #include <arch/i386/kernel/segmentation.h>
 #include <arch/i386/kernel/cpu.h>
 
@@ -49,6 +50,7 @@ struct {
 } process_table;
 
 static uint32_t next_pid = 1;
+static int scheduler_available = 0;
 proc* init_process = NULL;
 
 void initialize_process() 
@@ -56,6 +58,8 @@ void initialize_process()
     //TODO: Add process specific initialization
     // This function is called after stack changed to process's kernel stack
     // and the page dir changed to process's own dir
+
+    scheduler_available = 1;
 }
 
 // Ref: xv6/proc.c
@@ -219,6 +223,9 @@ void exit(int exit_code)
 
 void yield()
 {
+    if(!scheduler_available) {
+        return;
+    }
     PANIC_ASSERT(!is_interrupt_enabled());
 
     proc* p = curr_proc();
