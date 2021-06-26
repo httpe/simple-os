@@ -32,10 +32,18 @@ export PATH=$TOOL_CHAIN_ROOT/usr/bin:$PATH
 ### Compile & Install Standalone Bintuils
 ######################################################
 
-sudo apt -y update
-sudo apt -y install build-essential autoconf automake git
-sudo apt -y install qemu-system-x86
-sudo apt -y install bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo libisl-dev curl
+if command -v apt &> /dev/null
+then
+    sudo apt -y update
+    sudo apt -y install build-essential autoconf automake git
+    sudo apt -y install bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo libisl-dev curl
+    sudo apt -y install qemu-system-x86 nasm
+elif command -v pacman &> /dev/null
+then
+    sudo pacman -Syy
+    sudo pacman -S --needed base-devel gmp libmpc mpfr
+    sudo pacman -S --needed git qemu qemu-arch-extra nasm
+fi
 
 cd $TOOL_CHAIN_BUILD_DIR
 curl https://ftp.gnu.org/gnu/binutils/binutils-2.35.1.tar.gz --output binutils-2.35.1.tar.gz
