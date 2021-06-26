@@ -1,4 +1,6 @@
 #include <kernel/ata.h>
+#include <kernel/lock.h>
+#include <kernel/process.h>
 #include <arch/i386/kernel/port_io.h>
 
 // 28 bit ATA PIO disk driver
@@ -22,6 +24,7 @@ ERR: a 1 indicates that an error occured. An error code has been placed in the e
 #define STATUS_DF 0x20
 #define STATUS_ERR 0x01
 
+static lock ata_lock;
 
 static void ATA_wait_BSY();
 static void ATA_wait_DRQ();
@@ -34,6 +37,8 @@ static void ATA_delay_400ns();
 // sector_count: How many sectors you want to read. A sectorcount of 0 means 256 sectors = 128K
 //
 static void read_sectors_ATA_28bit_PIO(bool slave, uint16_t* target, uint32_t LBA, uint8_t sector_count) {
+    acquire(&ata_lock);
+
     ATA_wait_BSY();
     // Send 0xE0 for the "master" or 0xF0 for the "slave", ORed with the highest 4 bits of the LBA to port 0x1F6: outb(0x1F6, 0xE0 | (slavebit << 4) | ((LBA >> 24) & 0x0F))
     outb(0x1F6, 0xE0 | (slave << 4) | ((LBA >> 24) & 0xF));
@@ -65,6 +70,8 @@ static void read_sectors_ATA_28bit_PIO(bool slave, uint16_t* target, uint32_t LB
             target[i] = inw(0x1F0);
         target += 256;
     }
+
+    release(&ata_lock);
 }
 
 void read_sectors_ATA_PIO(bool slave, void* buf, uint32_t LBA, uint32_t sector_count)
@@ -90,6 +97,8 @@ void read_sectors_ATA_PIO(bool slave, void* buf, uint32_t LBA, uint32_t sector_c
 // source: a buffer whose length is sector_count*512 bytes 
 //
 static void write_sectors_ATA_28bit_PIO(bool slave, uint32_t LBA, uint8_t sector_count, uint16_t* source) {
+    acquire(&ata_lock);
+
     ATA_wait_BSY();
     outb(0x1F6, 0xE0 | (slave << 4) | ((LBA >> 24) & 0xF));
     outb(0x1F2, sector_count);
@@ -119,6 +128,8 @@ static void write_sectors_ATA_28bit_PIO(bool slave, uint32_t LBA, uint8_t sector
 
     // Make sure to do a Cache Flush (ATA command 0xE7) after each write command completes.
     outb(0x1F7, 0xE7);
+
+    release(&ata_lock);
 }
 
 void write_sectors_ATA_PIO(bool slave, const void* buf, uint32_t LBA, uint32_t sector_count)
@@ -145,6 +156,10 @@ void write_sectors_ATA_PIO(bool slave, const void* buf, uint32_t LBA, uint32_t s
 // return: zero = success, otherwise failed
 // 
 int8_t ATA_Identify(bool slave, uint16_t* target) {
+    int return_val;
+
+    acquire(&ata_lock);
+
     ATA_wait_BSY();
     // select a target drive by sending 0xA0 for the master drive, or 0xB0 for the slave, to the "drive select" IO port (0x1F6)
     outb(0x1F6, 0xA0 | (slave << 4));
@@ -159,23 +174,37 @@ int8_t ATA_Identify(bool slave, uint16_t* target) {
     // Then read the Status port (0x1F7) again. If the value read is 0, the drive does not exist.
     ATA_delay_400ns();
     uint8_t status = inb(0x1F7);
-    if (status == 0) return -1;
+    if (status == 0) {
+        return_val = -1;
+        goto ret;
+    }
     // For any other value: poll the Status port (0x1F7) until bit 7 (BSY, value = 0x80) clears.
     // Because of some ATAPI drives that do not follow spec, at this point you need to check the LBAmid and LBAhi ports (0x1F4 and 0x1F5) 
     // to see if they are non-zero. If so, the drive is not ATA, and you should stop polling.
     while (inb(0x1F7) & STATUS_BSY) {
-        if (inb(0x1F4) != 0 || inb(0x1F5) != 0) return -2;
+        if (inb(0x1F4) != 0 || inb(0x1F5) != 0) {
+            return_val = -2;
+            goto ret;
+        }
     };
 
     // Otherwise, continue polling one of the Status ports until bit 3 (DRQ, value = 8) sets, or until bit 0 (ERR, value = 1) sets.
     ATA_wait_DRQ();
 
     // At that point, if ERR is clear, the data is ready to read from the Data port (0x1F0). Read 256 16-bit values, and store them.
-    if ((inb(0x1F7) & STATUS_ERR)) return 3;
+    if ((inb(0x1F7) & STATUS_ERR)) {
+        return_val = -3;
+        goto ret;
+    };
     for (int i = 0;i < 256;i++) {
         target[i] = inw(0x1F0);
     }
-    return 0;
+    
+    return_val = 0;
+
+ret:
+    release(&ata_lock);
+    return return_val;
 }
 
 // Get count of all sectors available to address using a 28bit LBA
@@ -210,9 +239,13 @@ static void ATA_delay_400ns() {
 //  If neither error bit is set, the device is ready right then.
 static void ATA_wait_BSY() {
     //Wait for BSY to be 0
-    while (inb(0x1F7) & STATUS_BSY);
+    while (inb(0x1F7) & STATUS_BSY) {
+        yield();
+    };
 }
 static void ATA_wait_DRQ() {
     //Wait fot DRQ or ERR to be 1
-    while (!(inb(0x1F7) & (STATUS_RDY | STATUS_ERR)));
+    while (!(inb(0x1F7) & (STATUS_RDY | STATUS_ERR))) {
+        yield();
+    };
 }
