@@ -53,7 +53,8 @@ disk_load_success:
     call detect_memory_map_by_e820
 
     ; Detect and switch to desired VESA/VGA mode before entering protected mode
-    call switch_vesa_mode
+    ; Commenting out this line, the system shall still work under conventional 80*25 text mode
+    ; call switch_vesa_mode
 
     call switch_to_pm
     jmp $       ; infinite loop, shall not reach here
