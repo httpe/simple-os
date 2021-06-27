@@ -158,6 +158,7 @@ void terminal_clear_screen(enum tty_clear_screen_mode mode) {
         col_end = TEXT_WIDTH - 1;
     }
 
+    // for the special case where the cursor is at the last position of a line
     if(col_start >= TEXT_WIDTH) {
         col_start = TEXT_WIDTH - 1;
     }
@@ -165,14 +166,15 @@ void terminal_clear_screen(enum tty_clear_screen_mode mode) {
         col_end = TEXT_WIDTH - 1;
     }
 
-    for (size_t y = row_start; y <= row_end; y++) {
-        for (size_t x = col_start; x <= col_end; x++) {
-            terminal_putentryat(' ', terminal_color, x, y);
-        }
-    }
-
     if(video_mode) {
-        clear_textmode_screen_edge(terminal_color_bg);
+        clear_screen(terminal_color_bg);
+        video_refresh();
+    } else {
+        for (size_t y = row_start; y <= row_end; y++) {
+            for (size_t x = col_start; x <= col_end; x++) {
+                terminal_putentryat(' ', terminal_color, x, y);
+            }
+        }
     }
 }
 
