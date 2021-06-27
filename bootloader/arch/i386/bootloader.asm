@@ -54,7 +54,7 @@ disk_load_success:
 
     ; Detect and switch to desired VESA/VGA mode before entering protected mode
     ; Commenting out this line, the system shall still work under conventional 80*25 text mode
-    ; call switch_vesa_mode
+    call switch_vesa_mode
 
     call switch_to_pm
     jmp $       ; infinite loop, shall not reach here
