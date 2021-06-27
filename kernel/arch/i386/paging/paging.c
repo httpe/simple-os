@@ -504,6 +504,7 @@ uint32_t alloc_pages(pde* page_dir, size_t page_count, bool is_kernel, bool is_w
     return VADDR_FROM_PAGE_INDEX(page_index);
 }
 
+//@param physical_addr return the starting address of the allocated consecutive physical memory block 
 uint32_t alloc_pages_consecutive_frames(pde* page_dir, size_t page_count, bool is_writeable, uint32_t* physical_addr) {
     if (page_count == 0) {
         return 0;
