@@ -32,12 +32,21 @@ void putpixel(uint32_t color, int x, int y) {
 // }
 
 
-void swap_buffer(uint32_t pixel_idx, uint32_t len) {
+static void swap_buffer(uint32_t pixel_idx, uint32_t len) {
     memmove(framebuffer + pixel_idx, video_buffer + pixel_idx, len*bpp/8);
 }
 
-void video_refresh() {
+void video_refresh()
+{
     swap_buffer(0, buffer_pixel_size);
+}
+void video_refresh_rect(uint x, uint y, uint w, uint h)
+{
+    uint off = x + y*width;
+    for(uint i=0; i<h;i++) {
+        swap_buffer(off, w);
+        off += width;
+    }
 }
 
 void fillrect(uint32_t color, int x, int y, int w, int h) {
@@ -67,15 +76,6 @@ void drawchar(unsigned char c, int x, int y, uint32_t bgcolor, uint32_t fgcolor)
     
 }
 
-void drawchar_textmode(unsigned char c, int char_x, int char_y, uint32_t bgcolor, uint32_t fgcolor)
-{
-    drawchar(c, char_x * FONT_WIDTH, char_y * FONT_HEIGHT, bgcolor, fgcolor);
-    uint32_t off =  char_y * FONT_HEIGHT * width + char_x * FONT_WIDTH;
-    for(uint i=0; i<FONT_HEIGHT;i++) {
-        swap_buffer(off, FONT_WIDTH);
-        off += width;
-    }
-}
 
 void screen_scroll_up(uint32_t row, uint32_t bgcolor)
 {
@@ -83,34 +83,21 @@ void screen_scroll_up(uint32_t row, uint32_t bgcolor)
     fillrect(bgcolor, 0, height - row, width, row);
 }
 
-void scroll_up_textmode(uint32_t row, uint32_t bgcolor)
-{
-    screen_scroll_up(row * FONT_HEIGHT, bgcolor);
-    // clear_textmode_screen_edge(bgcolor);
-    video_refresh();
-}
-
-// Fill screen right/bottom edges which doesn't covered by textmode characters 
-// static void clear_textmode_screen_edge(uint32_t bgcolor)
-// {
-//     uint32_t width_rem = width % FONT_WIDTH;
-//     if(width_rem > 0) {
-//         fillrect(bgcolor, width - width_rem - 1, 0, width_rem, height);
-//     }
-//     uint32_t height_rem = height % FONT_HEIGHT;
-//     if(height_rem > 0) {
-//         fillrect(bgcolor, 0, height - height_rem - 1, width_rem, height_rem);
-//     }
-// }
 
 void clear_screen(uint32_t bgcolor) {
     fillrect(bgcolor, 0, 0, width, height);
 }
 
-void get_textmode_screen_size(uint32_t* w_in_char, uint32_t* h_in_char)
+void get_screen_size(uint32_t* w, uint32_t* h)
 {
-    *w_in_char = width / FONT_WIDTH;
-    *h_in_char = height / FONT_HEIGHT;
+    *w = width;
+    *h = height;
+}
+
+void get_vga_font_size(uint32_t* w, uint32_t* h)
+{
+    *w = FONT_WIDTH;
+    *h = FONT_HEIGHT;
 }
 
 int init_video(uint32_t info_phy_addr)

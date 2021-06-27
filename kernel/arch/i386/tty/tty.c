@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <common.h>
 
 #include <kernel/tty.h>
 #include <kernel/serial.h>
@@ -16,6 +17,10 @@ static int initialized;
 static int video_mode;
 static size_t TEXT_WIDTH;
 static size_t TEXT_HEIGHT;
+
+static size_t font_width, font_height;
+static size_t screen_res_w, screen_res_h;
+
 static size_t terminal_row;
 static size_t terminal_column;
 static uint64_t terminal_color;
@@ -82,7 +87,13 @@ static void terminal_putentryat(unsigned char c, uint64_t color, size_t col, siz
     if(initialized) {
         const size_t index = row * TEXT_WIDTH + col;
         if(video_mode) {
-            drawchar_textmode(c, col, row, color >> 32, color & 0xFFFFFFFF);
+            uint x = col * font_width;
+            uint y = row * font_height;
+            uint fg_color = color & 0xFFFFFFFF;
+            uint bg_color = color >> 32;
+
+            drawchar(c, col * font_width, row * font_height, bg_color, fg_color);
+            video_refresh_rect(x, y, font_width, font_height);
         } else {
             terminal_buffer[index] = vga_entry(c, color);
         }
@@ -101,7 +112,11 @@ void terminal_initialize(uint32_t mbt_physical_addr) {
         ) {
 
         video_mode = 1;
-        get_textmode_screen_size(&TEXT_WIDTH, &TEXT_HEIGHT);
+        get_screen_size(&screen_res_w, &screen_res_h);
+        get_vga_font_size(&font_width, &font_height);
+
+        TEXT_WIDTH = screen_res_w / font_width;
+        TEXT_HEIGHT = screen_res_h / font_height;
 
     } else {
         video_mode = 0;
@@ -231,7 +246,8 @@ void terminal_set_font_attr(enum tty_font_attr attr) {
 void terminal_scroll_up()
 {
     if(video_mode) {
-        scroll_up_textmode(1, terminal_color_bg);
+        screen_scroll_up(font_height, terminal_color_bg);
+        video_refresh();
     } else {
         memmove(VGA_MEMORY, VGA_MEMORY + TEXT_WIDTH, sizeof(VGA_MEMORY[0]) * TEXT_HEIGHT * TEXT_WIDTH);
     }
