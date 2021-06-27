@@ -18,5 +18,6 @@ typedef struct cpu {
 
 cpu* curr_cpu();
 uint read_cpu_eflags();
+uint64_t rdtsc();
 
 #endif

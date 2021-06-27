@@ -80,3 +80,13 @@ uint xchg(volatile uint *addr, uint newval)
                "cc");
   return result;
 }
+
+//TODO: Might not be available on all CPU, need to check CPUID
+// Read CPU cycle counter
+// Ref: https://wiki.osdev.org/TSC
+uint64_t rdtsc()
+{
+    uint64_t ret;
+    asm volatile ( "rdtsc" : "=A"(ret) );
+    return ret;
+}
