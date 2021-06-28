@@ -8,7 +8,8 @@
 static int initialized;
 
 static uint32_t* framebuffer;
-static uint32_t* video_buffer;
+static uint32_t* video_buffer_next;
+static uint32_t* video_buffer_curr;
 static uint32_t buffer_byte_size;
 static uint32_t buffer_pixel_size;
 static uint8_t bpp;
@@ -32,25 +33,41 @@ void putpixel(uint32_t color, int x, int y) {
 // }
 
 
-static void swap_buffer(uint32_t pixel_idx, uint32_t len) {
-    memmove(framebuffer + pixel_idx, video_buffer + pixel_idx, len*bpp/8);
-}
+// static void swap_buffer(uint32_t pixel_idx, uint32_t len) {
+//     if(stop_swap) {
+//         return;
+//     }
+//     memmove(framebuffer + pixel_idx, video_buffer_next + pixel_idx, len*bpp/8);
+// }
 
 void video_refresh()
 {
-    swap_buffer(0, buffer_pixel_size);
+    // only write changed pixels to video memory
+    for(uint i=0; i<buffer_pixel_size; i++) {
+        if(video_buffer_next[i] != video_buffer_curr[i]) {
+            video_buffer_curr[i] = video_buffer_next[i];
+            framebuffer[i] = video_buffer_next[i];
+        }
+    }
 }
 void video_refresh_rect(uint x, uint y, uint w, uint h)
 {
-    uint off = x + y*width;
-    for(uint i=0; i<h;i++) {
-        swap_buffer(off, w);
-        off += width;
+    uint off = y*width + x;
+    uint i,j;
+    for(i=0; i<h;i++) {
+        for(j=0; j<w;j++) {
+            if(video_buffer_next[off] != video_buffer_curr[off]) {
+                video_buffer_curr[off] = video_buffer_next[off];
+                framebuffer[off] = video_buffer_next[off];
+            }
+            off++;
+        }
+        off += width - w;
     }
 }
 
 void fillrect(uint32_t color, int x, int y, int w, int h) {
-    uint32_t* where = &video_buffer[x + y*width];
+    uint32_t* where = &video_buffer_next[x + y*width];
     int i, j;
  
     for (i = 0; i < h; i++) {
@@ -66,20 +83,27 @@ void drawchar(unsigned char c, int x, int y, uint32_t bgcolor, uint32_t fgcolor)
     int cx,cy;
     int mask[8]={128,64,32,16,8,4,2,1}; // should match FONT_WIDTH
 	unsigned char *glyph=font+(int)c*FONT_HEIGHT;
-    uint32_t* buff = &video_buffer[x + y*width];
+    uint32_t* buff = &video_buffer_next[x + y*width];
 	for(cy=0;cy<FONT_HEIGHT;cy++){
-		for(cx=0;cx<FONT_WIDTH;cx++){
-            *buff++ = glyph[cy]&mask[cx]?fgcolor:bgcolor;
-		}
+        // optimized but only usable for font width == 8
+        *buff++ = glyph[cy]&mask[0]?fgcolor:bgcolor;
+        *buff++ = glyph[cy]&mask[1]?fgcolor:bgcolor;
+        *buff++ = glyph[cy]&mask[2]?fgcolor:bgcolor;
+        *buff++ = glyph[cy]&mask[3]?fgcolor:bgcolor;
+        *buff++ = glyph[cy]&mask[4]?fgcolor:bgcolor;
+        *buff++ = glyph[cy]&mask[5]?fgcolor:bgcolor;
+        *buff++ = glyph[cy]&mask[6]?fgcolor:bgcolor;
+        *buff++ = glyph[cy]&mask[7]?fgcolor:bgcolor;
+		// for(cx=0;cx<FONT_WIDTH;cx++){
+        //     *buff++ = glyph[cy]&mask[cx]?fgcolor:bgcolor;   
+		// }
         buff += width - FONT_WIDTH;
 	}
-    
 }
-
 
 void screen_scroll_up(uint32_t row, uint32_t bgcolor)
 {
-    memmove(video_buffer, ((void*) video_buffer) + row * pitch, (height - row)*pitch);
+    memmove(video_buffer_next, ((void*) video_buffer_next) + row * pitch, (height - row)*pitch);
     fillrect(bgcolor, 0, height - row, width, row);
 }
 
@@ -140,7 +164,10 @@ int init_video(uint32_t info_phy_addr)
     buffer_byte_size = width*height*bpp/8;
     buffer_pixel_size = width*height;
 
+    // we assume here and in tty that there is no padding between lines
     PANIC_ASSERT(pitch == bpp/8 * width);
+    // drawchar uses this assumption
+    PANIC_ASSERT(FONT_WIDTH == 8);
 
     framebuffer = (uint32_t*) (uint32_t) info->framebuffer_addr;
     if(!is_vaddr_accessible(curr_page_dir(), (uint32_t) framebuffer, true, true)) {
@@ -160,23 +187,50 @@ int init_video(uint32_t info_phy_addr)
     PANIC_ASSERT(vaddr2paddr(curr_page_dir(), (uint32_t) framebuffer) == (uint32_t) framebuffer);
     PANIC_ASSERT(vaddr2paddr(curr_page_dir(), (uint32_t) framebuffer + (width*height*bpp/8 - 1)) == (uint32_t) framebuffer + (width*height*bpp/8 - 1));
 
-    video_buffer = (uint32_t*) alloc_pages_consecutive_frames(curr_page_dir(), PAGE_COUNT_FROM_BYTES(width*height*bpp/8), true, NULL);
-    memset(video_buffer, 0, buffer_byte_size);
-    swap_buffer(0, buffer_pixel_size);
+    // Use two video buffers, video_buffer_curr holds the current view and video_buffer_next holds the next view to be displayed/flushed to framebuffer
+    video_buffer_curr = (uint32_t*) alloc_pages_consecutive_frames(curr_page_dir(), PAGE_COUNT_FROM_BYTES(width*height*bpp/8), true, NULL);
+    memset(video_buffer_curr, 0, PAGE_COUNT_FROM_BYTES(width*height*bpp/8) * PAGE_SIZE);
+    video_buffer_next = (uint32_t*) alloc_pages_consecutive_frames(curr_page_dir(), PAGE_COUNT_FROM_BYTES(width*height*bpp/8), true, NULL);
+    memset(video_buffer_next, 0, PAGE_COUNT_FROM_BYTES(width*height*bpp/8) * PAGE_SIZE);
+    // sync video buffer
+    memmove(framebuffer, video_buffer_curr, buffer_byte_size);
 
     initialized = 1;
 
-    // Performance benchmark
+
+    // Video Driver Performance benchmark
+
+    // uint64_t draw_time = 0;
+    // uint64_t refresh_time = 0;
+    
     // uint64_t t0 = rdtsc();
 
-    // for(int y=0;y < 1;y++) {
-    //     for(int x=0;x < 100; x++) {
-    //         drawchar_textmode('X', x, y, 0x0, 0x00FFFFFF);
+    // for(int i=0; i < 100; i++) {
+    //     char c = (i%2 == 0)?'A':'B';
+    //     uint64_t tt0 = rdtsc();
+    //     for(int y=0;y < 37;y++) {
+    //         for(int x=0;x < 100; x++) {
+    //             drawchar(c, x * FONT_WIDTH, y * FONT_HEIGHT, 0x0, 0x00FFFFFF);
+    //             // video_refresh_rect(x * FONT_WIDTH, y * FONT_HEIGHT, FONT_WIDTH, FONT_HEIGHT);
+    //         }
     //     }
+    //     uint64_t tt1 = rdtsc();
+
+    //     video_refresh();
+        
+    //     uint64_t tt2 = rdtsc();
+        
+    //     draw_time += tt1 - tt0;
+    //     refresh_time += tt2 - tt1;
     // }
 
     // uint64_t t1 = rdtsc();
-    // uint64_t d = t1 - t0;
+    // uint64_t total_time = t1 - t0;
+    // volatile uint64_t fps = 3600750000 / (total_time/100);
+
+    // volatile uint64_t draw_frac = (draw_time * 100) / total_time;
+    // volatile uint64_t refresh_frac = (refresh_time * 100) / total_time;
+    // volatile uint64_t refresh_fps = 3600750000 / (refresh_time / 100);
 
     return 0;
 }
