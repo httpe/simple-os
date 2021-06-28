@@ -5,11 +5,23 @@
 
 #include <arch/i386/kernel/cpu.h>
 
+// Ref: https://wiki.osdev.org/Drawing_In_Protected_Mode
+// Ref: https://wiki.osdev.org/Getting_VBE_Mode_Info
+// Ref: https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial
+// Ref: https://wiki.osdev.org/Double_Buffering
+// Ref: https://wiki.osdev.org/VGA_Fonts
+// Ref: http://www.petesqbsite.com/sections/tutorials/tuts/vbe3.pdf
+
+// Good advices on improving video performance
+// Scrolling in the VESA mode: https://forum.osdev.org/viewtopic.php?f=1&t=22702
+// Sluggish SVGA drivers: https://forum.osdev.org/viewtopic.php?f=15&t=22882
+// gui scroll is super slow: https://forum.osdev.org/viewtopic.php?f=1&t=23891&start=0 (in which Brendan suggested this video_buffer_curr/video_buffer_next method)
+
 static int initialized;
 
 static uint32_t* framebuffer;
-static uint32_t* video_buffer_next;
 static uint32_t* video_buffer_curr;
+static uint32_t* video_buffer_next;
 static uint32_t buffer_byte_size;
 static uint32_t buffer_pixel_size;
 static uint8_t bpp;
