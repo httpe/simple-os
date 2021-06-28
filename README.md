@@ -89,27 +89,34 @@ Although the final goal is to make the system self-hosting, we have planned for 
     - Compile the source code of the system inside the system
     - The system is now self-hosting
 
-## Prerequisite
-
-Familiarity with x86 assembly language and C will help you understand the code.
-
-[Tutorialspoint Assembly Programming Tutorial](https://www.tutorialspoint.com/assembly_programming/index.htm) provides a good tutorial for [NASM](https://en.wikipedia.org/wiki/Netwide_Assembler) assembly, which is the assembly dialect we use in this project.
-
-We also use Makefile to automate the compile process. The [Tutorialspoint Unix Makefile Tutorial](https://www.tutorialspoint.com/makefile/index.htm) is a good introduction.
-
-A one-stop shop for OS development knowledge is the [OsDev Wiki](https://wiki.osdev.org/Main_Page). You can find various useful resources there, and there are bunch of [tutorials](https://wiki.osdev.org/Tutorials) to follow. It is highly recommended to take a look at the [Bare Bones](https://wiki.osdev.org/Bare_Bones) tutorial at OsDev Wiki to get some feeling on how to get started with OS development.
-
-## Installing Dependencies
-
-Our testing environment is `Ubuntu 20.04 LTS` and `Archlinux`, if you use the same, you can install all the mandatory dependencies (1. through 4.) by running `build-toolchain.sh`. It will run for 30 - 45 minutes depending on your machine's spec. Based on our experience, at least 4GB ram is required in building GCC and 8GB is recommended. Also, please prepare around 10GB of free disk space to hold all the intermediate files generated in the building process.
+## Dependencies
 
 1. [NASM Assembler](https://www.nasm.us/).
 
 2. [QEMU](https://www.qemu.org/) Emulator: We will use QEMU to emulate our system, avoiding restarting computer again and again just to test the system.
 
-3. GCC & Binutils for x86: It is recommended to [compile a cross-compiler for your own](https://wiki.osdev.org/GCC_Cross-Compiler). Your system shall also have GCC tool chain installed, since we will use utility like GNU Make.
+3. System wide GCC & Binutils toolchain: We will need them to [compile a cross-compiler](https://wiki.osdev.org/GCC_Cross-Compiler) and build our [OS specific toolchain](https://wiki.osdev.org/OS_Specific_Toolchain) at next step.
 
-4. Hosted GCC & Binutils and Newlib for Simple-OS: We will need the specialized tool-chain and Newlib for those user space programs including init and shell. Please refer to `HostedToolchain.md` on how to build them.
+    Installing 1-3 on `Ubuntu`:
+
+    ```bash
+        sudo apt -y update
+        sudo apt -y install build-essential autoconf automake git
+        sudo apt -y install bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo libisl-dev curl
+        sudo apt -y install qemu-system-x86 nasm
+    ```
+
+    Installing 1-3 on `Arch Linux`:
+
+    ```bash
+        sudo pacman -Syy
+        sudo pacman -S --needed base-devel gmp libmpc mpfr
+        sudo pacman -S --needed git qemu qemu-arch-extra nasm
+    ```
+
+4. Hosted GCC & Binutils and Newlib for Simple-OS: We will need this specialized tool-chain and Newlib to compile those user space programs including init and shell.
+
+    To build the cross-compiler and our OS specific tool-chain, you can use the script `build-toolchain.sh`. It will run for 30 - 45 minutes depending on your machine's spec. Based on our experience, at least 4GB ram is required in building GCC and 8GB is recommended. Also, please prepare around 10GB of free disk space to hold all the intermediate files generated in the building process.
 
 5. (Optional) [VSCode](https://code.visualstudio.com/): We provide some integration of the building/debugging process with VSCode, but it is optional. Some extension may also be needed as described in the `Debug` section below.
 
@@ -214,6 +221,16 @@ With all of the setup, the debugging process is streamlined to:
 **Note:** Some code in `bootloader/arch/i386/bootloader.asm` and `kernel/arch/i386/boot/boot.asm` can not be debug in this way, please see the comments there.  
 
 ## Folder Structure
+
+### Before reading the code
+
+Familiarity with x86 assembly language and C will help you understand the code.
+
+[Tutorialspoint Assembly Programming Tutorial](https://www.tutorialspoint.com/assembly_programming/index.htm) provides a good tutorial for [NASM](https://en.wikipedia.org/wiki/Netwide_Assembler) assembly, which is the assembly dialect we use in this project.
+
+We also use Makefile to automate the compile process. The [Tutorialspoint Unix Makefile Tutorial](https://www.tutorialspoint.com/makefile/index.htm) is a good introduction.
+
+A one-stop shop for OS development knowledge is the [OsDev Wiki](https://wiki.osdev.org/Main_Page). You can find various useful resources there, and there are bunch of [tutorials](https://wiki.osdev.org/Tutorials) to follow. It is highly recommended to take a look at the [Bare Bones](https://wiki.osdev.org/Bare_Bones) tutorial at OsDev Wiki to get some feeling on how to get started with OS development.
 
 ### Bootloader
 
