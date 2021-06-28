@@ -74,6 +74,16 @@ Although the final goal is to make the system self-hosting, we have planned for 
       - IPv4 layer implemented
       - Ping utility implemented (ICMP protocol)
 
+1. **Milestone Eight: Graphics**
+    - Switch to [VESA Video Modes](https://wiki.osdev.org/Getting_VBE_Mode_Info) using the [VBE](http://www.petesqbsite.com/sections/tutorials/tuts/vbe3.pdf) (VESA BIOS Extensions Standard) functions (Ref: [VESA Tutorial](https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial))
+    - Provide [basic graphical drawing routines](https://wiki.osdev.org/Drawing_In_Protected_Mode), like drawing a line, a rectangle
+    - Enable higher resolution text console (showing more than 80*25 characters), including text drawing ([VGA Font](https://wiki.osdev.org/VGA_Fonts)), screen scrolling and text cursor
+    - Write an image viewer
+    - **In Progress**
+      - Bootloader can now switch to VESA video modes and pass the VBE information to the kernel through multi-boot structure
+      - Implemented a video driver supporting [double buffering](https://wiki.osdev.org/Double_Buffering) which only redraw changed pixel by comparing with a third video buffer
+      - TTY now support emulated text mode under video modes. Text cursor is also available
+
 1. **Final Goal: Self-hosting**
     - Port a sophisticate enough compiler to the system
     - Compile the source code of the system inside the system
