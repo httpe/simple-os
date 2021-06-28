@@ -28,6 +28,12 @@ static tty_color_spec terminal_color_fg;
 static tty_color_spec terminal_color_bg;
 static uint16_t* terminal_buffer;
 
+static int cursor_enabled;
+static uint video_cursor_x;
+static uint video_cursor_y;
+
+static int no_video_refresh;
+
 // Ref: https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
 // Using xterm RGB value
 static uint32_t tty_color2rgb_color[16] = {
@@ -60,9 +66,23 @@ tty_color_spec ttycolor2spec(enum tty_color c) {
     }
 }
 
+void tty_stop_refresh()
+{
+    no_video_refresh = 1;
+}
+
+void tty_start_refresh()
+{
+    no_video_refresh = 0;
+    if(video_mode) {
+        video_refresh();
+    }
+}
+
 // Enable blinking cursor
 void enable_cursor()
 {
+    cursor_enabled = 1;
     if(!video_mode) {
         outb(0x3D4, 0x0A);
         outb(0x3D5, (inb(0x3D5) & 0xC0) | TTY_CURSOR_SCANLINE_START);
@@ -70,17 +90,25 @@ void enable_cursor()
         outb(0x3D4, 0x0B);
         outb(0x3D5, (inb(0x3D5) & 0xE0) | TTY_CURSOR_SCANLINE_END);
     }
-    // TODO: video mode cursor
+
+    update_cursor();
+    
 }
 
 // Disable blinking cursor
 void disable_cursor()
 {
+    cursor_enabled = 0;
     if(!video_mode) {
         outb(0x3D4, 0x0A);
         outb(0x3D5, 0x20);
     }
-    // TODO: video mode cursor
+
+    fillrect(terminal_color_bg, video_cursor_x, video_cursor_y, font_width, 2);
+    if(!no_video_refresh) {
+        video_refresh_rect(video_cursor_x, video_cursor_y, font_width, 2);
+    }
+
 }
 
 static void terminal_putentryat(unsigned char c, uint64_t color, size_t col, size_t row) {
@@ -181,14 +209,10 @@ void terminal_clear_screen(enum tty_clear_screen_mode mode) {
         col_end = TEXT_WIDTH - 1;
     }
 
-    if(video_mode) {
-        clear_screen(terminal_color_bg);
-        video_refresh();
-    } else {
-        for (size_t y = row_start; y <= row_end; y++) {
-            for (size_t x = col_start; x <= col_end; x++) {
-                terminal_putentryat(' ', terminal_color, x, y);
-            }
+    // TODO: Do fillrect might be faster in video mode 
+    for (size_t y = row_start; y <= row_end; y++) {
+        for (size_t x = col_start; x <= col_end; x++) {
+            terminal_putentryat(' ', terminal_color, x, y);
         }
     }
 }
@@ -320,14 +344,29 @@ static void set_text_mode_cursor(size_t row, size_t col) {
 
 // Update text cursor to where the last char was printed
 void update_cursor(void) {
-    if(!video_mode) {
-        size_t col = terminal_column;
-        if(col >= TEXT_WIDTH) {
-            col = TEXT_WIDTH - 1;
-        }
-        set_text_mode_cursor(terminal_row, col);
+    size_t col = terminal_column;
+    if(col >= TEXT_WIDTH) {
+        col = TEXT_WIDTH - 1;
     }
-    // TODO video mode cursor
+    if(!video_mode) {
+        if(cursor_enabled) {
+            set_text_mode_cursor(terminal_row, col);
+        }
+    } else {
+        if(cursor_enabled) {
+            fillrect(terminal_color_bg, video_cursor_x, video_cursor_y, font_width, 2);
+            if(!no_video_refresh) {
+                video_refresh_rect(video_cursor_x, video_cursor_y, font_width, 2);
+            }
+            video_cursor_x = col * font_width;
+            video_cursor_y = (terminal_row + 1) * font_height;
+            fillrect(terminal_color_fg, video_cursor_x, video_cursor_y, font_width, 2);
+            if(!no_video_refresh) {
+                video_refresh_rect(video_cursor_x, video_cursor_y, font_width, 2);
+            }
+        }
+    }
+    
 }
 
 void set_cursor(size_t row, size_t col)
