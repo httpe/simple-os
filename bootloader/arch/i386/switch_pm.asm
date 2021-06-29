@@ -1,12 +1,13 @@
-; extern BEGIN_PM
+; extern BEGIN_PM, do_e820
 ; global switch_to_pm
 
 [bits 16]
+
 switch_to_pm:
 
-    mov bx, MSG_SWITCH_PM_START
-    call print
-    call print_nl
+    ; mov bx, MSG_SWITCH_PM_START
+    ; call print
+    ; call print_nl
 
     ; start the procedure of entering real mode
     ; ref: https://wiki.osdev.org/Protected_Mode
@@ -21,9 +22,9 @@ switch_to_pm:
     or al, 1000_0000b
     out 0x70, al
 
-    mov bx, MSG_SWITCH_PM_NMI
-    call print
-    call print_nl
+    ; mov bx, MSG_SWITCH_PM_NMI
+    ; call print
+    ; call print_nl
 
     ; 2. Enable the A20 Line
     call enable_a20
@@ -35,9 +36,9 @@ switch_to_pm:
 .a20_hang:
     jmp .a20_hang                       ; if failed in enabling A20, hang
 .a20_enabled:
-    mov bx, MSG_A20_ENABLED
-    call print
-    call print_nl
+    ; mov bx, MSG_A20_ENABLED
+    ; call print
+    ; call print_nl
 
     ; 3. Load the Global Descriptor Table with segment descriptors suitable for code, data, and stack
     cli                     ; 1. disable interrupts
@@ -48,10 +49,12 @@ switch_to_pm:
     jmp CODE_SEG:init_pm    ; 4. far jump by using a different segment, basically setting CS to point to the correct protected mode segment (GDT entry)
 
 
+
 MSG_SWITCH_PM_START db "Start switching to Protected_Mode", 0
 MSG_SWITCH_PM_NMI db "NMI Disabled", 0
 MSG_A20_ENABLED db "A20 enabled", 0
 MSG_A20_ENABLE_FAILED db "Enabling A20 failed, hanged", 0
+
 
 [bits 32]
 init_pm:                    ; we are now using 32-bit instructions

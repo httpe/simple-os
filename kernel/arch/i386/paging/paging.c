@@ -5,7 +5,7 @@
 #include <common.h>
 #include <kernel/memory_bitmap.h>
 #include <kernel/paging.h>
-
+#include <kernel/multiboot.h>
 #include <arch/i386/kernel/isr.h>
 #include <arch/i386/kernel/segmentation.h>
 #include <arch/i386/kernel/cpu.h>
@@ -59,7 +59,6 @@ typedef struct page_directory_entry
 
 // Declare internal utility functions
 static uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, bool is_kernel);
-static uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32_t* frames,  bool is_kernel, bool is_writeable, bool alloc_consecutive_frame);
 static uint unmap_pages_from(pde* page_dir, uint page_index, uint page_count, bool free_frame, bool skip_unmapped);
 
 
@@ -240,8 +239,9 @@ static uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, boo
 
 // Map or allocate pages
 //@param frames frame index arrary of length page_count, map to these frames. If NULL, allocate new frames
+//      If consecutive_frame is true and frames is not null, will map *frames, *frames + 1, *frames + 2 ...
 //@return number of frames mapped
-static uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32_t* frames,  bool is_kernel, bool is_writeable, bool alloc_consecutive_frame)
+uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32_t* frames,  bool is_kernel, bool is_writeable, bool consecutive_frame)
 {
     if(page_count == 0) {
         return 0;
@@ -258,8 +258,11 @@ static uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32
     page_t* page_table = get_page_table(page_dir, page_dir_idx, true);
     
     uint frame_index;
-    if(frames == NULL && alloc_consecutive_frame) {
+    if(frames == NULL && consecutive_frame) {
         frame_index = n_free_frames(page_count);
+    }
+    if(frames != NULL && consecutive_frame) {
+        frame_index = *frames;
     }
 
     while(page_allocated < page_count) {
@@ -269,14 +272,14 @@ static uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32
         PANIC_ASSERT(!old_pte.present);
 
         if(frames == NULL) {
-            if(alloc_consecutive_frame) {
-                set_frame(frame_index++);
-            } else {
+            if(!consecutive_frame) {
                 frame_index = first_free_frame();
-                set_frame(frame_index);
             }
+                set_frame(frame_index);
         } else {
-            frame_index = *frames++;
+            if(!consecutive_frame) {
+                frame_index = *frames++;
+            }
             PANIC_ASSERT(test_frame(frame_index));
         }
         
@@ -291,6 +294,9 @@ static uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32
         }
 
         page_allocated++;
+        if(consecutive_frame) {
+            frame_index++;
+        }
 
         page_table_idx++;
         if(page_table_idx >= PAGE_TABLE_SIZE) {
@@ -498,6 +504,7 @@ uint32_t alloc_pages(pde* page_dir, size_t page_count, bool is_kernel, bool is_w
     return VADDR_FROM_PAGE_INDEX(page_index);
 }
 
+//@param physical_addr return the starting address of the allocated consecutive physical memory block 
 uint32_t alloc_pages_consecutive_frames(pde* page_dir, size_t page_count, bool is_writeable, uint32_t* physical_addr) {
     if (page_count == 0) {
         return 0;
@@ -649,8 +656,8 @@ pde* copy_user_space(pde* page_dir)
     return new_page_dir;
 }
 
-
-void initialize_paging() {
+void initialize_paging()
+{
     init_gdt();
     install_page_fault_handler();
 

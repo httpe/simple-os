@@ -74,32 +74,49 @@ Although the final goal is to make the system self-hosting, we have planned for 
       - IPv4 layer implemented
       - Ping utility implemented (ICMP protocol)
 
+1. **Milestone Eight: Graphics**
+    - Switch to [VESA Video Modes](https://wiki.osdev.org/Getting_VBE_Mode_Info) using the [VBE](http://www.petesqbsite.com/sections/tutorials/tuts/vbe3.pdf) (VESA BIOS Extensions Standard) functions (Ref: [VESA Tutorial](https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial))
+    - Provide [basic graphical drawing routines](https://wiki.osdev.org/Drawing_In_Protected_Mode), like drawing a line, a rectangle
+    - Enable higher resolution text console (showing more than 80*25 characters), including text drawing ([VGA Font](https://wiki.osdev.org/VGA_Fonts)), screen scrolling and text cursor
+    - Write an image viewer
+    - **In Progress**
+      - Bootloader can now switch to VESA video modes and pass the VBE information to the kernel through multi-boot structure
+      - Implemented a video driver supporting [double buffering](https://wiki.osdev.org/Double_Buffering) which only redraw changed pixel by comparing with a third video buffer
+      - TTY now support emulated text mode under video modes. Text cursor is also available
+
 1. **Final Goal: Self-hosting**
     - Port a sophisticate enough compiler to the system
     - Compile the source code of the system inside the system
     - The system is now self-hosting
 
-## Prerequisite
-
-To read the code, you need to be familiar with x86 assembly language and C.
-
-[Tutorialspoint Assembly Programming Tutorial](https://www.tutorialspoint.com/assembly_programming/index.htm) provide a good tutorial for [NASM](https://en.wikipedia.org/wiki/Netwide_Assembler) assembly, which is the dialect we use in this project.
-
-We also use Makefile to automate the compile process. The [Tutorialspoint Unix Makefile Tutorial](https://www.tutorialspoint.com/makefile/index.htm) is a good introduction.
-
-A one-stop shop for OS development is the [OsDev Wiki](https://wiki.osdev.org/Main_Page). You can find various useful resources there, and there are bunch of [tutorials](https://wiki.osdev.org/Tutorials) to follow. It is highly recommended to take a look at the [Bare Bones](https://wiki.osdev.org/Bare_Bones) tutorial at OsDev Wiki to get a feel on how to get started with OS development.
-
 ## Dependencies
-
-Our testing environment is Ubuntu 20.04 LTS, if you use the same, you can install all the mandatory dependencies (1. through 4.) by running `build-toolchain.sh`.
 
 1. [NASM Assembler](https://www.nasm.us/).
 
 2. [QEMU](https://www.qemu.org/) Emulator: We will use QEMU to emulate our system, avoiding restarting computer again and again just to test the system.
 
-3. GCC & Binutils for x86: It is recommended to [compile a cross-compiler for your own](https://wiki.osdev.org/GCC_Cross-Compiler). Your system shall also have GCC tool chain installed, since we will use utility like GNU Make.
+3. System wide GCC & Binutils toolchain: We will need them to [compile a cross-compiler](https://wiki.osdev.org/GCC_Cross-Compiler) and build our [OS specific toolchain](https://wiki.osdev.org/OS_Specific_Toolchain) at next step.
 
-4. Hosted GCC & Binutils and Newlib for Simple-OS: We will need the specialized tool-chain and Newlib for those user space programs including init and shell. Please refer to `HostedToolchain.md` on how to build them.
+    Installing 1-3 on `Ubuntu`:
+
+    ```bash
+        sudo apt -y update
+        sudo apt -y install build-essential autoconf automake git
+        sudo apt -y install bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo libisl-dev curl
+        sudo apt -y install qemu-system-x86 nasm
+    ```
+
+    Installing 1-3 on `Arch Linux`:
+
+    ```bash
+        sudo pacman -Syy
+        sudo pacman -S --needed base-devel gmp libmpc mpfr
+        sudo pacman -S --needed git qemu qemu-arch-extra nasm
+    ```
+
+4. Hosted GCC & Binutils and Newlib for Simple-OS: We will need this specialized tool-chain and Newlib to compile those user space programs including init and shell.
+
+    To build the cross-compiler and our OS specific tool-chain, you can use the script `build-toolchain.sh`. It will run for 30 - 45 minutes depending on your machine's spec. Based on our experience, at least 4GB ram is required in building GCC and 8GB is recommended. Also, please prepare around 10GB of free disk space to hold all the intermediate files generated in the building process.
 
 5. (Optional) [VSCode](https://code.visualstudio.com/): We provide some integration of the building/debugging process with VSCode, but it is optional. Some extension may also be needed as described in the `Debug` section below.
 
@@ -107,13 +124,13 @@ Our testing environment is Ubuntu 20.04 LTS, if you use the same, you can instal
 
 ### Configure
 
-If your tool-chain is built by the `build-toolchain.sh` script, you can skip this section. The default values should work automatically.
+If your tool-chain is built by the `build-toolchain.sh` script, you can skip this section. The default values should work automatically. Otherwise, please still use `build-toolchain.sh` as a reference.
 
-Firstly, you need to change the `CROSSCOMPILERBIN` variable in `config.sh` to point it to the folder containing the cross-compiling GCC/Binutils binaries (see *Dependencies* section).
+Build environment variables are set up in `config.sh`:
 
-Note that the env variable `AS` is assumed to be the system wide NASM assembler, if not set, `nasm` is used.
-
-Also, you need to make sure the hosted tool-chain and Newlib is compiled and installed to the location indicated by `TOOL_CHAIN_ROOT` variable in `config.sh` for the user space programs (those under `applications`) to be compiled successfully.
+- `CROSSCOMPILERBIN`: Point it to the folder containing the cross-compiling GCC/Binutils binaries (see *Dependencies* section).
+- `AS`: Point to the system wide NASM assembler, if not set, `nasm` is used.
+- `TOOL_CHAIN_ROOT`: Point to the location holding the Simple-OS hosted tool-chain and Newlib
 
 ### Compile
 
@@ -134,9 +151,9 @@ You can test run the compiled kernel by QEMU:
 ./qemu.sh
 ```
 
-Anything written to the serial port (all outputs to the screen will be copied to the serial port by the kernel) will be logged in `serial_port_output.txt`.
+Anything written to the serial port (all outputs to the screen will be copied to the serial port by the kernel) will be logged into `serial_port_output.txt`.
 
-The script also check if there is a `testfs.fat` image file under root dir, if so, it will mount it as `hdb` when starting QEMU. This file should be a hard disk image of a FAT-32 file system. If `hdb` is present, Simple-OS will try to mount it under `/home`.
+The script also check if there is a `testfs.fat` image file under root dir, if so, it will mount it through the `-hdb` argument when starting QEMU. This file should be a hard disk image of a FAT-32 file system. Simple-OS will try to mount it under `/home`.
 
 For testing purpose, you can use the [FAT32 image]([testfs.fat.tar](https://github.com/aroulin/FAT32-FS-Driver/blob/master/testfs.fat.tar?raw=true)) provided by the [FAT32-FS-Driver](https://github.com/aroulin/FAT32-FS-Driver) project. Or simply generate an empty FAT32 image (512MiB) by:
 
@@ -149,13 +166,13 @@ mkfs.vfat testfs.fat
 
 It is possible to debug the kernel by GDB. See [QEMU GDB Usage](https://www.qemu.org/docs/master/system/gdb.html).
 
-Start QEMU in WSL by:
+First start QEMU in debug mode by running:
 
 ```bash
 ./qemu.sh debug
 ```
 
-And then attach GDB to the QEMU instance in WSL by:
+And then attach GDB to the QEMU instance by:
 
 ```bash
 gdb -ex "target remote localhost:1234" -ex "symbol-file sysroot/boot/simple_os.kernel"
@@ -167,9 +184,9 @@ The above loads debug symbols for the kernel, to debug our own bootloader:
 gdb -ex "target remote localhost:1234" -ex "symbol-file bootloader/bootloader.elf" 
 ```
 
-The `bootloader.elf` is generated solely to provide the debug symbols.
+Note that `bootloader/bootloader.elf` is generated solely to provide the debug symbols. The real bootloader binary is `bootloader/bootloader_padded.bin`.
 
-This trick is also describe in the [os-tutorial](https://github.com/cfenollosa/os-tutorial/tree/master/14-checkpoint) for macOS.
+This debugging trick is also describe in the [os-tutorial](https://github.com/cfenollosa/os-tutorial/tree/master/14-checkpoint) for macOS.
 
 ### VSCode Integration
 
@@ -187,8 +204,11 @@ Assuming you are running Simple-OS in a remote (virtual) machine, to setup the r
 1. [Remote - SSH](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh) extension
 1. [Native Debug](https://marketplace.visualstudio.com/items?itemName=webfreak.debug) extension for remote debug through SSH.
 1. VSCode extensions [Remote X11](https://marketplace.visualstudio.com/items?itemName=spadin.remote-x11) and [Remote X11 (SSH)](https://marketplace.visualstudio.com/items?itemName=spadin.remote-x11-ssh) to run QEMU (GUI application) through SSH
-    - If your host machine is Windows, then a local X-window server is also needed. You can use [vcxsrv](https://sourceforge.net/projects/vcxsrv/).
-    - If you SSH into a virtual machine by port forwarding, change `remoteX11.SSH.host` and `remoteX11.SSH.port` in "Remote X11 (SSH)" remote setting (e.g. change to 127.0.0.1 and 5679).
+    - If your host machine is Windows, then a local X-window server is also needed. You can install [vcxsrv](https://sourceforge.net/projects/vcxsrv/).
+    - If you SSH into a virtual machine by port forwarding, change `remoteX11.SSH.host` and `remoteX11.SSH.port` in "Remote X11 (SSH)" remote setting (e.g. change to 127.0.0.1 and 5679). Note that the extension does not support password authentication to the remote host, so please add your public key to the serve's `~/.ssh/authorized_keys` (Ref: [How To Set Up SSH Keys](https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys-2))
+    - In Archlinux, X11 forwarding needs to be enabled explicitly, please see [OpenSSH - X11 Forwarding](https://wiki.archlinux.org/title/OpenSSH#X11_forwarding)
+1. GDB Init Script
+    - Copy/Append `.gdbinit` to `~/.gdbinit`. The utility GDB functions defined there will be used in `.vscode/launch.json`.
 
 With all of the setup, the debugging process is streamlined to:
 
@@ -201,6 +221,16 @@ With all of the setup, the debugging process is streamlined to:
 **Note:** Some code in `bootloader/arch/i386/bootloader.asm` and `kernel/arch/i386/boot/boot.asm` can not be debug in this way, please see the comments there.  
 
 ## Folder Structure
+
+### Before reading the code
+
+Familiarity with x86 assembly language and C will help you understand the code.
+
+[Tutorialspoint Assembly Programming Tutorial](https://www.tutorialspoint.com/assembly_programming/index.htm) provides a good tutorial for [NASM](https://en.wikipedia.org/wiki/Netwide_Assembler) assembly, which is the assembly dialect we use in this project.
+
+We also use Makefile to automate the compile process. The [Tutorialspoint Unix Makefile Tutorial](https://www.tutorialspoint.com/makefile/index.htm) is a good introduction.
+
+A one-stop shop for OS development knowledge is the [OsDev Wiki](https://wiki.osdev.org/Main_Page). You can find various useful resources there, and there are bunch of [tutorials](https://wiki.osdev.org/Tutorials) to follow. It is highly recommended to take a look at the [Bare Bones](https://wiki.osdev.org/Bare_Bones) tutorial at OsDev Wiki to get some feeling on how to get started with OS development.
 
 ### Bootloader
 

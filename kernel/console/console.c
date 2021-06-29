@@ -6,7 +6,7 @@
 #include <kernel/keyboard.h>
 #include <kernel/tty.h>
 #include <kernel/stat.h>
-#include <kernel/vga.h>
+#include <arch/i386/kernel/cpu.h>
 
 static struct circular_buffer {
     char buf[CONSOLE_BUF_SIZE];
@@ -14,23 +14,23 @@ static struct circular_buffer {
     uint w;
 } console_buffer;
 
-static enum vga_color console_color2vga_color[16] = {
-    VGA_COLOR_BLACK,
-    VGA_COLOR_RED,
-    VGA_COLOR_GREEN,
-    VGA_COLOR_BROWN,
-    VGA_COLOR_BLUE,
-    VGA_COLOR_MAGENTA,
-    VGA_COLOR_CYAN,
-    VGA_COLOR_DARK_GREY,
-    VGA_COLOR_LIGHT_GREY,
-    VGA_COLOR_LIGHT_RED,
-    VGA_COLOR_LIGHT_GREEN,
-    VGA_COLOR_LIGHT_BROWN,
-    VGA_COLOR_LIGHT_BLUE,
-    VGA_COLOR_LIGHT_MAGENTA,
-    VGA_COLOR_LIGHT_CYAN,
-    VGA_COLOR_WHITE
+static enum tty_color console_color2tty_color[16] = {
+    TTY_COLOR_BLACK,
+    TTY_COLOR_RED,
+    TTY_COLOR_GREEN,
+    TTY_COLOR_BROWN,
+    TTY_COLOR_BLUE,
+    TTY_COLOR_MAGENTA,
+    TTY_COLOR_CYAN,
+    TTY_COLOR_DARK_GREY,
+    TTY_COLOR_LIGHT_GREY,
+    TTY_COLOR_LIGHT_RED,
+    TTY_COLOR_LIGHT_GREEN,
+    TTY_COLOR_LIGHT_BROWN,
+    TTY_COLOR_LIGHT_BLUE,
+    TTY_COLOR_LIGHT_MAGENTA,
+    TTY_COLOR_LIGHT_CYAN,
+    TTY_COLOR_WHITE
 };
 
 static int console_buffer_append(char c) {
@@ -288,7 +288,7 @@ static int process_escaped_sequence(const char* buf, size_t size)
             } else if(command == 'm') {
                 // Changing font attributes
                 int attr = 0;
-                enum vga_color fg, bg;
+                uint32_t fg, bg;
                 terminal_get_color(&fg, &bg);
                 for(int i=0; i<6; i++) {
                     int opt;
@@ -316,13 +316,13 @@ static int process_escaped_sequence(const char* buf, size_t size)
                         // Negative (reverse) color
                         attr |= TTY_FONT_ATTR_REVERSE_COLOR;
                     } else if(opt >= 30 && opt <= 37) {
-                        fg = console_color2vga_color[opt - 30];
+                        fg = ttycolor2spec(console_color2tty_color[opt - 30]);
                     } else if(opt == 39) {
-                        fg = TTY_DEFAULT_COLOR_FG;
+                        fg = ttycolor2spec(TTY_DEFAULT_COLOR_FG);
                     } else if(opt >= 40 && opt <= 47) {
-                        bg =  console_color2vga_color[opt - 40 + 8];
+                        bg =  ttycolor2spec(console_color2tty_color[opt - 40 + 8]);
                     } else if(opt == 49) {
-                        bg = TTY_DEFAULT_COLOR_BG;
+                        bg = ttycolor2spec(TTY_DEFAULT_COLOR_BG);
                     }
                 }
                 terminal_set_color(fg, bg);
@@ -343,15 +343,41 @@ static int console_write(struct fs_mount_point* mount_point, const char * path, 
     UNUSED_ARG(offset);
     UNUSED_ARG(fi);
 
+    // Code for console benchmarking
+    // uint64_t escape_time = 0;
+    // uint64_t putchar_time = 0;
+    // clear_screen_time = 0;
+
+    // uint64_t t0 = rdtsc();
+
+    tty_stop_refresh();
     for(uint i=0; i<size; i++) {
+        // uint64_t tt0 = rdtsc();
         char c = buf[i];
         if(c == '\x1b') {
             int skip = process_escaped_sequence(&buf[i], size - i);
             i += skip;
+            // escape_time += rdtsc() - tt0;
         } else {
             terminal_putchar(c);
+            // putchar_time += rdtsc() - tt0;
         }
     }
+
+    // uint64_t t1 = rdtsc();
+
+    tty_start_refresh();
+
+    // uint64_t t2 = rdtsc();
+    // uint64_t d = t2 - t0;
+    // volatile uint64_t fps = 3600750000 / (d+1);
+    // volatile uint64_t escape_frac = (escape_time * 100) / (d+1);
+    // volatile uint64_t putchar_frac = (putchar_time * 100) / (d + 1);
+    // volatile uint64_t clear_screen_frac = (clear_screen_time * 100) / (d + 1);
+    // volatile uint64_t refresh_frac = ((t2 - t1) * 100) / (d + 1);
+
+    // volatile uint64_t refresh_fps = 3600750000 / (t2 - t1 + 1);
+
     return size;
 }
 

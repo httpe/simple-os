@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <common.h>
 
 // A page is 4KiB in size
 #define PAGE_SIZE 0x1000
@@ -32,6 +33,7 @@ uint32_t change_page_rw_attr(pde* page_dir, uint32_t page_index, bool is_writeab
 uint32_t alloc_pages_at(pde* page_dir, uint32_t page_index, size_t page_count, bool is_kernel, bool is_writeable);
 void dealloc_pages(pde* page_dir, uint32_t page_index, size_t page_count);
 
+uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32_t* frames,  bool is_kernel, bool is_writeable, bool consecutive_frame);
 uint32_t link_pages_between(pde* pd_source, uint32_t vaddr, uint32_t size, pde* pd_target, bool alloc_source_rw, bool target_rw);
 void unmap_pages(pde* page_dir, uint32_t vaddr, uint32_t size);
 

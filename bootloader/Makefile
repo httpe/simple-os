@@ -5,9 +5,9 @@ HOSTARCH!=../target-triplet-to-arch.sh $(HOST)
 KERNEL_ROOT=$(SYSROOT)
 # This must be in sync of KERNEL_BOOT_IMG in main.c
 KERNEL_BOOT_IMG=$(SYSROOT)$(BOOTDIR)/simple_os.kernel
-# Pad the final binary to 8192 bytes (16 512 byte sectors)
+# Pad the final binary to 16384 bytes (32 * 512 byte sectors)
 # This variable must be in sync with: bootloader.asm and main.c, search "BOOTLOADER_MAX_SIZE" there
-BOOTLOADER_MAX_SIZE=8192
+BOOTLOADER_MAX_SIZE=16384
 
 # Start of the Makefile
 
@@ -20,6 +20,8 @@ bootloader/main.o \
 string/string.o \
 tar/tar.o \
 elf/elf.o \
+video/video.o \
+
 
 
 # shell assignment operator ‘!=’
@@ -85,3 +87,4 @@ clean:
 
 install: bootable_kernel.bin bootloader.elf
 	cp bootable_kernel.bin ..
+

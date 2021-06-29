@@ -7,18 +7,22 @@
 #include "../tar/tar.h"
 #include "../elf/elf.h"
 #include "../multiboot/multiboot.h"
+#include "../video/video.h"
 
 #include "../arch/i386/ata.h"
 #include "../arch/i386/tty.h"
 
 // The whole bootloader binary is assumed to take the first 16 sectors
 // must be in sync of BOOTLOADER_MAX_SIZE in Makefile
-#define BOOTLOADER_SECTORS 16
+#define BOOTLOADER_SECTORS 32
 #define KERNEL_BOOT_IMG "/boot/simple_os.kernel"
 
 // Defined in memory.asm
-extern uint32_t ADDR_MMAP_ADDR; // address of the memory map structure
-extern uint32_t ADDR_MMAP_COUNT; // count of the memory map entries
+extern uint16_t MMAP_COUNT;
+extern multiboot_memory_map_t MMAP[];
+
+
+static const char* VGA_FONT_MODULE_CMDLINE = "VGA FONT";
 
 // Load a file from the tar file system
 //
@@ -50,16 +54,71 @@ int tar_loopup_lazy(uint32_t LBA, char* filename, unsigned char* buffer) {
 }
 
 void bootloader_main(void) {
-    // printing starting at row 16
-    uint8_t console_print_row = 16;
 
     // Init multiboot info structure and memory map info
     // Ref: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html
     // Store the Multiboot info structure at the end of conventional memory space 0x00007E00 - 0x0007FFFF
     multiboot_info_t* ptr_multiboot_info = (multiboot_info_t*)0x00080000 - sizeof(multiboot_info_t);
-    ptr_multiboot_info->flags = 0b1000000; // Flag the memory layout info is available
-    ptr_multiboot_info->mmap_length = (*(uint32_t*)ADDR_MMAP_COUNT) * sizeof(multiboot_memory_map_t);
-    ptr_multiboot_info->mmap_addr = ADDR_MMAP_ADDR;
+    ptr_multiboot_info->flags = 
+        MULTIBOOT_INFO_MEM_MAP | MULTIBOOT_INFO_VBE_INFO | MULTIBOOT_INFO_FRAMEBUFFER_INFO | MULTIBOOT_INFO_MODS;
+    ptr_multiboot_info->mods_count = 0;
+    ptr_multiboot_info->mods_addr = ((uint32_t) ptr_multiboot_info);
+
+
+    // Save memory map info to Multiboot structure
+    // ptr_multiboot_info->mmap_length = (*(uint32_t*)ADDR_MMAP_COUNT) * sizeof(multiboot_memory_map_t);
+    // ptr_multiboot_info->mmap_addr = ADDR_MMAP_ADDR;
+    ptr_multiboot_info->mmap_length = MMAP_COUNT * sizeof(multiboot_memory_map_t);
+    ptr_multiboot_info->mmap_addr = (uint32_t) MMAP;
+
+    // Save VBE video BIOS info to Multiboot structure
+    // Please see "VBE info" section at https://www.gnu.org/software/grub/manual/multiboot/multiboot.html
+    if(VESA_MODE != 0) {
+        // VBE Video mode
+        ptr_multiboot_info->framebuffer_type = MULTIBOOT_FRAMEBUFFER_TYPE_RGB;
+        ptr_multiboot_info->vbe_control_info = (uint32_t) VESA_BIOS_INFO;
+        ptr_multiboot_info->vbe_mode_info = (uint32_t) VESA_MODE_INFO;
+        ptr_multiboot_info->vbe_mode = VESA_MODE;
+        ptr_multiboot_info->framebuffer_addr = VESA_MODE_INFO->framebuffer;
+        ptr_multiboot_info->framebuffer_pitch = VESA_MODE_INFO->pitch;
+        ptr_multiboot_info->framebuffer_width = VESA_MODE_INFO->width;
+        ptr_multiboot_info->framebuffer_height = VESA_MODE_INFO->height;
+        ptr_multiboot_info->framebuffer_bpp = VESA_MODE_INFO->bpp;
+        
+        ptr_multiboot_info->mods_count++;
+        ptr_multiboot_info->mods_addr -= sizeof(struct multiboot_mod_list);
+        struct multiboot_mod_list* mod = (struct multiboot_mod_list*) ptr_multiboot_info->mods_addr;
+        mod->mod_start = VGA_FONT_ADDR;
+        mod->mod_end = VGA_FONT_ADDR + 16*8*256;
+        mod->cmdline = (uint32_t) VGA_FONT_MODULE_CMDLINE;
+
+        init_video(ptr_multiboot_info);
+        // Display graphical welcome message if in VGA video mode
+        uint32_t bgcolor = 0x0066CCFF;
+        uint32_t fgcolor = 0x00FFFFFF;
+        fillrect(bgcolor, 200, 200, 400, 200);
+        char* hello_msg = "Welcome to 32-bit Simple-Bootloader!";
+        int x = 400 - strlen(hello_msg) / 2 * 8;
+        int y = 300 - 16 / 2;
+        for(unsigned int i=0; i<strlen(hello_msg); i++) {
+            drawchar(hello_msg[i], x + 8*i, y, bgcolor, fgcolor);
+        }
+    } else {
+        // EGA Text Mode (80 * 40)
+        ptr_multiboot_info->framebuffer_type = MULTIBOOT_FRAMEBUFFER_TYPE_EGA_TEXT;
+        ptr_multiboot_info->vbe_control_info = 0;
+        ptr_multiboot_info->vbe_mode_info = 0;
+        ptr_multiboot_info->vbe_mode = 0;
+        ptr_multiboot_info->framebuffer_addr = 0xB8000;
+        ptr_multiboot_info->framebuffer_pitch = 160;
+        ptr_multiboot_info->framebuffer_width = 80;
+        ptr_multiboot_info->framebuffer_height = 25;
+        ptr_multiboot_info->framebuffer_bpp = 16;
+    }
+
+    init_tty(ptr_multiboot_info);
+
+    uint8_t console_print_row = 0;
 
     // Load kernel from tar file system to this address
     char* kernel_buffer = (char*)0x01000000;

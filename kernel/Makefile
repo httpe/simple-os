@@ -44,6 +44,8 @@ network/arp.o \
 network/ipv4.o \
 network/network.o \
 pipe/pipe.o \
+video/video.o \
+lock/lock.o \
 
 
 

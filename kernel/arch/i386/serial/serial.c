@@ -23,7 +23,8 @@ void init_serial() {
 
     // Check if serial is faulty (i.e: not same byte as sent)
     if (inb(PORT + 0) != 0xAE) {
-        PANIC("Serial Port Init Failed");
+        // Kernel panic, but we don't have I/O device to print error mesage, so just hang
+        while(1);
     }
 
     // If serial is not faulty set it in normal operation mode

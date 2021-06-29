@@ -49,5 +49,47 @@ end:
 HEX_OUT:
     db '0x0000',0 ; reserve memory for our new string
 
+; print cx bytes of memory pointed by bx in hex
+print_hex_cx:
+    pusha
 
+.print_hex_cx_one_byte:
+
+    mov ah, 0x0e
+    mov al, '0'
+    int 0x10
+    mov al, 'x'
+    int 0x10
+
+    mov dl, [bx]
+    add bx, 1
+
+    mov al, dl
+
+    ; print MSB
+    shr al, 4
+    add al, 0x30 ; add 0x30 to N to convert it to ASCII "N"
+    cmp al, 0x39 ; if > 9, add extra 8 to represent 'A' to 'F'
+    jle .print_msb
+    add al, 7 ; 'A' is ASCII 65 instead of 58, so 65-58=7
+.print_msb:
+    int 0x10
+
+    ; print LSB
+    and dl, 0x0f
+    add dl, 0x30 ; add 0x30 to N to convert it to ASCII "N"
+    cmp dl, 0x39 ; if > 9, add extra 8 to represent 'A' to 'F'
+    jle .print_lsb
+    add dl, 7 ; 'A' is ASCII 65 instead of 58, so 65-58=7
+.print_lsb:
+    mov al, dl
+    int 0x10
+
+    mov al, ' '
+    int 0x10
+
+    loop .print_hex_cx_one_byte
+
+    popa
+    ret
 

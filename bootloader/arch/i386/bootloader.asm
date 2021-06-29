@@ -1,5 +1,8 @@
 ; Modified from https://github.com/cfenollosa/os-tutorial/blob/master/13-kernel-barebones/bootsect.asm
 
+; magic number to check after loading the non-MBR sectors from disk
+DISK_LOAD_MAGIC equ 0x1234
+
 section .boot
 ; Note that .boot section will not generate debug symbol
 ;   so you cannot debug this section in gdb without using absolute address
@@ -24,36 +27,42 @@ boot:
     call print ; This will be written after the BIOS messages
     call print_nl
 
-    ; the boot loader is assume to have 16 sectors, load the other 15 sectors here
-    ; This file will yield 4 sectors (the assembly part), and the C part will yield the other 12 sectors
+    ; the boot loader is assumed to have 32 sectors (16KiB), load the other 31 sectors here
+    ; This file will yield 16 sectors (the assembly part), and the C part will yield the other 16 sectors
     ; load to right after this MBR sector
     ; real mode addressing is segment*16 + offset, so the 512 bytes MBR take 0x200 bytes
     ; and thus we choose to load from disk to 0:0x7e00
     ; must be in sync of BOOTLOADER_MAX_SIZE in Makefile
-    mov dh, 15
+    mov dh, 31
     mov bx, 0x7e00
     call disk_load  ; dl shall be loaded automatically during system boot to point to the current disk/media of this MBR
 
+    ; ensure the disk is loaded successfully by comparing the magic number
+    mov dx, [0x7e00]
+    cmp dx, DISK_LOAD_MAGIC
+    je disk_load_success
+    mov bx, MSG_LOAD_FROM_DISK_FAILED
+    call print
+    jmp $
+disk_load_success:
     mov bx, MSG_LOAD_FROM_DISK
     call print
     call print_nl
 
-    ; ensure the disk is loaded successfully
-    mov dx, [0x7e00]
-    call print_hex
-    ; jmp $ ; should print Ox0500
+    ; Detect memory layout and store the memory map at variable ADDR_MMAP_ADDR
+    call detect_memory_map_by_e820
 
-    ; Detect memory layout using BIOS interrupt 0x15, eax=0xE820 
-    ; The entry count will be stored at 0x0500
-    ; The actual memory layout/map entries will be stored starting at 0x0504
-    call do_e820
+    ; Detect and switch to desired VESA/VGA mode before entering protected mode
+    ; Commenting out this line, the system shall still work under conventional 80*25 text mode
+    call switch_vesa_mode
 
     call switch_to_pm
     jmp $       ; infinite loop, shall not reach here
 
 
-MSG_REAL_MODE db "Started in 16-bit real mode", 0
-MSG_LOAD_FROM_DISK db "Loaded remaining sectors", 0
+MSG_REAL_MODE db "Welcome to 16-bit Simple-Bootloader!", 0
+MSG_LOAD_FROM_DISK db "Remaining sectors loaded successfully", 0
+MSG_LOAD_FROM_DISK_FAILED db "Failed loading remaining sectors, hanged", 0
 
 ; 16-bit printing utility functions
 ; symbol provided: print, print_nl
@@ -75,8 +84,15 @@ dw 0xaa55 ; write 0xaa55 in 511 and 512 bytes
 ; switch to .text section so the symbol are exported
 section .text
 
+; first two magic bytes of the first sector to be loaded from disk dynamically 
+dw DISK_LOAD_MAGIC
+
+; Various helper utility functions
+%include "utility.asm"
 ; utility to detect memory layout
 %include "memory.asm"
+; utility to detect and switch to desired VESA/VGA mode
+%include "vesa.asm"
 ; utility to enable A20 address line
 ; symbol provided: enable_a20
 %include "a20.asm"
@@ -86,20 +102,23 @@ section .text
 %include "gdt.asm"
 %include "switch_pm.asm"
 
+
 [bits 32]
 BEGIN_PM: ; after the switch we will get here
-    mov esi, MSG_PROT_MODE
-    mov edi, 14*80 ; write to the start of the 14th row
-    mov ah, WHITE_ON_BLACK
-    call print_pm ; Note that this will be written at the top left corner
+    ; Commenting out the printing because there are
+    ; for 80 * 25 text mode only, no use under VESA/VGA mode
+    ; mov esi, MSG_PROT_MODE
+    ; mov edi, 14*80 ; write to the start of the 14th row
+    ; mov ah, WHITE_ON_BLACK
+    ; call print_pm ; Note that this will be written at the top left corner
     ; jmp $: should print highlighted Started in 32-bit protected mode
 
     ; test print_memory_hex
-    mov esi, 0x7c00 + 0x1FE
-    mov ecx, 2
-    mov ah, WHITE_ON_BLACK
-    mov edi, 15*80              ; print at the start of 15th row
-    call print_memory_hex       ; shall print out the MBR magic number '55 AA '
+    ; mov esi, 0x7c00 + 0x1FE
+    ; mov ecx, 2
+    ; mov ah, WHITE_ON_BLACK
+    ; mov edi, 15*80              ; print at the start of 15th row
+    ; call print_memory_hex       ; shall print out the MBR magic number '55 AA '
 
     ; start switching to C compiled code
     extern bootloader_main
@@ -110,9 +129,11 @@ BEGIN_PM: ; after the switch we will get here
 MSG_PROT_MODE db "Started in 32-bit protected mode", 0
 
 ; 32-bit protected mode print
+; For 80 * 25 text mode only, no use under VESA/VGA mode
 ; symbol provided: print_pm, WHITE_ON_BLACK, print_memory_hex
-%include "print_pm.asm"
+; %include "print_pm.asm"
 
 
-; The boot loader shall be exactly 2048 bytes (four sectors in total, one MBR sector and three utility sectors)
-times 2048-($-$$) db 0
+; The boot loader shall be exactly 8192 bytes (16 sectors in total, one MBR sector and 15 utility sectors)
+; Must be inline with items related to BOOTLOADER_MAX_SIZE
+times 8190-512-($-$$) db 0
