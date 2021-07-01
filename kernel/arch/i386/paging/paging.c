@@ -13,6 +13,12 @@
 // Ref: https://blog.inlow.online/2019/01/21/Paging/
 // Ref: http://www.jamesmolloy.co.uk/tutorial_html/6.-Paging.html
 
+// NOTE:
+// We are assuming there is no dynamic memory allocation/mapping/deallocation
+// in interrupt handlers except syscall handler, so we don't need to insert any
+// lock to the paging, since the page table/dir is per process
+// no cross-process accessible global variables here 
+
 // Entries per page directory
 #define PAGE_DIR_SIZE 1024
 // Entries per page table

@@ -133,6 +133,7 @@ void isr_handler(trapframe* r) {
     }
 }
 
+// Note: we assume there is NO any dynamic memory alloc/dealloc/mapping in interrupt handler except the syscall one
 void register_interrupt_handler(uint8_t n, interrupt_handler handler) {
     interrupt_handlers[n] = handler;
 }

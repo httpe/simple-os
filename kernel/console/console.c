@@ -157,6 +157,7 @@ static int console_read(struct fs_mount_point* mount_point, const char * path, c
             // if console buffer is empty, check if key buffer has anything to read
             int written = write_keypress_to_buffer();
             if(written == 0) {
+                // console read is non-blocking
                 return char_read;
             }
             continue;
