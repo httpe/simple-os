@@ -33,6 +33,7 @@ static uint8_t* font;
 #define FONT_WIDTH 8
 
 void putpixel(uint32_t color, int x, int y) {
+    if(!initialized) return;
     framebuffer[x + y*width] = color;
 }
 
@@ -53,6 +54,7 @@ void putpixel(uint32_t color, int x, int y) {
 
 void video_refresh()
 {
+    if(!initialized) return;
     // only write changed pixels to video memory
     for(uint i=0; i<buffer_pixel_size; i++) {
         if(video_buffer_next[i] != video_buffer_curr[i]) {
@@ -63,6 +65,7 @@ void video_refresh()
 }
 void video_refresh_rect(uint x, uint y, uint w, uint h)
 {
+    if(!initialized) return;
     uint off = y*width + x;
     uint i,j;
     for(i=0; i<h;i++) {
@@ -78,6 +81,7 @@ void video_refresh_rect(uint x, uint y, uint w, uint h)
 }
 
 void fillrect(uint32_t color, int x, int y, int w, int h) {
+    if(!initialized) return;
     uint32_t* where = &video_buffer_next[x + y*width];
     int i, j;
  
@@ -90,6 +94,7 @@ void fillrect(uint32_t color, int x, int y, int w, int h) {
 }
 
 void drawpic(uint32_t* buff, int x, int y, int w, int h) {
+    if(!initialized) return;
     if(x >= (int) width || y >= (int) height) {
         return;
     }
@@ -112,6 +117,7 @@ void drawpic(uint32_t* buff, int x, int y, int w, int h) {
  
 void drawchar(unsigned char c, int x, int y, uint32_t bgcolor, uint32_t fgcolor)
 {
+    if(!initialized) return;
     int cy;
     int mask[8]={128,64,32,16,8,4,2,1}; // should match FONT_WIDTH
 	unsigned char *glyph=font+(int)c*FONT_HEIGHT;
@@ -135,6 +141,7 @@ void drawchar(unsigned char c, int x, int y, uint32_t bgcolor, uint32_t fgcolor)
 
 void screen_scroll_up(uint32_t row, uint32_t bgcolor)
 {
+    if(!initialized) return;
     memmove(video_buffer_next, ((void*) video_buffer_next) + row * pitch, (height - row)*pitch);
     fillrect(bgcolor, 0, height - row, width, row);
 }
