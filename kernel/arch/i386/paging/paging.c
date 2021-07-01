@@ -145,7 +145,7 @@ static void alloc_page_table(pde* page_dir, uint page_dir_idx)
     PANIC_ASSERT(!page_dir[page_dir_idx].present);
 
     uint32_t  page_table_frame = first_free_frame();
-    set_frame(page_table_frame);
+    // printf("Alloc page table frame[%u]\n", page_table_frame);
 
     pde page_dir_entry = { .present = 1, .rw = 1, .user = 1, .page_table_frame = page_table_frame };
     page_dir[page_dir_idx] = page_dir_entry;
@@ -275,7 +275,7 @@ uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32_t* fra
             if(!consecutive_frame) {
                 frame_index = first_free_frame();
             }
-                set_frame(frame_index);
+            // printf("Alloc frame[%u]->page[%u:%u]\n", frame_index, page_dir_idx, page_table_idx);
         } else {
             if(!consecutive_frame) {
                 frame_index = *frames++;
@@ -403,7 +403,7 @@ uint32_t link_pages_between(pde* pd_source, uint32_t vaddr, uint32_t size, pde* 
         uint frame_index;
         if(!pte_source->present) {
             frame_index = first_free_frame();
-            set_frame(frame_index);
+            // printf("Link page, frame[%u]\n", frame_index);
             *pte_source = (page_t) {.present = 1, .user = true, .rw = alloc_source_rw, .frame = frame_index};
             if(is_curr_page_dir(pd_source)) {
                 flush_tlb(VADDR_FROM_PAGE_INDEX(table_idx_source + dir_idx_source*PAGE_TABLE_SIZE));

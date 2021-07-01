@@ -19,7 +19,6 @@
 // Get the 0-based offset into the uint32_t
 #define BIT_OFFSET_FROM_FRAME_INDEX(a) ((a) % (8 * 4))
 
-void set_frame(uint32_t frame_idx);
 void clear_frame(uint32_t frame_idx);
 uint32_t test_frame(uint32_t frame_idx);
 uint32_t first_free_frame();

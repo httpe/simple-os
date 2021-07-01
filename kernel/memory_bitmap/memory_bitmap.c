@@ -17,7 +17,7 @@ static uint32_t frames[ARRAY_INDEX_FROM_FRAME_INDEX(N_FRAMES)];
 static uint32_t last_allocated_frame_idx = 0;
 
 // Set a bit in the frames bitset
-void set_frame(uint32_t frame_idx) {
+static void set_frame(uint32_t frame_idx) {
     // uint32_t frame_idx = FRAME_INDEX_FROM_ADDR(physical_addr);
     uint32_t idx = ARRAY_INDEX_FROM_FRAME_INDEX(frame_idx);
     uint32_t off = BIT_OFFSET_FROM_FRAME_INDEX(frame_idx);
@@ -41,7 +41,7 @@ uint32_t test_frame(uint32_t frame_idx) {
     return (frames[idx] & (0x1 << off));
 }
 
-// Find N consecutive free frames
+// Find N consecutive free frames and mark used
 //@return: first frame index of the series
 uint32_t n_free_frames(uint n)
 {
@@ -51,35 +51,36 @@ uint32_t n_free_frames(uint n)
     uint32_t first_frame = 0;
 
     uint32_t frame_idx = (last_allocated_frame_idx + 1) % N_FRAMES;
-    for(; frame_idx != last_allocated_frame_idx; frame_idx = (frame_idx + 1) % N_FRAMES) {
+    while(frame_idx != last_allocated_frame_idx) {
         uint32_t i = ARRAY_INDEX_FROM_FRAME_INDEX(frame_idx);
         uint32_t j = BIT_OFFSET_FROM_FRAME_INDEX(frame_idx);
-        if (frames[i] != 0xFFFFFFFF) // nothing free, exit early.
-        {
-            // at least one bit is free here.
-            for (j = 0; j < 32; j++) {
-                uint32_t toTest = 0x1 << j;
-                if (!(frames[i] & toTest)) {
-                    if(n_found == 0) {
-                        first_frame = i * 4 * 8 + j;
-                    }
-                    n_found++;
-                    if(n_found == n) {
-                        return first_frame;
-                    }
-                } else {
-                    n_found = 0;
+        uint32_t toTest = 0x1 << j;
+        if (!(frames[i] & toTest)) {
+            if(n_found == 0) {
+                first_frame = frame_idx;
+            }
+            n_found++;
+            if(n_found == n) {
+                // claim the returning frames
+                for(int i=0;i<n;i++) {
+                    set_frame(first_frame + i);
                 }
+                return first_frame;
             }
         } else {
             n_found = 0;
+        }
+        frame_idx++;
+        if(frame_idx >= N_FRAMES) {
+            n_found = 0;
+            frame_idx = 0;
         }
     }
 
     PANIC("No free frame!");
 }
 
-// Find the first free frame.
+// Find a free frame and mark used 
 uint32_t first_free_frame() {
     return n_free_frames(1);
 }
@@ -144,7 +145,7 @@ void initialize_bitmap(uint32_t mbt_physical_addr) {
         if (mmap->type != MULTIBOOT_MEMORY_AVAILABLE) {
             frame_idx = FRAME_INDEX_FROM_ADDR(mem_block_addr);
             frame_idx_end = FRAME_INDEX_FROM_ADDR(mem_block_addr + mem_block_len - 1); // memory block size counted in number of frames
-            // printf("Frame reserved: 0x%x - 0x%x\n", (uint32_t) frame_idx, (uint32_t) frame_idx_end);
+            printf("Frame reserved: 0x%x - 0x%x\n", (uint32_t) frame_idx, (uint32_t) frame_idx_end);
             while (frame_idx < N_FRAMES && frame_idx <= frame_idx_end) {
                 set_frame(frame_idx);
                 frame_idx++;
