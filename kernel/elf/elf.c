@@ -32,7 +32,8 @@ Elf32_Addr load_elf(pde* page_dir, const char* buff, uint32_t* vaddr_ub) {
             unmap_pages(curr_page_dir(), (uint32_t)dest_ptr, program_header.p_memsz);
             
             // calculate upper bound of the mapped user space memory
-            uint32_t mapped_vaddr_ub = (program_header.p_vaddr + program_header.p_memsz + (PAGE_SIZE - 1))/PAGE_SIZE*PAGE_SIZE;
+            // uint32_t mapped_vaddr_ub = (program_header.p_vaddr + program_header.p_memsz + (PAGE_SIZE - 1))/PAGE_SIZE*PAGE_SIZE;
+            uint32_t mapped_vaddr_ub = program_header.p_vaddr + program_header.p_memsz - 1;
             if(mapped_vaddr_ub > *vaddr_ub) {
                 *vaddr_ub = mapped_vaddr_ub;
             } 

@@ -523,7 +523,8 @@ int exec(const char* path, char* const * argv)
     p->tf->eip = entry_point;
     p->user_stack = (void*) ustack_start;
 
-    p->size = (vaddr_ub + (PAGE_SIZE - 1))/PAGE_SIZE * PAGE_SIZE;
+    // p->size = (vaddr_ub + (PAGE_SIZE - 1))/PAGE_SIZE * PAGE_SIZE;
+    p->size = vaddr_ub;
     p->orig_size = p->size;
 
     // switch to new page dir
