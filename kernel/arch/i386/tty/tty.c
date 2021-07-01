@@ -121,7 +121,9 @@ static void terminal_putentryat(unsigned char c, uint64_t color, size_t col, siz
             uint bg_color = color >> 32;
 
             drawchar(c, col * font_width, row * font_height, bg_color, fg_color);
-            video_refresh_rect(x, y, font_width, font_height);
+            if(!no_video_refresh) {
+                video_refresh_rect(x, y, font_width, font_height);
+            }
         } else {
             terminal_buffer[index] = vga_entry(c, color);
         }
@@ -270,8 +272,12 @@ void terminal_set_font_attr(enum tty_font_attr attr) {
 void terminal_scroll_up()
 {
     if(video_mode) {
+        disable_cursor();
         screen_scroll_up(font_height, terminal_color_bg);
-        video_refresh();
+        enable_cursor();
+        if(!no_video_refresh) {
+            video_refresh();
+        }
     } else {
         memmove(VGA_MEMORY, VGA_MEMORY + TEXT_WIDTH, sizeof(VGA_MEMORY[0]) * TEXT_HEIGHT * TEXT_WIDTH);
     }
