@@ -344,13 +344,14 @@ int sys_network_receive_ipv4_pkt(trapframe* r)
 
 int sys_refresh_screen(trapframe* r)
 {
+    UNUSED_ARG(r);
     video_refresh();
     return 0;
 }
 
 int sys_draw_picture(trapframe* r)
 {
-    char * buf = *(uint32_t**) (r->esp + 4);
+    uint32_t* buf = *(uint32_t**) (r->esp + 4);
     int x = *(int *) (r->esp + 8);
     int y = *(int *) (r->esp + 12);
     int w = *(int *) (r->esp + 16);

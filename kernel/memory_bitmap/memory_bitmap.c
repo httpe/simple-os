@@ -62,7 +62,7 @@ uint32_t n_free_frames(uint n)
             n_found++;
             if(n_found == n) {
                 // claim the returning frames
-                for(int i=0;i<n;i++) {
+                for(uint i=0;i<n;i++) {
                     set_frame(first_frame + i);
                 }
                 return first_frame;
