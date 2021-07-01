@@ -83,6 +83,7 @@ Although the final goal is to make the system self-hosting, we have planned for 
       - Bootloader can now switch to VESA video modes and pass the VBE information to the kernel through multi-boot structure
       - Implemented a video driver supporting [double buffering](https://wiki.osdev.org/Double_Buffering) which only redraw changed pixel by comparing with a third video buffer
       - TTY now support emulated text mode under video modes. Text cursor is also available
+      - Image viewer `image` implemented with the support of [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h)
 
 1. **Final Goal: Self-hosting**
     - Port a sophisticate enough compiler to the system
