@@ -34,6 +34,8 @@
 #define SYS_RMDIR 27
 #define SYS_NETWORK_SEND_IPv4_PKT 28
 #define SYS_NETWORK_RECEIVE_IPv4_PKT 29
+#define SYS_REFRESH_SCREEN 30
+#define SYS_DRAW_PICTURE 31
 
 // defined in interrupt.asm
 extern void int88();

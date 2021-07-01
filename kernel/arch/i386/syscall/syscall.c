@@ -11,6 +11,7 @@
 #include <kernel/ethernet.h>
 #include <kernel/ipv4.h>
 #include <kernel/cpu.h>
+#include <kernel/video.h>
 #include <arch/i386/kernel/isr.h>
 
 
@@ -32,7 +33,7 @@ int sys_sbrk(trapframe* r)
     proc* p = curr_proc();
     uint32_t orig_size = p->size;
     uint32_t new_size = p->size + delta;
-    if(new_size < p->orig_size || new_size < p->orig_size) {
+    if(new_size < p->orig_size) {
         return -EINVAL;
     } 
     p->size = new_size;
@@ -43,6 +44,21 @@ int sys_sbrk(trapframe* r)
     } else if(new_last_pg_idx < orig_last_pg_idx) {
         dealloc_pages(p->page_dir, new_last_pg_idx + 1, orig_last_pg_idx - new_last_pg_idx); 
     }
+    // if(delta > 0) {
+    //     memset((void*) orig_size, 0, delta);
+    // }
+    // PANIC_ASSERT(is_vaddr_accessible(p->page_dir, orig_size, false, true));
+    // if(delta > 0) {
+    //     PANIC_ASSERT(is_vaddr_accessible(p->page_dir, orig_size + delta - 1, false, true));
+    //     if(delta > PAGE_SIZE) {
+    //         PANIC_ASSERT(is_vaddr_accessible(p->page_dir, orig_size + PAGE_SIZE, false, true));
+    //     }
+    // }
+    // PANIC_ASSERT(!is_vaddr_accessible(p->page_dir, 0xEFFFFFFF, false, true));
+    
+    // uint32_t p1 = vaddr2paddr(p->page_dir, 0x805af95);
+    // uint32_t p2 = vaddr2paddr(p->page_dir, 0xbfffff94);
+
     // returning int but shall cast back to uint
     return (int) orig_size;
 }
@@ -326,6 +342,23 @@ int sys_network_receive_ipv4_pkt(trapframe* r)
     return res;
 }
 
+int sys_refresh_screen(trapframe* r)
+{
+    video_refresh();
+    return 0;
+}
+
+int sys_draw_picture(trapframe* r)
+{
+    char * buf = *(uint32_t**) (r->esp + 4);
+    int x = *(int *) (r->esp + 8);
+    int y = *(int *) (r->esp + 12);
+    int w = *(int *) (r->esp + 16);
+    int h = *(int *) (r->esp + 20);
+    drawpic(buf, x, y, w, h);
+    return 0;
+}
+
 void syscall_handler(trapframe* r)
 {
     // Avoid scheduling when in syscall/kernel space
@@ -425,6 +458,12 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_NETWORK_RECEIVE_IPv4_PKT:
         r->eax = sys_network_receive_ipv4_pkt(r);
+        break;
+    case SYS_REFRESH_SCREEN:
+        r->eax = sys_refresh_screen(r);
+        break;
+    case SYS_DRAW_PICTURE:
+        r->eax = sys_draw_picture(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);
