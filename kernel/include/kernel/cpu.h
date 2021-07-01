@@ -3,6 +3,7 @@
 
 #include <common.h>
 
+void init_cpu();
 void disable_interrupt();
 void enable_interrupt();
 int is_interrupt_enabled();

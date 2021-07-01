@@ -4,6 +4,11 @@
 
 cpu current_cpu;
 
+void init_cpu()
+{
+    current_cpu = (cpu) {0};
+}
+
 cpu* curr_cpu()
 {
     return &current_cpu;

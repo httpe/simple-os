@@ -2,6 +2,7 @@
 #include <kernel/multiboot.h>
 #include <kernel/panic.h>
 #include <kernel/memory_bitmap.h>
+#include <kernel/lock.h>
 
 // Memory bitmap
 #define uint32combine(high,low) ((((uint64_t) (high)) << 32) + (uint64_t) (low))
@@ -10,19 +11,23 @@
 // Ref: https://stackoverflow.com/questions/48561217/how-to-get-value-of-variable-defined-in-ld-linker-script-from-c
 extern char KERNEL_PHYSICAL_START[], KERNEL_PHYSICAL_END[];
 
-// A bitset of frames - used or free.
-static uint32_t frames[ARRAY_INDEX_FROM_FRAME_INDEX(N_FRAMES)];
-
-// Last known allocated frame, not necessarily correct 
-static uint32_t last_allocated_frame_idx = 0;
+static struct {
+    // A bitset of frames - used or free.
+    uint32_t frames[ARRAY_INDEX_FROM_FRAME_INDEX(N_FRAMES)];
+    // Last known allocated frame, not necessarily correct 
+    uint32_t last_allocated_frame_idx;
+    lock lk;
+} memmap;
 
 // Set a bit in the frames bitset
 static void set_frame(uint32_t frame_idx) {
     // uint32_t frame_idx = FRAME_INDEX_FROM_ADDR(physical_addr);
     uint32_t idx = ARRAY_INDEX_FROM_FRAME_INDEX(frame_idx);
     uint32_t off = BIT_OFFSET_FROM_FRAME_INDEX(frame_idx);
-    frames[idx] |= (0x1 << off);
-    last_allocated_frame_idx = frame_idx;
+    acquire(&memmap.lk);
+    memmap.frames[idx] |= (0x1 << off);
+    memmap.last_allocated_frame_idx = frame_idx;
+    release(&memmap.lk);
 }
 
 // Clear a bit in the frames bitset
@@ -30,7 +35,9 @@ void clear_frame(uint32_t frame_idx) {
     // uint32_t frame_idx = FRAME_INDEX_FROM_ADDR(physical_addr);
     uint32_t idx = ARRAY_INDEX_FROM_FRAME_INDEX(frame_idx);
     uint32_t off = BIT_OFFSET_FROM_FRAME_INDEX(frame_idx);
-    frames[idx] &= ~(0x1 << off);
+    acquire(&memmap.lk);
+    memmap.frames[idx] &= ~(0x1 << off);
+    release(&memmap.lk);
 }
 
 // Test if a bit is set.
@@ -38,7 +45,10 @@ uint32_t test_frame(uint32_t frame_idx) {
     // uint32_t frame_idx = FRAME_INDEX_FROM_ADDR(physical_addr);
     uint32_t idx = ARRAY_INDEX_FROM_FRAME_INDEX(frame_idx);
     uint32_t off = BIT_OFFSET_FROM_FRAME_INDEX(frame_idx);
-    return (frames[idx] & (0x1 << off));
+    acquire(&memmap.lk);
+    uint32_t is_used = (memmap.frames[idx] & (0x1 << off));
+    release(&memmap.lk);
+    return is_used;
 }
 
 // Find N consecutive free frames and mark used
@@ -50,21 +60,24 @@ uint32_t n_free_frames(uint n)
     uint32_t n_found = 0;
     uint32_t first_frame = 0;
 
-    uint32_t frame_idx = (last_allocated_frame_idx + 1) % N_FRAMES;
-    while(frame_idx != last_allocated_frame_idx) {
+    acquire(&memmap.lk);
+    uint32_t frame_idx = (memmap.last_allocated_frame_idx + 1) % N_FRAMES;
+    while(frame_idx != memmap.last_allocated_frame_idx) {
         uint32_t i = ARRAY_INDEX_FROM_FRAME_INDEX(frame_idx);
         uint32_t j = BIT_OFFSET_FROM_FRAME_INDEX(frame_idx);
         uint32_t toTest = 0x1 << j;
-        if (!(frames[i] & toTest)) {
+        if (!(memmap.frames[i] & toTest)) {
             if(n_found == 0) {
                 first_frame = frame_idx;
             }
             n_found++;
             if(n_found == n) {
+                release(&memmap.lk);
                 // claim the returning frames
                 for(uint i=0;i<n;i++) {
                     set_frame(first_frame + i);
                 }
+                
                 return first_frame;
             }
         } else {
@@ -88,7 +101,7 @@ uint32_t first_free_frame() {
 void initialize_bitmap(uint32_t mbt_physical_addr) {
     for (int i = 0;i < ARRAY_INDEX_FROM_FRAME_INDEX(N_FRAMES);i++) {
         // Initialize all memory to be used/reserved, we will clear for available memory below
-        frames[i] = 0xFFFFFFFF;
+        memmap.frames[i] = 0xFFFFFFFF;
     }
 
     // Get memory map

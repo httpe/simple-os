@@ -18,6 +18,9 @@ void initialize_architecture(uint32_t mbt_physical_addr) {
     // Initialize serial port I/O so we can print debug message out 
     init_serial();
 
+    // Initialize the global CPU state
+    init_cpu();
+
     // Initialize memory bitmap for the physical memory manager (frame allocator)
     initialize_bitmap(mbt_physical_addr);
 
