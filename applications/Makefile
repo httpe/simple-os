@@ -27,7 +27,9 @@ mv/mv.elf \
 mkdir/mkdir.elf \
 rmdir/rmdir.elf \
 ping/ping.elf \
-cp/cp.elf
+cp/cp.elf \
+image/image.elf \
+
 
 .PHONY: all clean install
 # .SUFFIXES: .o .c .S
@@ -52,12 +54,15 @@ all: $(BINARIES)
 # %.o: %.asm
 # 	$(AS) $(ASMFLAGS) $< -o $@
 
+image/stb_image.h:
+	curl https://raw.githubusercontent.com/nothings/stb/master/stb_image.h > image/stb_image.h
+
 clean:
 	rm -f $(BINARIES)
 	rm -f $(OBJS) *.o */*.o */*/*.o
 	rm -f $(OBJS:.o=.d) *.d */*.d */*/*.d
 
-install: $(BINARIES)
+install: image/stb_image.h $(BINARIES)
 	mkdir -p $(DESTDIR)$(BINDIR)
 	cp -p $(BINARIES) $(DESTDIR)$(BINDIR)
 
