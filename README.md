@@ -162,6 +162,15 @@ dd if=/dev/zero of=testfs.fat bs=1024 count=$(expr 512 \* 1024)
 mkfs.vfat testfs.fat
 ```
 
+You can mount the disk/partition image in Linux to manage the files in it:
+
+```bash
+mkdir -p mnt
+sudo mount -t vfat testfs.fat mnt
+# manage the files, once done, umount
+sudo umount mnt
+```
+
 ### Debug
 
 It is possible to debug the kernel by GDB. See [QEMU GDB Usage](https://www.qemu.org/docs/master/system/gdb.html).
