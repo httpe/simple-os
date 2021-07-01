@@ -50,6 +50,10 @@ static void test_libc() {
     memmove(buf, str2, strlen(str2)+1);
     printf("%s", buf);
     free(buf);
+
+    char* buf1 = malloc(500*3030*4);
+    memset(buf1, 0, 500*3030*4);
+    free(buf1);
 }
 
 static void test_file_system() {
