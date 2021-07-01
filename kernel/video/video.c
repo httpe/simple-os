@@ -3,7 +3,6 @@
 #include <kernel/paging.h>
 #include <kernel/panic.h>
 
-#include <arch/i386/kernel/cpu.h>
 
 // Ref: https://wiki.osdev.org/Drawing_In_Protected_Mode
 // Ref: https://wiki.osdev.org/Getting_VBE_Mode_Info
@@ -89,10 +88,31 @@ void fillrect(uint32_t color, int x, int y, int w, int h) {
         where += width - w;
     }
 }
+
+void drawpic(uint32_t* buff, int x, int y, int w, int h) {
+    if(x >= (int) width || y >= (int) height) {
+        return;
+    }
+    if(x + w > (int) width) {
+        w = width - x;
+    }
+    if(y + h > (int) height) {
+        h = height - y;
+    }
+    uint32_t* where = &video_buffer_next[x + y*width];
+    int i, j;    
+ 
+    for (i = 0; i < h; i++) {
+        for (j = 0; j < w; j++) {
+            *where++ = *buff++;
+        }
+        where += width - w;
+    }
+}
  
 void drawchar(unsigned char c, int x, int y, uint32_t bgcolor, uint32_t fgcolor)
 {
-    int cx,cy;
+    int cy;
     int mask[8]={128,64,32,16,8,4,2,1}; // should match FONT_WIDTH
 	unsigned char *glyph=font+(int)c*FONT_HEIGHT;
     uint32_t* buff = &video_buffer_next[x + y*width];
@@ -243,6 +263,17 @@ int init_video(uint32_t info_phy_addr)
     // volatile uint64_t draw_frac = (draw_time * 100) / total_time;
     // volatile uint64_t refresh_frac = (refresh_time * 100) / total_time;
     // volatile uint64_t refresh_fps = 3600750000 / (refresh_time / 100);
+
+    // Test drawpic
+    
+    // uint32_t* pic = (uint32_t*) alloc_pages_consecutive_frames(curr_page_dir(), PAGE_COUNT_FROM_BYTES(500*303*bpp/8), true, NULL);
+    // for(int i=0; i<500*303; i++) {
+    //     pic[i] = 0x000000FF;
+    //     pic[i] += ((i*100 / 303) * 0xFF / 100) << 24;
+    // }
+
+    // drawpic(pic, 0, 0, 500, 303);
+    // video_refresh();
 
     return 0;
 }

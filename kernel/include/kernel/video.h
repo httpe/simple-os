@@ -8,6 +8,7 @@
 
 void putpixel(uint32_t color, int x, int y);
 void fillrect(uint32_t color, int x, int y, int w, int h);
+void drawpic(uint32_t* buff, int x, int y, int w, int h);
 void screen_scroll_up(uint32_t row, uint32_t bgcolor);
 void clear_screen(uint32_t bgcolor);
 
