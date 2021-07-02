@@ -5,7 +5,7 @@
 
 #include <common.h>
 #include <kernel/keyboard.h>
-
+#include <kernel/lock.h>
 #include <arch/i386/kernel/port_io.h>
 #include <arch/i386/kernel/isr.h>
 
@@ -26,6 +26,7 @@ struct circular_buffer {
     key buf[KEYBOARD_BUFFER_SIZE];
     uint r;
     uint w;
+    lock lk;
 } key_buffer;
 
 #define SHIFT 1
@@ -200,12 +201,16 @@ static void key_buffer_append(key c) {
     if(c == NO) {
         return;
     }
+    acquire(&key_buffer.lk);
+
     if(key_buffer.w == (key_buffer.r + KEYBOARD_BUFFER_SIZE - 1) % KEYBOARD_BUFFER_SIZE) {
         // buffer is full, no more input allowed
-        return;
+    } else {
+        key_buffer.buf[key_buffer.w] = c;
+        key_buffer.w = (key_buffer.w + 1) % KEYBOARD_BUFFER_SIZE;
     }
-    key_buffer.buf[key_buffer.w] = c;
-    key_buffer.w = (key_buffer.w + 1) % KEYBOARD_BUFFER_SIZE;
+
+    release(&key_buffer.lk);
 }
 
 static void keyboard_callback(trapframe* regs) {
@@ -223,11 +228,16 @@ static void kbd_ack(void) {
 
 key read_key_buffer() {
     key c;
+    acquire(&key_buffer.lk);
+
     if(key_buffer.w == key_buffer.r) {
-        return NO;
+        c = NO;
+    } else {
+        c =  key_buffer.buf[key_buffer.r];
+        key_buffer.r = (key_buffer.r + 1) % KEYBOARD_BUFFER_SIZE;
     }
-    c =  key_buffer.buf[key_buffer.r];
-    key_buffer.r = (key_buffer.r + 1) % KEYBOARD_BUFFER_SIZE;
+
+    release(&key_buffer.lk);
     return c;
 }
 
