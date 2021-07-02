@@ -16,7 +16,10 @@ void acquire(lock* lk)
     uint pid = p?p->pid:0;
 
     while(lk->locked) {
-        PANIC_ASSERT(lk->holding_pid != pid);
+        if(lk->holding_pid == pid) {
+            PANIC("Deal Lock");
+        }
+        
         yield();
     }
     lk->locked = 1;
@@ -35,7 +38,7 @@ void release(lock* lk)
     // no need to use atomic assembly like xchg
     PANIC_ASSERT(!is_interrupt_enabled());
     if(!lk->locked) {
-        PANIC_ASSERT(lk->locked);
+        PANIC("Releasing Non-holding lock");
     }
     
     // if in multi-core scenario, need to insert 
