@@ -12,6 +12,7 @@
 #include <kernel/errno.h>
 #include <kernel/elf.h>
 #include <kernel/cpu.h>
+#include <kernel/lock.h>
 #include <arch/i386/kernel/segmentation.h>
 #include <arch/i386/kernel/cpu.h>
 
@@ -47,6 +48,7 @@ extern void switch_kernel_context(struct context **old, struct context *new);
 
 struct {
   proc proc[N_PROCESS];
+  lock lk;
 } process_table;
 
 static uint32_t next_pid = 1;
@@ -59,6 +61,11 @@ void initialize_process()
     // This function is called after stack changed to process's kernel stack
     // and the page dir changed to process's own dir
 
+    // Any new process will be scheduled with process table locked
+    // because it is scheduled from another process's yield
+    // also the scheduler will ensure any process is scheduled to in locked state
+    release(&process_table.lk);
+
     scheduler_available = 1;
 }
 
@@ -66,20 +73,23 @@ void initialize_process()
 // Allocate a new process
 proc* create_process()
 {
+    acquire(&process_table.lk);
     proc* p = NULL;
     for(int i=0;i<N_PROCESS;i++) {
         if(process_table.proc[i].state == PROC_STATE_UNUSED) {
             p = &process_table.proc[i];
+            p->state = PROC_STATE_EMBRYO;
+            release(&process_table.lk);
             break;
         }
         if(i==N_PROCESS-1) {
-            return NULL;
+            release(&process_table.lk);
+            PANIC("Too many processes");
         }
     }
 
     memset(p, 0, sizeof(*p));
     p->pid = next_pid++;
-    p->state = PROC_STATE_EMBRYO;
     // allocate process's kernel stack
     // allocate one additional read-only page and change it to read-only to detect stack overflow
     uint32_t kernel_stack_addr = alloc_pages(curr_page_dir(), N_KERNEL_STACK_PAGE_SIZE + 1, true, true);
@@ -98,8 +108,8 @@ proc* create_process()
     sp -= sizeof(*p->context);
     p->context = (context*) sp;
     p->context->eip = (uint32_t) initialize_process;
-    // p->eip shall be setup later
-    // then the call chain will be scheduler -> initialize_process -> int_ret -> (p->eip)
+    // p->tf->eip shall be setup later
+    // then the call chain will be scheduler -> initialize_process -> int_ret -> (p->tf->eip)
     
     return p;
 }
@@ -155,10 +165,20 @@ void switch_process_memory_mapping(proc* p)
 void scheduler()
 {
     proc* p;
+    // acquire lock for the first process
+    // pretend it was yielded from another process
+    acquire(&process_table.lk);
     while(1) {
         for(p = process_table.proc; p < &process_table.proc[N_PROCESS]; p++){
             if(p->state != PROC_STATE_RUNNABLE)
                 continue;
+
+            // Holding the process table lock when leaving and entering the scheduler
+            // Enter with lock because we are entering scheduler's loop of process_table
+            // Leave with lock because we use the p->context to do switching
+
+            PANIC_ASSERT(!is_interrupt_enabled());
+            PANIC_ASSERT(holding(&process_table.lk));
 
             // printf("Scheduling to process %u\n", p->pid);
             cpu* cpu = curr_cpu();
@@ -167,6 +187,8 @@ void scheduler()
             p->state = PROC_STATE_RUNNING;
             switch_kernel_context(&cpu->scheduler_context, p->context);
 
+            PANIC_ASSERT(holding(&process_table.lk));
+            
             // printf("Switched back from process %u\n", p->pid);
             cpu->current_process = NULL;
         }
@@ -189,6 +211,7 @@ void exit(int exit_code)
         }
     }
 
+    acquire(&process_table.lk);
     // pass children to init
     for(int i=0; i<N_PROCESS; i++) {
         if(process_table.proc[i].parent == p) {
@@ -226,15 +249,17 @@ void yield()
     if(!scheduler_available) {
         return;
     }
-    PANIC_ASSERT(!is_interrupt_enabled());
+    // PANIC_ASSERT(!is_interrupt_enabled());
 
     proc* p = curr_proc();
 
     if(!p->no_schedule) {
+        acquire(&process_table.lk);
         // printf("PID %u yield\n", p->pid);
         p->state = PROC_STATE_RUNNABLE;
         switch_kernel_context(&p->context, curr_cpu()->scheduler_context);
         // printf("PID %u back from yield\n", p->pid);
+        release(&process_table.lk);
     }
 
 
