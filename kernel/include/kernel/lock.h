@@ -7,6 +7,7 @@
 // Disabling interrupt when locked, strictest
 typedef struct lock {
     uint locked;
+    uint holding_pid;
 } lock;
 
 // Use this ONLY if the resoure will NOT be used in any interrupt handler
@@ -22,6 +23,7 @@ typedef struct rw_lock {
 
 void acquire(lock* lk);
 void release(lock* lk);
+uint holding(lock* lk);
 
 void start_writing(rw_lock* lk);
 void finish_writing(rw_lock* lk);

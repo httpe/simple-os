@@ -11,10 +11,17 @@ void acquire(lock* lk)
     // to ensure atomicity of the check-and-flag code below
     // no need to use atomic assembly like xchg
     push_cli();
+
+    proc* p = curr_proc();
+    uint pid = p?p->pid:0;
+
     while(lk->locked) {
+        PANIC_ASSERT(lk->holding_pid != pid);
         yield();
     }
     lk->locked = 1;
+    lk->holding_pid = pid;
+    
 
     // if in multi-core scenario, need to insert 
     // __sync_synchronize()
@@ -27,12 +34,23 @@ void release(lock* lk)
     // to ensure atomicity of the check-and-flag code below
     // no need to use atomic assembly like xchg
     PANIC_ASSERT(!is_interrupt_enabled());
-    PANIC_ASSERT(lk->locked);
+    if(!lk->locked) {
+        PANIC_ASSERT(lk->locked);
+    }
+    
     // if in multi-core scenario, need to insert 
     // __sync_synchronize()
     // here
     lk->locked = 0;
     pop_cli();
+}
+
+uint holding(lock* lk)
+{
+  push_cli();
+  uint r = lk->locked;
+  pop_cli();
+  return r;
 }
 
 void start_writing(rw_lock* lk) 
