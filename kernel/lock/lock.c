@@ -5,7 +5,7 @@
 
 // Ref: xv6/spinlock.c
 
-void acquire(lock* lk)
+void acquire(yield_lock* lk)
 {
     // Assuming there is only one CPU, so disabling interrupt will be enough
     // to ensure atomicity of the check-and-flag code below
@@ -31,7 +31,7 @@ void acquire(lock* lk)
     // here
 }
 
-void release(lock* lk)
+void release(yield_lock* lk)
 {
     // Assuming there is only one CPU, so disabling interrupt will be enough
     // to ensure atomicity of the check-and-flag code below
@@ -48,7 +48,7 @@ void release(lock* lk)
     pop_cli();
 }
 
-uint holding(lock* lk)
+uint holding(yield_lock* lk)
 {
   push_cli();
   uint r = lk->locked;

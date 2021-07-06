@@ -48,7 +48,7 @@ extern void switch_kernel_context(struct context **old, struct context *new);
 
 struct {
   proc proc[N_PROCESS];
-  lock lk;
+  yield_lock lk;
 } process_table;
 
 static uint32_t next_pid = 1;

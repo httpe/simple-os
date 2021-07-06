@@ -25,7 +25,7 @@ typedef struct rtl8139 {
     uint packet_sent;
     void* send_buff;
     uint32_t send_buff_phy_addr;
-    lock lk;
+    yield_lock lk;
 } rtl8139;
 
 typedef struct rtl18139_packet_header {

@@ -26,7 +26,7 @@ struct circular_buffer {
     key buf[KEYBOARD_BUFFER_SIZE];
     uint r;
     uint w;
-    lock lk;
+    yield_lock lk;
 } key_buffer;
 
 #define SHIFT 1

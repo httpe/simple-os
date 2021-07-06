@@ -24,7 +24,7 @@ ERR: a 1 indicates that an error occured. An error code has been placed in the e
 #define STATUS_DF 0x20
 #define STATUS_ERR 0x01
 
-static lock ata_lock;
+static yield_lock ata_lock;
 
 static void ATA_wait_BSY();
 static void ATA_wait_DRQ();

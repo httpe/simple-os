@@ -16,7 +16,7 @@ static struct {
     uint32_t frames[ARRAY_INDEX_FROM_FRAME_INDEX(N_FRAMES)];
     // Last known allocated frame, not necessarily correct 
     uint32_t last_allocated_frame_idx;
-    lock lk;
+    yield_lock lk;
 } memmap;
 
 // Set a bit in the frames bitset
