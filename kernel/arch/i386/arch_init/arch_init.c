@@ -5,7 +5,7 @@
 #include <kernel/memory_bitmap.h>
 #include <kernel/paging.h>
 #include <kernel/pci.h>
-
+#include <kernel/cpu.h>
 #include <arch/i386/kernel/isr.h>
 #include <kernel/timer.h>
 #include <kernel/keyboard.h>
