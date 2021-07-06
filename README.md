@@ -1,8 +1,6 @@
 # Simple-OS
 
-Simple-OS is a (barely working) hobbyist operating system. My target is to create a self-hosting operating system, i.e. you can compile itself in itself.
-
-Currently the only CPU architecture supported is x86-32.
+Simple-OS is a (rather basic) hobbyist operating system for x86-32bit platform. The target is to create a self-hosting operating system, i.e. one can compile Simple-OS in itself.
 
 ## Current Status & Goal
 
@@ -53,15 +51,16 @@ Although the final goal is to make the system self-hosting, we have planned for 
     - Compile and run the text editor inside the system
     - **In Progress**
       - A shell with `cd` and program execution was implemented
-      - Implemented various file management utilities including `ls`, `mkdir`, `rmdir`, `mv` and `rm`
+      - Implemented various file management utilities including `ls`, `mkdir`, `rmdir`, `mv`, `cp` and `rm`
       - Ported the simple text editor [Kilo](https://viewsourcecode.org/snaptoken/kilo/index.html), with basic editing functionalities and C syntax highlighting
 
 1. **Milestone Six: Multi-core CPU support and IPC**
-    - Support multi-core CPU through [APCI](https://wiki.osdev.org/APIC)
+    - Support multi-core CPU [SMP](https://wiki.osdev.org/SMP) through [APIC](https://wiki.osdev.org/APIC)
     - Provide [synchronization mechanism](https://wiki.osdev.org/Synchronization_Primitives) for multi-tasking environment, like locks
     - Provide inter process communication ([IPC](https://wiki.osdev.org/Category:IPC)) mechanism like pipe and signal
     - **In Progress**
-      - Pipe is implemented as an in memory circular buffer FS
+      - Pipe is implemented with memory circular buffer as an file system
+      - Mutex lock (yield when waiting) and Readers–writer lock implemented
 
 1. **Milestone Seven: Networking**
     - Allow connecting to the Internet
@@ -72,7 +71,7 @@ Although the final goal is to make the system self-hosting, we have planned for 
       - Ethernet layer implemented (no caching)
       - ARP probe/announcement implemented
       - IPv4 layer implemented
-      - Ping utility implemented (ICMP protocol)
+      - `ping` utility implemented (ICMP protocol)
 
 1. **Milestone Eight: Graphics**
     - Switch to [VESA Video Modes](https://wiki.osdev.org/Getting_VBE_Mode_Info) using the [VBE](http://www.petesqbsite.com/sections/tutorials/tuts/vbe3.pdf) (VESA BIOS Extensions Standard) functions (Ref: [VESA Tutorial](https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial))
@@ -87,8 +86,8 @@ Although the final goal is to make the system self-hosting, we have planned for 
 
 1. **Final Goal: Self-hosting**
     - Port a sophisticate enough compiler to the system
-    - Compile the source code of the system inside the system
-    - The system is now self-hosting
+    - Compile the source code of the system inside the system (self-compiling)
+    - Compile the compiling toolchain in the system and use them to compile the system (self-hosting)
 
 ## Dependencies
 
