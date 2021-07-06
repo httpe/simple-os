@@ -7,6 +7,7 @@
 #include <kernel/rtl8139.h>
 #include <arch/i386/kernel/port_io.h>
 #include <kernel/paging.h>
+#include <kernel/lock.h>
 #include <arch/i386/kernel/isr.h>
 #include <arch/i386/kernel/pic.h>
 
@@ -24,6 +25,7 @@ typedef struct rtl8139 {
     uint packet_sent;
     void* send_buff;
     uint32_t send_buff_phy_addr;
+    lock lk;
 } rtl8139;
 
 typedef struct rtl18139_packet_header {
@@ -64,6 +66,8 @@ static bool packet_ok(rtl18139_packet_header* header) {
 static void rtl8139_irq_handler(trapframe* tf)
 {
     UNUSED_ARG(tf);
+
+    acquire(&dev.lk);
 
     uint16_t int_reg = inw(dev.io_base + RTL8139_ISR);
     printf("RTL8139 IRQ: Int reg 0x%x\n", int_reg);
@@ -108,6 +112,8 @@ static void rtl8139_irq_handler(trapframe* tf)
             outw(dev.io_base + RTL8139_CAPR, dev.rx_offset - 0x10); //-0x10 to avoid overflow 
         }
     }
+
+    release(&dev.lk);
 }
 
 void init_rtl8139(uint8_t bus, uint8_t device, uint8_t function)
@@ -191,8 +197,10 @@ void init_rtl8139(uint8_t bus, uint8_t device, uint8_t function)
 
 int rtl8139_send_packet(void* buf, uint size)
 {
+    acquire(&dev.lk);
     if(dev.packet_to_send - dev.packet_sent >= 4) {
         // no free transmit descriptor
+        release(&dev.lk);
         printf("RTL8139: No free transmit descriptor\n");
         return -1;
     }
@@ -209,6 +217,7 @@ int rtl8139_send_packet(void* buf, uint size)
 
     dev.packet_to_send++;
     
+    release(&dev.lk);
     return 0;
 }
 
