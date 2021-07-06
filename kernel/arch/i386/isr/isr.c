@@ -7,7 +7,7 @@
 #include <arch/i386/kernel/idt.h>
 #include <arch/i386/kernel/port_io.h>
 #include <arch/i386/kernel/pic.h>
-
+#include <kernel/cpu.h>
 
 
 // Ref: https://github.com/cfenollosa/os-tutorial/blob/master/23-fixes
@@ -142,7 +142,9 @@ void irq_handler(trapframe* r) {
     uint8_t irq_no = (uint8_t)r->err; // err_code is the IRQ number for IRQs, see interrupt.asm
     /* After every interrupt we need to send an EOI to the PICs
      * or they will not send another interrupt again */
-    bool is_spurious = PIC_sendEOI(irq_no);
+    bool is_spurious = PIC_is_spurious_irq(irq_no);
+
+    // printf("IRQ %d\n", irq_no);
 
     if (!is_spurious) {
         /* Handle the interrupt in a more modular way */
@@ -150,6 +152,8 @@ void irq_handler(trapframe* r) {
             interrupt_handler handler = interrupt_handlers[r->trapno];
             handler(r);
         }
+
+        PIC_sendEOI(irq_no);
     } else {
         // Track of the number of spurious IRQs
         spurious_irq_counter[irq_no]++;

@@ -45,9 +45,8 @@ void PIC_remap(int offset1, int offset2) {
     outb(PIC2_DATA, a2);
 }
 
-// This is issued to the PIC chips at the end of an IRQ-based interrupt routine. 
-// Return: if the IRQ is a spurious one (See https://wiki.osdev.org/PIC#Handling_Spurious_IRQs)
-bool PIC_sendEOI(unsigned char irq) {
+bool PIC_is_spurious_irq(unsigned char irq)
+{
     if (irq == 7 || irq == 15) {
         // Check for Spurious IRQs
         uint16_t isr = pic_get_isr();
@@ -64,14 +63,21 @@ bool PIC_sendEOI(unsigned char irq) {
         }
     }
 
+    return false;
+    
+}
+
+// This is issued to the PIC chips at the end of an IRQ-based interrupt routine.
+// Only after acknowledging EOI can the SAME IRQ triggers interrupt/ISR (if interrupt is enabled)
+// Other IRQ is not affected by EOI, as long as interrupt is enabled they will trigger an (nested) interrupt
+// Return: if the IRQ is a spurious one (See https://wiki.osdev.org/PIC#Handling_Spurious_IRQs)
+void PIC_sendEOI(unsigned char irq) {
     // If the IRQ came from the Master PIC, it is sufficient to issue this command only to the Master PIC; 
     // however if the IRQ came from the Slave PIC, it is necessary to issue the command to both PIC chips.
     if (irq >= 8)
         outb(PIC2_COMMAND, PIC_EOI);
 
     outb(PIC1_COMMAND, PIC_EOI);
-
-    return false;
 }
 
 // The PIC has an internal register called the IMR, or the Interrupt Mask Register. 
