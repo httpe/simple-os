@@ -11,7 +11,6 @@ static inline _syscall3(SYS_WRITE, int, sys_write, int, fd, const void*, buf, ui
 int putchar(int ic) {
 #if defined(__is_libk)
 	terminal_putchar((char) ic);
-	// update_cursor();
 #else
 	char c = (char) ic;
 	sys_write(0, &c, 1);

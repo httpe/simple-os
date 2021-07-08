@@ -65,7 +65,6 @@ void terminal_write(const char* data, size_t size);
 void terminal_writestring(const char* data);
 void enable_cursor();
 void disable_cursor();
-void update_cursor(void);
 void terminal_get_color(tty_color_spec *fg, tty_color_spec *bg);
 void terminal_set_color(tty_color_spec fg, tty_color_spec bg);
 tty_color_spec ttycolor2spec(enum tty_color c);
