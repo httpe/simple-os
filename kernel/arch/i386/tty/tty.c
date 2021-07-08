@@ -3,11 +3,12 @@
 #include <stdint.h>
 #include <string.h>
 #include <common.h>
-
 #include <kernel/tty.h>
 #include <kernel/serial.h>
 #include <kernel/multiboot.h>
 #include <kernel/video.h>
+#include <kernel/lock.h>
+#include <kernel/panic.h>
 #include <arch/i386/kernel/port_io.h>
 
 // It is assumed that the first 1MiB physical address space is mapped to virtual address starting at 0xC0000000
@@ -32,9 +33,9 @@ static struct {
     uint video_cursor_y;
 
     int no_video_refresh;
+
+    yield_lock lk;
 } tty;
-
-
 
 // Ref: https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
 // Using xterm RGB value
@@ -56,6 +57,10 @@ static uint32_t tty_color2rgb_color[16] = {
 	ARGB(0,255,255,0),
 	ARGB(0, 255, 255, 255),
 };
+
+static void update_cursor(void);
+
+
 
 // Color spec:
 // In text mode, equal to tty_color
@@ -84,6 +89,7 @@ void tty_start_refresh()
 // Enable blinking cursor
 void enable_cursor()
 {
+    acquire(&tty.lk);
     tty.cursor_enabled = 1;
     if(!tty.video_mode) {
         outb(0x3D4, 0x0A);
@@ -92,6 +98,7 @@ void enable_cursor()
         outb(0x3D4, 0x0B);
         outb(0x3D5, (inb(0x3D5) & 0xE0) | TTY_CURSOR_SCANLINE_END);
     }
+    release(&tty.lk);
 
     update_cursor();
     
@@ -100,11 +107,13 @@ void enable_cursor()
 // Disable blinking cursor
 void disable_cursor()
 {
+    acquire(&tty.lk);
     tty.cursor_enabled = 0;
     if(!tty.video_mode) {
         outb(0x3D4, 0x0A);
         outb(0x3D5, 0x20);
     }
+    release(&tty.lk);
 
     fillrect(tty.terminal_color_bg, tty.video_cursor_x, tty.video_cursor_y, tty.font_width, 2);
     if(!tty.no_video_refresh) {
@@ -115,6 +124,7 @@ void disable_cursor()
 
 static void terminal_putentryat(unsigned char c, uint64_t color, size_t col, size_t row) {
     if(tty.initialized) {
+        PANIC_ASSERT(holding(&tty.lk));
         const size_t index = row * tty.text_width + col;
         if(tty.video_mode) {
             uint x = col * tty.font_width;
@@ -173,6 +183,8 @@ void terminal_initialize(uint32_t mbt_physical_addr) {
 
 void terminal_clear_screen(enum tty_clear_screen_mode mode) {
     size_t row_start, row_end, col_start, col_end;
+
+    acquire(&tty.lk);
     if(mode == TTY_CLEAR_SCREEN_AFTER) {
         row_start = tty.terminal_row;
         row_end = tty.text_height - 1;
@@ -219,14 +231,19 @@ void terminal_clear_screen(enum tty_clear_screen_mode mode) {
             terminal_putentryat(' ', tty.terminal_color, x, y);
         }
     }
+
+    release(&tty.lk);
 }
 
 void terminal_get_color(tty_color_spec *fg, tty_color_spec *bg) {
+    acquire(&tty.lk);
     *fg = tty.terminal_color_fg;
     *bg = tty.terminal_color_bg;
+    release(&tty.lk);
 }
 
 void terminal_set_color(tty_color_spec fg, tty_color_spec bg) {
+    acquire(&tty.lk);
     tty.terminal_color_fg = fg;
     tty.terminal_color_bg = bg;
     if(tty.video_mode) {
@@ -234,9 +251,11 @@ void terminal_set_color(tty_color_spec fg, tty_color_spec bg) {
     } else {
         tty.terminal_color =  vga_entry_color(tty.terminal_color_fg, tty.terminal_color_bg);
     }
+    release(&tty.lk);
 }
 
 void terminal_set_font_attr(enum tty_font_attr attr) {
+    acquire(&tty.lk);
     if(tty.video_mode) {
         uint64_t color = (uint64_t) tty.terminal_color_fg | ((uint64_t) tty.terminal_color_bg << 32);
         if(attr == TTY_FONT_ATTR_CLEAR) {
@@ -267,16 +286,18 @@ void terminal_set_font_attr(enum tty_font_attr attr) {
             tty.terminal_color = color;
         }
     }
-    
-
+    release(&tty.lk);
 }
 
-void terminal_scroll_up()
+static void terminal_scroll_up()
 {
+    PANIC_ASSERT(holding(&tty.lk));
     if(tty.video_mode) {
+        release(&tty.lk);
         disable_cursor();
         screen_scroll_up(tty.font_height, tty.terminal_color_bg);
         enable_cursor();
+        acquire(&tty.lk);
         if(!tty.no_video_refresh) {
             video_refresh();
         }
@@ -290,7 +311,7 @@ void terminal_scroll_up()
 
 void terminal_putchar(char c) {
     unsigned char uc = c;
-
+    acquire(&tty.lk);
     if(tty.initialized) {
         if (c == '\n') {
             tty.terminal_column = 0;
@@ -323,6 +344,7 @@ void terminal_putchar(char c) {
             ++tty.terminal_column;
         }
     }
+    release(&tty.lk);
 
     if (is_serial_port_initialized()) {
         write_serial(c);
@@ -343,6 +365,7 @@ void terminal_writestring(const char* data) {
 
 // Ref: https://wiki.osdev.org/Text_Mode_Cursor
 static void set_text_mode_cursor(size_t row, size_t col) {
+    PANIC_ASSERT(holding(&tty.lk));
     uint16_t pos = row * tty.text_width + col;
     outb(0x3D4, 0x0F);
     outb(0x3D5, (uint8_t)(pos & 0xFF));
@@ -351,7 +374,8 @@ static void set_text_mode_cursor(size_t row, size_t col) {
 }
 
 // Update text cursor to where the last char was printed
-void update_cursor(void) {
+static void update_cursor(void) {
+    acquire(&tty.lk);
     size_t col = tty.terminal_column;
     if(col >= tty.text_width) {
         col = tty.text_width - 1;
@@ -374,11 +398,13 @@ void update_cursor(void) {
             }
         }
     }
+    release(&tty.lk);
     
 }
 
 void set_cursor(size_t row, size_t col)
 {
+    acquire(&tty.lk);
     if(row >= tty.text_height) {
         row = tty.text_height - 1;
     }
@@ -387,11 +413,14 @@ void set_cursor(size_t row, size_t col)
     }
     tty.terminal_row = row;
     tty.terminal_column = col;
+    release(&tty.lk);
+
     update_cursor();
 }
 
 void move_cursor(int row_delta, int col_delta)
 {
+    acquire(&tty.lk);
     int row = (int) tty.terminal_row + row_delta;
     int col = (int) tty.terminal_column + col_delta;
     if(row < 0) {
@@ -406,6 +435,8 @@ void move_cursor(int row_delta, int col_delta)
     }
     tty.terminal_row = (size_t) row;
     tty.terminal_column = (size_t) col;
+    release(&tty.lk);
+
     update_cursor();
 }
 
@@ -422,6 +453,8 @@ void move_cursor(int row_delta, int col_delta)
 
 
 void get_cursor_position(size_t* row, size_t* col) {
+    acquire(&tty.lk);
     *row = tty.terminal_row;
     *col = tty.terminal_column;
+    release(&tty.lk);
 }
