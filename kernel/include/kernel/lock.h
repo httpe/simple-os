@@ -7,6 +7,8 @@
 // Disabling interrupt when locked, strictest
 // When the lock is holding by other process, yield
 // When the lock is holding by the same process, panic
+// Under single-CPU setting, if no manual yielding in critical region,
+//   it is suffice to protect only the write operation
 typedef struct yield_lock {
     uint locked;
     uint holding_pid;

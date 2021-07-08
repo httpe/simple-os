@@ -3,8 +3,7 @@
 #include <kernel/ata.h>
 #include <kernel/panic.h>
 #include <kernel/heap.h>
-
-static uint32_t next_block_dev_id = 1;
+#include <kernel/lock.h>
 
 #define MAX_STORAGE_DEV_COUNT 8
 
@@ -12,9 +11,11 @@ typedef struct ata_storage_info {
     bool is_slave;
 } ata_storage_info;
 
-static block_storage storage_list[MAX_STORAGE_DEV_COUNT];
-
-
+static struct {
+    uint32_t next_block_dev_id;
+    block_storage storage_list[MAX_STORAGE_DEV_COUNT];
+    yield_lock lk;
+} blk;
 
 static int64_t read_blocks_ata(block_storage* storage, void* buff,  uint32_t LBA, uint32_t block_count)
 {
@@ -40,11 +41,13 @@ static int64_t write_blocks_ata(block_storage* storage, uint32_t LBA, uint32_t b
 
 static void add_block_storage(block_storage* storage)
 {
-    storage->device_id = next_block_dev_id++;
+    acquire(&blk.lk);
+    storage->device_id = blk.next_block_dev_id++;
     for(uint32_t i=0; i<MAX_STORAGE_DEV_COUNT; i++) {
-        if(storage_list[i].device_id == 0) {
+        if(blk.storage_list[i].device_id == 0) {
             //id == 0 means unused slot
-            storage_list[i] = *storage;
+            blk.storage_list[i] = *storage;
+            release(&blk.lk);
             return;
         }
     }
@@ -54,8 +57,8 @@ static void add_block_storage(block_storage* storage)
 block_storage* get_block_storage(uint32_t device_id)
 {
     for(uint32_t i=0; i<MAX_STORAGE_DEV_COUNT; i++) {
-        if(storage_list[i].device_id == device_id) {
-            return &storage_list[i];
+        if(blk.storage_list[i].device_id == device_id) {
+            return &blk.storage_list[i];
         }
     }
     return NULL;
@@ -63,6 +66,8 @@ block_storage* get_block_storage(uint32_t device_id)
 
 void initialize_block_storage()
 {
+    blk.next_block_dev_id = 1; //ID starts from 1, 0 means unused
+
     // Add master/slave IDE devices
     
     int32_t total_block_count = get_total_28bit_sectors(false);
