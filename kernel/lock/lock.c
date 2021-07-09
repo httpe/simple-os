@@ -13,7 +13,7 @@ void acquire(yield_lock* lk)
     push_cli();
 
     proc* p = curr_proc();
-    uint pid = p?p->pid:0;
+    int pid = p?p->pid:0;
 
     while(lk->locked) {
         if(lk->holding_pid == pid) {
@@ -58,30 +58,37 @@ uint holding(yield_lock* lk)
 
 void start_writing(rw_lock* lk) 
 {
-    disable_interrupt();
+    // push_cli();
     acquire(&lk->lk);
-    while(lk->writing || lk->reading) {
+    proc* p = curr_proc();
+    PANIC_ASSERT(p != NULL);
+    while(lk->writing_pid || lk->reading) {
+        if(lk->writing_pid == p->pid) {
+            PANIC("RW Write Dead Lock");
+        }
         release(&lk->lk);
         yield();
         acquire(&lk->lk);
     }
-    lk->writing = 1;
+    lk->writing_pid = p->pid;
     release(&lk->lk);
-    enable_interrupt();
+    // pop_cli();
 }
 
 void finish_writing(rw_lock* lk) 
 {
     acquire(&lk->lk);
-    PANIC_ASSERT(lk->writing);
-    lk->writing = 0;
+    PANIC_ASSERT(lk->writing_pid);
+    lk->writing_pid = 0;
     release(&lk->lk);
 }
 
 void start_reading(rw_lock* lk) 
 {
     acquire(&lk->lk);
-    while(lk->writing) {
+    proc* p = curr_proc();
+    PANIC_ASSERT(p != NULL);
+    while(lk->writing_pid && lk->writing_pid != p->pid) {
         release(&lk->lk);
         yield();
         acquire(&lk->lk);

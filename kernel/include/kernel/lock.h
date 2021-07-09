@@ -11,7 +11,7 @@
 //   it is suffice to protect only the write operation
 typedef struct yield_lock {
     uint locked;
-    uint holding_pid;
+    int holding_pid;
 } yield_lock;
 
 // Does NOT disable interrupt when locked
@@ -21,7 +21,7 @@ typedef struct yield_lock {
 // from the interrupt handler
 typedef struct rw_lock {
     yield_lock lk;
-    uint writing;
+    int writing_pid;
     uint reading;
 } rw_lock;
 
