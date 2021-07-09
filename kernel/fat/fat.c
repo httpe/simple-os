@@ -1810,6 +1810,114 @@ static int fat32_release(struct fs_mount_point* mount_point, const char * path, 
 	return 0;
 }
 
+static int fat32_release_locked(struct fs_mount_point* mount_point, const char * path, struct fs_file_info *fi)
+{
+    fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
+    start_writing(&meta->rw_lk);
+    int res = fat32_release(mount_point, path, fi);
+    finish_writing(&meta->rw_lk);
+	return res;
+}
+
+static int fat32_readdir_locked(struct fs_mount_point* mount_point, const char * path, uint offset, struct fs_dir_filler_info* info, fs_dir_filler filler)
+{
+    fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
+    start_reading(&meta->rw_lk);
+    int res = fat32_readdir(mount_point, path, offset, info, filler);
+    finish_reading(&meta->rw_lk);
+    return res;
+}
+
+static int fat32_getattr_locked(struct fs_mount_point* mount_point, const char * path, struct fs_stat * st, struct fs_file_info *fi)
+{
+    fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
+    start_reading(&meta->rw_lk);
+    int res = fat32_getattr(mount_point, path, st, fi);
+    finish_reading(&meta->rw_lk);
+    return res;
+}
+
+static int fat32_read_locked(struct fs_mount_point* mount_point, const char * path, char *buf, uint size, uint offset, struct fs_file_info *fi)
+{
+    fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
+    start_reading(&meta->rw_lk);
+    int res = fat32_read(mount_point, path, buf, size, offset, fi);
+    finish_reading(&meta->rw_lk);
+    return res;
+}
+
+static int fat32_mknod_locked(struct fs_mount_point* mount_point, const char * path, uint mode)
+{
+    fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
+    start_writing(&meta->rw_lk);
+    int res = fat32_mknod(mount_point, path, mode);
+    finish_writing(&meta->rw_lk);
+    return res;
+}
+
+static int fat32_mkdir_locked(struct fs_mount_point* mount_point, const char * path, uint mode)
+{
+    fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
+    start_writing(&meta->rw_lk);
+    int res = fat32_mkdir(mount_point, path, mode);
+    finish_writing(&meta->rw_lk);
+    return res;
+}
+
+static int fat32_unlink_locked(struct fs_mount_point* mount_point, const char * path)
+{
+    fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
+    start_writing(&meta->rw_lk);
+    int res = fat32_unlink(mount_point, path);
+    finish_writing(&meta->rw_lk);
+    return res;
+}
+
+static int fat32_rmdir_locked(struct fs_mount_point* mount_point, const char * path)
+{
+    fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
+    start_writing(&meta->rw_lk);
+    int res = fat32_rmdir(mount_point, path);
+    finish_writing(&meta->rw_lk);
+    return res;
+}
+
+static int fat32_write_locked(struct fs_mount_point* mount_point, const char * path, const char *buf, uint size, uint offset, struct fs_file_info * fi)
+{
+    fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
+    start_writing(&meta->rw_lk);
+    int res = fat32_write(mount_point, path, buf, size, offset, fi);
+    finish_writing(&meta->rw_lk);
+    return res;
+}
+
+static int fat32_truncate_locked(struct fs_mount_point* mount_point, const char * path, uint size, struct fs_file_info *fi)
+{
+    fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
+    start_writing(&meta->rw_lk);
+    int res = fat32_truncate(mount_point, path, size, fi);
+    finish_writing(&meta->rw_lk);
+    return res;
+}
+
+static int fat32_rename_locked(struct fs_mount_point* mount_point, const char * from, const char * to, uint flags)
+{
+    fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
+    start_writing(&meta->rw_lk);
+    int res = fat32_rename(mount_point, from, to, flags);
+    finish_writing(&meta->rw_lk);
+	return res;
+}
+
+static int fat32_open_locked(struct fs_mount_point* mount_point, const char * path, struct fs_file_info *fi)
+{
+    fat32_meta* meta = (fat32_meta*) mount_point->fs_meta;
+    start_writing(&meta->rw_lk);
+    int res = fat32_open(mount_point, path, fi);
+    finish_writing(&meta->rw_lk);
+    return res;
+}
+
 static int fat32_mount(fs_mount_point* mount_point, void* option)
 {
     fat_mount_option* opt = (fat_mount_option*) option;
@@ -1818,18 +1926,18 @@ static int fat32_mount(fs_mount_point* mount_point, void* option)
     memset(meta, 0, sizeof(*meta));
     mount_point->fs_meta = meta;
     mount_point->operations = (struct file_system_operations) {
-        .release = fat32_release,
-        .open = fat32_open,
-        .mknod = fat32_mknod,
-        .mkdir = fat32_mkdir,
-        .read = fat32_read,
-        .write = fat32_write,
-        .readdir = fat32_readdir,
-        .getattr = fat32_getattr,
-        .rename = fat32_rename,
-        .rmdir = fat32_rmdir,
-        .unlink = fat32_unlink,
-        .truncate = fat32_truncate
+        .release = fat32_release_locked,
+        .open = fat32_open_locked,
+        .mknod = fat32_mknod_locked,
+        .mkdir = fat32_mkdir_locked,
+        .read = fat32_read_locked,
+        .write = fat32_write_locked,
+        .readdir = fat32_readdir_locked,
+        .getattr = fat32_getattr_locked,
+        .rename = fat32_rename_locked,
+        .rmdir = fat32_rmdir_locked,
+        .unlink = fat32_unlink_locked,
+        .truncate = fat32_truncate_locked
     };
 
     meta->storage = opt->storage;

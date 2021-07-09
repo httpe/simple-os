@@ -3,7 +3,7 @@
 #define _KERNEL_FAT_H
 
 #include <stdint.h>
-
+#include <kernel/lock.h>
 #include <kernel/block_io.h>
 #include <kernel/file_system.h>
 
@@ -127,6 +127,7 @@ typedef struct fat32_meta {
     uint32_t* fat;
 	block_storage* storage;
 	fat32_file_entry* file_table;
+	rw_lock rw_lk;
 } fat32_meta;
 
 typedef struct fat_cluster {
