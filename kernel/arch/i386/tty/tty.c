@@ -109,16 +109,17 @@ void disable_cursor()
 {
     acquire(&tty.lk);
     tty.cursor_enabled = 0;
-    if(!tty.video_mode) {
+    if(tty.video_mode) {
+        fillrect(tty.terminal_color_bg, tty.video_cursor_x, tty.video_cursor_y, tty.font_width, 2);
+        if(!tty.no_video_refresh) {
+            video_refresh_rect(tty.video_cursor_x, tty.video_cursor_y, tty.font_width, 2);
+        }
+    } else {
         outb(0x3D4, 0x0A);
         outb(0x3D5, 0x20);
     }
     release(&tty.lk);
 
-    fillrect(tty.terminal_color_bg, tty.video_cursor_x, tty.video_cursor_y, tty.font_width, 2);
-    if(!tty.no_video_refresh) {
-        video_refresh_rect(tty.video_cursor_x, tty.video_cursor_y, tty.font_width, 2);
-    }
 
 }
 
@@ -292,7 +293,11 @@ void terminal_set_font_attr(enum tty_font_attr attr) {
 static void terminal_scroll_up()
 {
     PANIC_ASSERT(holding(&tty.lk));
+    if(tty.terminal_row > 0) {
+        tty.terminal_row--;
+    }
     if(tty.video_mode) {
+        // TODD: ensure scrolling atomicity
         release(&tty.lk);
         disable_cursor();
         screen_scroll_up(tty.font_height, tty.terminal_color_bg);
@@ -303,9 +308,6 @@ static void terminal_scroll_up()
         }
     } else {
         memmove(VGA_MEMORY, VGA_MEMORY + tty.text_width, sizeof(VGA_MEMORY[0]) * tty.text_height * tty.text_width);
-    }
-    if(tty.terminal_row > 0) {
-        tty.terminal_row--;
     }
 }
 
