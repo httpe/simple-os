@@ -6,12 +6,14 @@
 #include <kernel/keyboard.h>
 #include <kernel/tty.h>
 #include <kernel/stat.h>
+#include <kernel/lock.h>
 #include <arch/i386/kernel/cpu.h>
 
 static struct circular_buffer {
     char buf[CONSOLE_BUF_SIZE];
     uint r;
     uint w;
+    yield_lock lk;
 } console_buffer;
 
 static enum tty_color console_color2tty_color[16] = {
@@ -34,12 +36,15 @@ static enum tty_color console_color2tty_color[16] = {
 };
 
 static int console_buffer_append(char c) {
+    acquire(&console_buffer.lk);
     if(console_buffer.w == (console_buffer.r + CONSOLE_BUF_SIZE - 1) % CONSOLE_BUF_SIZE) {
         // buffer is full, no more input allowed
+        release(&console_buffer.lk);
         return 0;
     }
     console_buffer.buf[console_buffer.w] = c;
     console_buffer.w = (console_buffer.w + 1) % CONSOLE_BUF_SIZE;
+    release(&console_buffer.lk);
     return 1;
 }
 
@@ -53,11 +58,14 @@ static int console_buffer_append_str(char* s) {
 }
 
 static int read_console_buffer(char* c) {
+    acquire(&console_buffer.lk);
     if(console_buffer.w == console_buffer.r) {
+        release(&console_buffer.lk);
         return 0;
     }
     *c =  console_buffer.buf[ console_buffer.r];
     console_buffer.r = (console_buffer.r + 1) % CONSOLE_BUF_SIZE;
+    release(&console_buffer.lk);
     return 1;
 }
 

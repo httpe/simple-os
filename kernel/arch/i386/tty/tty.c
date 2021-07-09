@@ -75,15 +75,20 @@ tty_color_spec ttycolor2spec(enum tty_color c) {
 
 void tty_stop_refresh()
 {
-    tty.no_video_refresh = 1;
+    acquire(&tty.lk);
+    tty.no_video_refresh++;
+    release(&tty.lk);
 }
 
 void tty_start_refresh()
 {
-    tty.no_video_refresh = 0;
-    if(tty.video_mode) {
+    acquire(&tty.lk);
+    PANIC_ASSERT(tty.no_video_refresh > 0);
+    tty.no_video_refresh--;
+    if(tty.no_video_refresh == 0 && tty.video_mode) {
         video_refresh();
     }
+    release(&tty.lk);
 }
 
 // Enable blinking cursor
