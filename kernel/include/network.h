@@ -56,7 +56,7 @@ static inline void switch_endian(uint8_t* buf, uint32_t n) {
 #define ARP_OP_CODE_REQUEST 1
 #define ARP_OP_CODE_REPLY 2
 
-typedef struct arp
+typedef struct arp_packet
 {
     uint16_t htype; // Hardware type, Ethernet is 0x1
     uint16_t ptype; // Protocol type, IP is 0x0800
@@ -67,7 +67,7 @@ typedef struct arp
     ip_addr  spa; // Source protocol address - plen bytes (see above). If IPv4 can just be a "u32" type.
     mac_addr  tha; // Destination hardware address - hlen bytes (see above)
     ip_addr  tpa; // Destination protocol address - plen bytes (see above). If IPv4 can just be a "u32" type.
-}  __attribute__((packed)) arp;
+}  __attribute__((packed)) arp_packet;
 
 // version = 4, IHL (header length) = 20 bytes
 #define IPv4_VER_IHL 0x45
