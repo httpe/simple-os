@@ -3,6 +3,7 @@
 #include <string.h>
 #include <kernel/panic.h>
 #include <kernel/paging.h>
+#include <kernel/lock.h>
 #include <kernel/heap.h>
 
 // Magic number for heap header on the left boundary of a (virtual address wise) contiguous space 
@@ -38,6 +39,7 @@ typedef struct heap {
     uint32_t min_size_in_pages;
     uint32_t max_size_in_pages;
     bool is_kernel;
+    yield_lock lk;
 } heap_t;
 
 static heap_t* kernel_heap;
@@ -200,6 +202,7 @@ heap_header_t* unify_free_space(heap_t* heap, heap_header_t* free_header) {
 }
 
 void heap_free(heap_t* heap, uint32_t vaddr) {
+    acquire(&heap->lk);
     heap_header_t* header = (heap_header_t*)(vaddr - sizeof(heap_header_t));
     ASSERT_VALID_HEAP_HEADER(header); // assert it is a heap managed space
     PANIC_ASSERT(header->next == NULL); // assert it is marked as used, not a free space
@@ -222,6 +225,7 @@ void heap_free(heap_t* heap, uint32_t vaddr) {
             memset(unified_free_footer, 0, sizeof(heap_footer_t));
             dealloc_pages(curr_page_dir(), PAGE_INDEX_FROM_VADDR((uint32_t)unified_free_header), page_count);
             heap->size_in_pages -= page_count;
+            release(&heap->lk);
             return;
         }
     }
@@ -247,7 +251,7 @@ void heap_free(heap_t* heap, uint32_t vaddr) {
         }
 
     }
-
+    release(&heap->lk);
 }
 
 void kfree(void* vaddr) {
@@ -324,6 +328,7 @@ heap_header_t* find_free_heap_node_fit_size(heap_t* heap, size_t size) {
 }
 
 void* heap_alloc(heap_t* heap, size_t size) {
+    acquire(&heap->lk);
     heap_header_t* header = find_free_heap_node_fit_size(heap, size);
     if (header == NULL || header->size < size) {
         // No free space or free space too small: expand heap
@@ -331,7 +336,7 @@ void* heap_alloc(heap_t* heap, size_t size) {
         if (header == NULL) {
             // allocation failed because of expansion failure 
             PANIC("Heap expansion failed");
-            return 0;
+            // return 0;
         }
         ASSERT_VALID_HEAP_HEADER(header);
         PANIC_ASSERT(header->size >= size);
@@ -343,6 +348,7 @@ void* heap_alloc(heap_t* heap, size_t size) {
     if (header->size <= size + sizeof(heap_header_t) + sizeof(heap_footer_t)) {
         void* m = (void*)header + sizeof(heap_header_t);
         // printf("heap alloc: %x[%u]\n", (uint32_t) m, size);
+        release(&heap->lk);
         return m;
     }
 
@@ -368,6 +374,7 @@ void* heap_alloc(heap_t* heap, size_t size) {
 
     void* m = (void*)header + sizeof(heap_header_t);
     // printf("heap alloc: %x[%u]\n", (uint32_t) m, size);
+    release(&heap->lk);
     return m;
 }
 
