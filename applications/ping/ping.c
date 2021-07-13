@@ -10,16 +10,6 @@
 // static inline _syscall4(SYS_TEST, int, send_ethernet_packet, mac_addr*, dest, enum ether_type, type, void*, buf, uint, size)
 // static inline _syscall5(SYS_TEST, int, send_ipv4_packet, uint, ttl, enum ipv4_protocol, protocol, ip_addr*, dst, void*, buf, uint, len)
 
-#define PING_DATA_SIZE 56
-
-typedef struct ping {
-	uint8_t type;
-	uint8_t code;
-	uint16_t checksum;
-	uint16_t identifier;
-	uint16_t sequence_number;
-	char data[PING_DATA_SIZE];
-} ping;
 
 int main(int argc, char* argv[]) {
 
@@ -36,7 +26,7 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	ping pkt = (ping) {
+	ping_packet pkt = (ping_packet) {
 		.type = ICMP_TYPE_ECHO_REQUEST,
 		.code = ICMP_CODE_ECHO,
 		.identifier = switch_endian16(getpid()),
@@ -44,11 +34,11 @@ int main(int argc, char* argv[]) {
 		.data = "A ping packet from Simple-OS!"
 	};
 
-	pkt.checksum = ipv4_icmp_checksum(&pkt, sizeof(ping));
+	pkt.checksum = ipv4_icmp_checksum(&pkt, sizeof(ping_packet));
 
 	uint8_t* receive_buff = malloc(65535);
 
-	int r = syscall_send_ipv4_packet(0x40, IPv4_PROTOCAL_ICMP, &dst, &pkt, sizeof(ping));
+	int r = syscall_send_ipv4_packet(0x40, IPv4_PROTOCAL_ICMP, &dst, &pkt, sizeof(ping_packet));
 	if(r < 0) {
 		printf("Ping: Send error\n");
 		exit(-r);

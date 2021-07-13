@@ -5,6 +5,15 @@
 #include <common.h>
 #include <syscall.h>
 
+
+
+///////////////////////////////
+//
+// Ethernet Protocol
+//
+///////////////////////////////
+
+
 typedef struct mac_addr {
     uint8_t addr[6]; // store as big endian
 } mac_addr;
@@ -21,53 +30,20 @@ enum ether_type {
 };
 
 
-typedef struct ip_addr {
-    uint8_t addr[4]; // store as big endian
-} ip_addr;
+///////////////////////////////
+//
+// IPv4 Protocol
+//
+///////////////////////////////
 
 // Hardcode IP addrs before we implement DHCP
 #define MY_IP ((ip_addr) {.addr = {10,0,2,16}})
 #define DEFAULT_GATEWAY_IP ((ip_addr) {.addr = {10,0,2,2}})
 #define SUBNET_MASK 0xFFFFFF00
 
-static inline uint16_t switch_endian16(uint16_t nb) {
-    return (nb>>8) | (nb<<8);
-}
-
-static inline uint32_t switch_endian32(uint32_t nb) {
-    return ((nb>>24)&0xff)      |
-            ((nb<<8)&0xff0000)   |
-            ((nb>>8)&0xff00)     |
-            ((nb<<24)&0xff000000);
-}
-
-static inline void switch_endian(uint8_t* buf, uint32_t n) {
-    for(uint i=0; i<n/2; i++) {
-        uint8_t b = buf[i];
-        buf[i] = buf[n-1-i];
-        buf[n-1-i] = b;
-    }
-}
-
-#define ARP_HARDWARE_TYPE_ETHERNET 0x1
-#define ARP_PROTOCOL_TYPE_IPv4 0x0800
-#define ARP_HARDWARE_ADDR_LEN_ETHERNET 6
-#define ARP_PROTOCAL_ADDR_LEN_IPv4 4
-#define ARP_OP_CODE_REQUEST 1
-#define ARP_OP_CODE_REPLY 2
-
-typedef struct arp_packet
-{
-    uint16_t htype; // Hardware type, Ethernet is 0x1
-    uint16_t ptype; // Protocol type, IP is 0x0800
-    uint8_t  hlen; // Hardware address length (Ethernet = 6)
-    uint8_t  plen; // Protocol address length (IPv4 = 4)
-    uint16_t opcode; // ARP Operation Code
-    mac_addr  sha; // Source hardware address - hlen bytes (see above)
-    ip_addr  spa; // Source protocol address - plen bytes (see above). If IPv4 can just be a "u32" type.
-    mac_addr  tha; // Destination hardware address - hlen bytes (see above)
-    ip_addr  tpa; // Destination protocol address - plen bytes (see above). If IPv4 can just be a "u32" type.
-}  __attribute__((packed)) arp_packet;
+typedef struct ip_addr {
+    uint8_t addr[4]; // store as big endian
+} ip_addr;
 
 // version = 4, IHL (header length) = 20 bytes
 #define IPv4_VER_IHL 0x45
@@ -117,6 +93,41 @@ static inline uint16_t ipv4_icmp_checksum(void* buff, uint16_t len)
     return (uint16_t) checksum;
 }
 
+
+///////////////////////////////
+//
+// ARP Protocol
+//
+///////////////////////////////
+
+#define ARP_HARDWARE_TYPE_ETHERNET 0x1
+#define ARP_PROTOCOL_TYPE_IPv4 0x0800
+#define ARP_HARDWARE_ADDR_LEN_ETHERNET 6
+#define ARP_PROTOCAL_ADDR_LEN_IPv4 4
+#define ARP_OP_CODE_REQUEST 1
+#define ARP_OP_CODE_REPLY 2
+
+typedef struct arp_packet
+{
+    uint16_t htype; // Hardware type, Ethernet is 0x1
+    uint16_t ptype; // Protocol type, IP is 0x0800
+    uint8_t  hlen; // Hardware address length (Ethernet = 6)
+    uint8_t  plen; // Protocol address length (IPv4 = 4)
+    uint16_t opcode; // ARP Operation Code
+    mac_addr  sha; // Source hardware address - hlen bytes (see above)
+    ip_addr  spa; // Source protocol address - plen bytes (see above). If IPv4 can just be a "u32" type.
+    mac_addr  tha; // Destination hardware address - hlen bytes (see above)
+    ip_addr  tpa; // Destination protocol address - plen bytes (see above). If IPv4 can just be a "u32" type.
+}  __attribute__((packed)) arp_packet;
+
+
+///////////////////////////////
+//
+// ICMP Protocol
+//
+///////////////////////////////
+
+
 enum icmp_type {
     ICMP_TYPE_ECHO_REPLY = 0,
     ICMP_TYPE_ECHO_REQUEST = 8
@@ -125,6 +136,50 @@ enum icmp_type {
 enum icmp_code {
     ICMP_CODE_ECHO = 0
 };
+
+#define PING_DATA_SIZE 56
+
+typedef struct ping_packet {
+	uint8_t type;
+	uint8_t code;
+	uint16_t checksum;
+	uint16_t identifier;
+	uint16_t sequence_number;
+	char data[PING_DATA_SIZE];
+} ping_packet;
+
+
+///////////////////////////////
+//
+// Inline Network Utility
+//
+///////////////////////////////
+
+static inline uint16_t switch_endian16(uint16_t nb) {
+    return (nb>>8) | (nb<<8);
+}
+
+static inline uint32_t switch_endian32(uint32_t nb) {
+    return ((nb>>24)&0xff)      |
+            ((nb<<8)&0xff0000)   |
+            ((nb>>8)&0xff00)     |
+            ((nb<<24)&0xff000000);
+}
+
+static inline void switch_endian(uint8_t* buf, uint32_t n) {
+    for(uint i=0; i<n/2; i++) {
+        uint8_t b = buf[i];
+        buf[i] = buf[n-1-i];
+        buf[n-1-i] = b;
+    }
+}
+
+
+///////////////////////////////
+//
+// Network System Calls
+//
+//////////////////////////////
 
 static inline _syscall5(SYS_NETWORK_SEND_IPv4_PKT, int, syscall_send_ipv4_packet, uint, ttl, enum ipv4_protocol, protocol, ip_addr*, dst, void*, buf, uint, len)
 static inline _syscall2(SYS_NETWORK_RECEIVE_IPv4_PKT, int, syscall_receive_ipv4_packet, void*, buf, uint, len)
