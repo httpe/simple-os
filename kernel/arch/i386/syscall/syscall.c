@@ -10,10 +10,10 @@
 #include <kernel/process.h>
 #include <kernel/ethernet.h>
 #include <kernel/ipv4.h>
+#include <kernel/icmp.h>
 #include <kernel/cpu.h>
 #include <kernel/video.h>
 #include <arch/i386/kernel/isr.h>
-
 
 int sys_exec(trapframe* r)
 {
@@ -323,22 +323,29 @@ int sys_rmdir(trapframe* r)
     return fs_rmdir(abs_path);
 }
 
-int sys_network_send_ipv4_pkt(trapframe* r)
-{
-    uint8_t ttl = *(uint8_t*) (r->esp + 4);
-    int protocol = *(int *) (r->esp + 8);
-    ip_addr* dst = *(ip_addr**) (r->esp + 12);
-    char * buf = *(char**) (r->esp + 16);
-    uint buf_size = *(uint *) (r->esp + 20);
-    int res = ipv4_send_packet(ttl, protocol, *dst, buf, buf_size);
-    return res;
-}
-
 int sys_network_receive_ipv4_pkt(trapframe* r)
 {
     char * buf = *(char**) (r->esp + 4);
     uint buf_size = *(uint *) (r->esp + 8);
     int res = ipv4_wait_for_next_packet(buf, buf_size);
+    return res;
+}
+
+int sys_prep_icmp_pkt(trapframe* r) 
+{
+    icmp_opt * opt = *(icmp_opt**) (r->esp + 4);
+    char * buf = *(char**) (r->esp + 8);
+    uint buf_size = *(uint *) (r->esp + 12);
+    int res = icmp_prep_pkt(opt, buf, buf_size);
+    return res;
+}
+
+int sys_send_icmp_pkt(trapframe* r)
+{
+    icmp_opt * opt = *(icmp_opt**) (r->esp + 4);
+    char * buf = *(char**) (r->esp + 8);
+    uint pkt_len = *(uint *) (r->esp + 12);
+    int res = icmp_send_pkt(opt, buf, pkt_len);
     return res;
 }
 
@@ -454,9 +461,6 @@ void syscall_handler(trapframe* r)
     case SYS_RMDIR:
         r->eax = sys_rmdir(r);
         break;
-    case SYS_NETWORK_SEND_IPv4_PKT:
-        r->eax = sys_network_send_ipv4_pkt(r);
-        break;
     case SYS_NETWORK_RECEIVE_IPv4_PKT:
         r->eax = sys_network_receive_ipv4_pkt(r);
         break;
@@ -465,6 +469,12 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_DRAW_PICTURE:
         r->eax = sys_draw_picture(r);
+        break;
+    case SYS_PREP_ICMP_PKT:
+        r->eax = sys_prep_icmp_pkt(r);
+        break;
+    case SYS_SEND_ICMP_PKT:
+        r->eax = sys_send_icmp_pkt(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);

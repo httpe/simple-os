@@ -1,22 +1,19 @@
+#include <kernel/ipv4.h>
+#include <kernel/process.h>
+#include <kernel/rtl8139.h>
+#include <kernel/arp.h>
+#include <kernel/panic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <kernel/panic.h>
-#include <kernel/rtl8139.h>
-#include <kernel/arp.h>
-#include <kernel/ipv4.h>
-#include <kernel/process.h>
 
-static void* ipv4_transmit_buffer = NULL;
-static uint16_t id_counter = 0x8bb4;
+static uint16_t id_counter = 0;
 static uint64_t pkt_received = 0;
 static void* ipv4_receive_buffer = NULL;
 static uint16_t last_received_pkt_len = 0;
 
 int init_ipv4()
 {
-    ipv4_transmit_buffer = malloc(RTL8139_TRANSMIT_BUF_SIZE);
-    memset(ipv4_transmit_buffer, 0, RTL8139_TRANSMIT_BUF_SIZE);
     ipv4_receive_buffer = malloc(RTL8139_TRANSMIT_BUF_SIZE);
     memset(ipv4_receive_buffer, 0, RTL8139_TRANSMIT_BUF_SIZE);
     // Announce our hardcoded ip address before sending out any packet
@@ -26,56 +23,59 @@ int init_ipv4()
     return 0;
 }
 
-int ipv4_send_packet(uint8_t ttl, enum ipv4_protocol protocol, ip_addr dst, void* buf, uint16_t len)
-{
-    PANIC_ASSERT(ipv4_transmit_buffer != NULL);
+int ipv4_prep_pkt(ipv4_opt* opt, void* buf, uint16_t buf_len) {
 
-    PANIC_ASSERT(len + sizeof(ipv4_header) <= RTL8139_TRANSMIT_BUF_SIZE);
-
+    eth_opt e = (eth_opt) {.type = ETHER_TYPE_IPv4, .data_len = sizeof(ipv4_header) + opt->data_len};
+    
     // Hardcoded type of IP routing table
     // If local (determined by SUBNET_MASK), send to the target machine
     // Otherwise, send to default gateway
-    mac_addr mac_dst = {0};
-    if((SUBNET_MASK & *(uint32_t*) dst.addr) == (SUBNET_MASK & *(uint32_t*) DEFAULT_GATEWAY_IP.addr)) {
-        int r = arp_ip2mac(dst, &mac_dst);
+    if((SUBNET_MASK & *(uint32_t*) opt->dst.addr) == (SUBNET_MASK & *(uint32_t*) DEFAULT_GATEWAY_IP.addr)) {
+        int r = arp_ip2mac(opt->dst, &e.dest_mac);
         if(r < 0) {
-            arp_probe(dst);
+            arp_probe(opt->dst);
             return -1;
         }
     } else {
-        int r = arp_ip2mac(DEFAULT_GATEWAY_IP, &mac_dst);
+        int r = arp_ip2mac(DEFAULT_GATEWAY_IP, &e.dest_mac);
         if(r < 0) {
             arp_probe(DEFAULT_GATEWAY_IP);
             return -1;
         }
     }
-    
-    ipv4_header* hdr = (ipv4_header*) ipv4_transmit_buffer;
+
+    int len_eth_hdr = eth_prep_pkt(&e, buf, buf_len);
+    if(len_eth_hdr < 0) {
+        return len_eth_hdr;
+    }
+
+    if(len_eth_hdr + sizeof(ipv4_header) + opt->data_len > buf_len) {
+        return -1;
+    }
+
+    ipv4_header* hdr = (ipv4_header*) (buf + len_eth_hdr);
+    // swap endianess of all multi bytes fields
+    // assuming ip_addr is store in big endian already
     *hdr = (ipv4_header) {
         .ver_ihl = IPv4_VER_IHL,
         .dscp_ecn = IPv4_DSCP_ECN,
-        .len = sizeof(ipv4_header) + len,
-        .id = id_counter++,
-        .flags_fragoffset = IPv4_NO_FRAG,
-        .ttl = ttl,
-        .protocol = protocol,
+        .len = switch_endian16(sizeof(ipv4_header) + opt->data_len),
+        .id = switch_endian16(id_counter++),
+        .flags_fragoffset = switch_endian16(IPv4_NO_FRAG),
+        .ttl = opt->ttl,
+        .protocol = opt->protocol,
         .src = MY_IP,
-        .dst = dst
+        .dst = opt->dst
     };
-
-    // swap endianess of all multi bytes fields
-    // assuming ip_addr is store in big endian already
-    hdr->len = switch_endian16(hdr->len);
-    hdr->id =  switch_endian16(hdr->id);
-    hdr->flags_fragoffset =  switch_endian16(hdr->flags_fragoffset);
     
     // the checksum is already in the right endianess
     hdr->hdr_checksum = ipv4_icmp_checksum(hdr, sizeof(ipv4_header));
 
-    memmove(ipv4_transmit_buffer + sizeof(ipv4_header), buf, len);
+    return len_eth_hdr + sizeof(ipv4_header);
+}
 
-    int res = send_ethernet_packet(mac_dst, ETHER_TYPE_IPv4, ipv4_transmit_buffer, len + sizeof(ipv4_header));
-
+int ipv4_send_pkt(void* buf, uint16_t pkt_len) {
+    int res = eth_send_pkt(buf, pkt_len);
     return res;
 }
 

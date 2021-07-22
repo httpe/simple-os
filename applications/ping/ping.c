@@ -6,10 +6,6 @@
 #include <common.h>
 #include <network.h>
 
-// static inline _syscall2(SYS_TEST, int, sys_send_network_packet, void*, buf, uint, size)
-// static inline _syscall4(SYS_TEST, int, send_ethernet_packet, mac_addr*, dest, enum ether_type, type, void*, buf, uint, size)
-// static inline _syscall5(SYS_TEST, int, send_ipv4_packet, uint, ttl, enum ipv4_protocol, protocol, ip_addr*, dst, void*, buf, uint, len)
-
 
 int main(int argc, char* argv[]) {
 
@@ -26,29 +22,37 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	ping_packet pkt = (ping_packet) {
+	icmp_opt opt = {
 		.type = ICMP_TYPE_ECHO_REQUEST,
 		.code = ICMP_CODE_ECHO,
-		.identifier = switch_endian16(getpid()),
-		.sequence_number = 0,
-		.data = "A ping packet from Simple-OS!"
+		.ipv4.dst = dst,
+		.ipv4.ttl = 0x40,
+		.rest.un.echo.id = getpid(),
+		.rest.un.echo.sequence = 0,
+		.data_len = 56
 	};
 
-	pkt.checksum = ipv4_icmp_checksum(&pkt, sizeof(ping_packet));
-
-	uint8_t* receive_buff = malloc(65535);
-
-	int r = syscall_send_ipv4_packet(0x40, IPv4_PROTOCAL_ICMP, &dst, &pkt, sizeof(ping_packet));
-	if(r < 0) {
+	char* transmit_buff = malloc(65535);
+	memset(transmit_buff, 0, 65535);
+	int hdr_len = syscall_prep_icmp_packet(&opt, transmit_buff, 65535);
+	if(hdr_len < 0) {
+		printf("Ping: Prepare packet error\n");
+		exit(-hdr_len);
+	}
+	const char* msg = "A ping packet from Simple-OS!";
+	memmove(transmit_buff + hdr_len, msg, strlen(msg));
+	int r_send = syscall_send_icmp_packet(&opt, transmit_buff, hdr_len + opt.data_len);
+	if(r_send < 0) {
 		printf("Ping: Send error\n");
-		exit(-r);
+		exit(-r_send);
 	}
 
+	uint8_t* receive_buff = malloc(65535);
 	while(1) {
 		int received = syscall_receive_ipv4_packet(receive_buff, 65535);
 		if(received < 0) {
 			printf("Ping: Receive error\n");
-			exit(-r);
+			exit(-received);
 		}
 
 		ipv4_header* hdr = (ipv4_header*) receive_buff;
@@ -61,24 +65,24 @@ int main(int argc, char* argv[]) {
 			continue;
 		}
 
-		if(received < (int) (sizeof(ipv4_header) + sizeof(ping))) {
+		if(received < (int) (sizeof(ipv4_header) + sizeof(icmp_header) + opt.data_len)) {
 			printf("Ping: Skipping packet too small\n");
 			continue;
 		}
 
-		ping* p = (ping*) (receive_buff + sizeof(ipv4_header));
+		icmp_header* p = (icmp_header*) (receive_buff + sizeof(ipv4_header));
 		if(p->type != ICMP_TYPE_ECHO_REPLY || p->code != ICMP_CODE_ECHO || 
-			p->identifier != pkt.identifier || p->sequence_number != pkt.sequence_number
+			p->rest.un.echo.id != switch_endian16(opt.rest.un.echo.id) || p->rest.un.echo.sequence != switch_endian16(opt.rest.un.echo.sequence)
 		) {
 			printf("Ping: Skipping other ICMP packet\n");
 			continue;
 		}
 		
-		if(memcmp(p->data, pkt.data, PING_DATA_SIZE) == 0) {
+		if(memcmp(p + 1, transmit_buff + hdr_len, opt.data_len) == 0) {
 			printf("Ping: GOOD reply received!\n");
 			exit(0);
 		} else {
-			printf("Ping: reply corrupted!\n");
+			printf("Ping: reply corrupted, data: \n%s\n", (char*) (p+1));
 			exit(1);
 		}
 		

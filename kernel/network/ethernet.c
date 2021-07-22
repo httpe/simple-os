@@ -13,11 +13,6 @@
 
 #define CRC_POLY    0xEDB88320
 
-static struct {
-    void* ethernet_transmit_buffer;
-    yield_lock lk;
-} eth;
-
 // Source: https://stackoverflow.com/questions/60684565/c-crc32-checksum-does-not-match-wireshark-on-ethernet-frame-check-sequence
 static uint32_t crc32(uint8_t *data, uint len)
 {
@@ -45,30 +40,27 @@ static uint32_t crc32(uint8_t *data, uint len)
 
 int init_ethernet()
 {
-    eth.ethernet_transmit_buffer = malloc(RTL8139_TRANSMIT_BUF_SIZE);
-    memset(eth.ethernet_transmit_buffer, 0, RTL8139_TRANSMIT_BUF_SIZE);
     return 0;
 }
 
-int send_ethernet_packet(mac_addr dest_mac, enum ether_type type, void* buf, uint16_t len)
-{
-    PANIC_ASSERT(eth.ethernet_transmit_buffer != NULL);
 
-    if(buf == NULL || len == 0) {
-        return 0;
+
+int eth_prep_pkt(eth_opt* opt,  void* buf, uint16_t buf_len) {
+    uint16_t pkt_len = sizeof(eth_header) + opt->data_len;
+    if(pkt_len > buf_len || pkt_len > RTL8139_TRANSMIT_BUF_SIZE) {
+        return -1;
     }
+    eth_header* header = (eth_header*) buf;
+    *header = (eth_header) {
+        .dest = opt->dest_mac,
+        .src = rtl8139_mac(),
+        .ethertype = switch_endian16(opt->type)
+    };
+    return sizeof(eth_header);
+}
 
-    uint pkt_len = sizeof(eth_header) + len;
-    PANIC_ASSERT(pkt_len <= RTL8139_TRANSMIT_BUF_SIZE);
-    acquire(&eth.lk);
-    eth_header* header = (eth_header*) eth.ethernet_transmit_buffer;
-    header->dest = dest_mac;
-    header->src = rtl8139_mac();
-    header->ethertype = switch_endian16(type);
-    // TODO: very inefficient, should implement a buffer queue 
-    memmove(eth.ethernet_transmit_buffer + sizeof(eth_header), buf, len);
-    int res = rtl8139_send_packet(eth.ethernet_transmit_buffer, pkt_len);
-    release(&eth.lk);
+int eth_send_pkt(void* buf, uint16_t pkt_len) {
+    int res = rtl8139_send_packet(buf, pkt_len);
     return res;
 }
 

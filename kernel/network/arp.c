@@ -15,7 +15,13 @@ typedef struct arp_record {
     mac_addr mac;
 } arp_record;
 
+#define ARP_TRANSMIT_BUFF_LEN 64
+
 static struct {
+    char transmit_buff[ARP_TRANSMIT_BUFF_LEN];
+    uint16_t transmit_hdr_len;
+    yield_lock transmit_lk;
+
     arp_record* arp_cache;
     arp_record* next_free_record;
     uint cached_records;
@@ -24,43 +30,47 @@ static struct {
 
 int init_arp()
 {
+    // for announce and prob the ethernet header and parts of the arp packet are the same, 
+    // so prepare the transmit buffer when init
+    arp_packet pl = {
+        .htype = switch_endian16(ARP_HARDWARE_TYPE_ETHERNET), 
+        .ptype = switch_endian16(ARP_PROTOCOL_TYPE_IPv4),
+        .hlen = ARP_HARDWARE_ADDR_LEN_ETHERNET,
+        .plen = ARP_PROTOCAL_ADDR_LEN_IPv4,
+        .opcode = switch_endian16(ARP_OP_CODE_REQUEST),
+        .sha = rtl8139_mac()
+    };
+    mac_addr dest_mac = {.addr = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}}; // broadcast
+    eth_opt opt = (eth_opt) {.dest_mac = dest_mac, .type = ETHER_TYPE_ARP, .data_len = sizeof(pl)};
+    arp.transmit_hdr_len = eth_prep_pkt(&opt, arp.transmit_buff, ARP_TRANSMIT_BUFF_LEN);
+    PANIC_ASSERT(arp.transmit_hdr_len > 0);
+    memmove(arp.transmit_buff + arp.transmit_hdr_len, &pl, sizeof(pl));
+
     arp.arp_cache = (arp_record*) malloc(sizeof(arp_record) * ARP_CACHE_N_RECORD);
     memset(arp.arp_cache, 0, sizeof(arp_record) * ARP_CACHE_N_RECORD);
     arp.next_free_record = arp.arp_cache;
     return 0;
 }
 
-int arp_announce_ip(ip_addr ip)
+int arp_announce_ip(ip_addr ip) 
 {
-    arp_packet pl = {
-        .htype = switch_endian16(ARP_HARDWARE_TYPE_ETHERNET), 
-        .ptype = switch_endian16(ARP_PROTOCOL_TYPE_IPv4),
-        .hlen = ARP_HARDWARE_ADDR_LEN_ETHERNET,
-        .plen = ARP_PROTOCAL_ADDR_LEN_IPv4,
-        .opcode = switch_endian16(ARP_OP_CODE_REQUEST)
-    };
-    pl.sha = rtl8139_mac();
-    pl.spa = ip;
-    pl.tpa = ip;
-    mac_addr dest_mac = {.addr = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}}; // broadcast
-    int res = send_ethernet_packet(dest_mac, ETHER_TYPE_ARP, &pl, sizeof(pl));
+    acquire(&arp.transmit_lk);
+    arp_packet* pl = (arp_packet*) (arp.transmit_buff + arp.transmit_hdr_len);
+    pl->spa = ip;
+    pl->tpa = ip;
+    int res = eth_send_pkt(arp.transmit_buff, arp.transmit_hdr_len + sizeof(arp_packet));
+    release(&arp.transmit_lk);
     return res;
 }
 
 int arp_probe(ip_addr ip)
 {
-    arp_packet pl = {
-        .htype = switch_endian16(ARP_HARDWARE_TYPE_ETHERNET), 
-        .ptype = switch_endian16(ARP_PROTOCOL_TYPE_IPv4),
-        .hlen = ARP_HARDWARE_ADDR_LEN_ETHERNET,
-        .plen = ARP_PROTOCAL_ADDR_LEN_IPv4,
-        .opcode = switch_endian16(ARP_OP_CODE_REQUEST)
-    };
-    pl.sha = rtl8139_mac();
-    // pl.spa = MY_IP;
-    pl.tpa = ip;
-    mac_addr dest_mac = {.addr = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}}; // broadcast
-    int res = send_ethernet_packet(dest_mac, ETHER_TYPE_ARP, &pl, sizeof(pl));
+    acquire(&arp.transmit_lk);
+    arp_packet* pl = (arp_packet*) (arp.transmit_buff + arp.transmit_hdr_len);
+    pl->spa = (ip_addr) {0};
+    pl->tpa = ip;
+    int res = eth_send_pkt(arp.transmit_buff, arp.transmit_hdr_len + sizeof(arp_packet));
+    release(&arp.transmit_lk);
     return res;
 }
 

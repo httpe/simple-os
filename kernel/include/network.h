@@ -29,6 +29,11 @@ enum ether_type {
     ETHER_TYPE_ARP = 0x0806
 };
 
+typedef struct {
+    mac_addr dest_mac;
+    enum ether_type type;
+    uint16_t data_len;
+} eth_opt;
 
 ///////////////////////////////
 //
@@ -93,6 +98,12 @@ static inline uint16_t ipv4_icmp_checksum(void* buff, uint16_t len)
     return (uint16_t) checksum;
 }
 
+typedef struct {
+    uint8_t ttl;
+    enum ipv4_protocol protocol;
+    ip_addr dst;
+    uint16_t data_len;
+} ipv4_opt;
 
 ///////////////////////////////
 //
@@ -137,17 +148,44 @@ enum icmp_code {
     ICMP_CODE_ECHO = 0
 };
 
-#define PING_DATA_SIZE 56
+//mimic Linux: /usr/include/netinet/ip_icmp.h
+typedef struct icmp_rest_of_header {
+    union
+    {
+        struct
+        {
+        uint16_t	id;
+        uint16_t	sequence;
+        } echo;			/* echo datagram */
+        uint32_t	gateway;	/* gateway address */
+        struct
+        {
+        uint16_t	__glibc_reserved;
+        uint16_t	mtu;
+        } frag;			/* path mtu discovery */
+    } un;
+} __attribute__((packed)) icmp_rest_of_header;
 
-typedef struct ping_packet {
-	uint8_t type;
-	uint8_t code;
+
+typedef struct icmp_header {
+	uint8_t type; // enum icmp_type
+	uint8_t code; // enum icmp_code
 	uint16_t checksum;
-	uint16_t identifier;
-	uint16_t sequence_number;
-	char data[PING_DATA_SIZE];
-} ping_packet;
+    icmp_rest_of_header rest;
+} __attribute__((packed)) icmp_header;
 
+
+typedef struct {
+    struct {
+        uint8_t ttl;
+        ip_addr dst;
+    } ipv4;
+
+    enum icmp_type type;
+    enum icmp_code code;
+    icmp_rest_of_header rest;
+    uint16_t data_len;
+} icmp_opt;
 
 ///////////////////////////////
 //
@@ -181,8 +219,10 @@ static inline void switch_endian(uint8_t* buf, uint32_t n) {
 //
 //////////////////////////////
 
-static inline _syscall5(SYS_NETWORK_SEND_IPv4_PKT, int, syscall_send_ipv4_packet, uint, ttl, enum ipv4_protocol, protocol, ip_addr*, dst, void*, buf, uint, len)
 static inline _syscall2(SYS_NETWORK_RECEIVE_IPv4_PKT, int, syscall_receive_ipv4_packet, void*, buf, uint, len)
+
+static inline _syscall3(SYS_PREP_ICMP_PKT, int, syscall_prep_icmp_packet, icmp_opt*, opt, void*, buf, uint16_t, buf_len)
+static inline _syscall3(SYS_SEND_ICMP_PKT, int, syscall_send_icmp_packet, icmp_opt*, opt, void*, buf, uint16_t, pkt_len)
 
 
 #endif
