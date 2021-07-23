@@ -370,7 +370,9 @@ int sys_draw_picture(trapframe* r)
 void syscall_handler(trapframe* r)
 {
     // Avoid scheduling when in syscall/kernel space
-    disable_interrupt();
+    // => no longer needed, after implementing locks
+    // disable_interrupt();
+    
 
     // trapframe r will be pop when returning to user space
     // so r->eax will be the return value of the syscall  
