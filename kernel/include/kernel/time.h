@@ -1,6 +1,8 @@
 #ifndef _TIME_H
 #define _TIME_H
 
+#include <stdint.h>
+
 // From Linux struct_tm.h
 /* ISO C `broken-down time' structure.  */
 typedef struct date_time
@@ -21,6 +23,9 @@ typedef struct date_time
 
 } date_time;
 
+typedef int64_t time_t;
+
 date_time current_datetime();
+time_t datetime2epoch(date_time* tim_p);
 
 #endif
