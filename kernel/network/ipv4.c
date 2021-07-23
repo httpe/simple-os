@@ -2,7 +2,9 @@
 #include <kernel/process.h>
 #include <kernel/rtl8139.h>
 #include <kernel/arp.h>
+#include <kernel/time.h>
 #include <kernel/panic.h>
+#include <kernel/errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -109,10 +111,17 @@ int ipv4_process_packet(void* buf, uint len)
 }
 
 
-int ipv4_wait_for_next_packet(void* buf, uint buf_size)
+int ipv4_wait_for_next_packet(void* buf, uint buf_size, uint timeout_sec)
 {
     uint64_t n = pkt_received;
+    date_time start = current_datetime(), end;
+    time_t epoch0 = datetime2epoch(&start), epoch1;
     while(pkt_received == n) {
+        end = current_datetime();
+        epoch1 = datetime2epoch(&end);
+        if(epoch1 - epoch0 > timeout_sec) {
+            return -1;
+        }
         yield();
     }
     if(buf_size < last_received_pkt_len) {

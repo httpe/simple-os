@@ -327,7 +327,8 @@ int sys_network_receive_ipv4_pkt(trapframe* r)
 {
     char * buf = *(char**) (r->esp + 4);
     uint buf_size = *(uint *) (r->esp + 8);
-    int res = ipv4_wait_for_next_packet(buf, buf_size);
+    uint time_out_sec = *(uint *) (r->esp + 12);
+    int res = ipv4_wait_for_next_packet(buf, buf_size, time_out_sec);
     return res;
 }
 

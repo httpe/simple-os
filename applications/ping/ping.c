@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
 
 	uint8_t* receive_buff = malloc(65535);
 	while(1) {
-		int received = syscall_receive_ipv4_packet(receive_buff, 65535);
+		int received = syscall_receive_ipv4_packet(receive_buff, 65535, 5);
 		if(received < 0) {
 			printf("Ping: Receive error\n");
 			exit(-received);

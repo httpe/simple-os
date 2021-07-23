@@ -219,7 +219,7 @@ static inline void switch_endian(uint8_t* buf, uint32_t n) {
 //
 //////////////////////////////
 
-static inline _syscall2(SYS_NETWORK_RECEIVE_IPv4_PKT, int, syscall_receive_ipv4_packet, void*, buf, uint, len)
+static inline _syscall3(SYS_NETWORK_RECEIVE_IPv4_PKT, int, syscall_receive_ipv4_packet, void*, buf, uint, len, uint, timeout_sec)
 
 static inline _syscall3(SYS_PREP_ICMP_PKT, int, syscall_prep_icmp_packet, icmp_opt*, opt, void*, buf, uint16_t, buf_len)
 static inline _syscall3(SYS_SEND_ICMP_PKT, int, syscall_send_icmp_packet, icmp_opt*, opt, void*, buf, uint16_t, pkt_len)
