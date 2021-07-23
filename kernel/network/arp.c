@@ -25,7 +25,7 @@ static struct {
     arp_record* arp_cache;
     arp_record* next_free_record;
     uint cached_records;
-    yield_lock lk;
+    yield_lock arp_cache_lk;
 } arp;
 
 int init_arp()
@@ -77,7 +77,7 @@ int arp_probe(ip_addr ip)
 int arp_process_packet(void* buf, uint16_t len)
 {
     UNUSED_ARG(len);
-    acquire(&arp.lk);
+    acquire(&arp.arp_cache_lk);
     PANIC_ASSERT(arp.arp_cache != NULL);
     
     arp_packet* pkt = (arp_packet*) buf;
@@ -106,22 +106,22 @@ int arp_process_packet(void* buf, uint16_t len)
             pkt->sha.addr[5]
         );
     }
-    release(&arp.lk);
+    release(&arp.arp_cache_lk);
     return 0;
 }
 
 
 int arp_ip2mac(ip_addr ip, mac_addr* mac)
 {
-    acquire(&arp.lk);
+    acquire(&arp.arp_cache_lk);
     for(uint i=0; i<arp.cached_records; i++) {
         if(memcmp(arp.arp_cache[i].ip.addr, ip.addr, 4) == 0) {
             *mac = arp.arp_cache[i].mac;
-            release(&arp.lk);
+            release(&arp.arp_cache_lk);
             return 0;
         }
     }
-    release(&arp.lk);
+    release(&arp.arp_cache_lk);
     return -1;
 }
 
