@@ -6,6 +6,9 @@
 #include <kernel/vbe.h>
 #include <kernel/multiboot.h>
 
+#define FONT_HEIGHT 16
+#define FONT_WIDTH 8
+
 void putpixel(uint32_t color, int x, int y);
 void fillrect(uint32_t color, int x, int y, int w, int h);
 void drawpic(uint32_t* buff, int x, int y, int w, int h);
