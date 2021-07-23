@@ -1,5 +1,6 @@
 #include <kernel/video.h>
 #include <kernel/paging.h>
+#include <kernel/lock.h>
 #include <kernel/panic.h>
 #include <string.h>
 #include <stdio.h>
@@ -29,12 +30,15 @@ static struct {
   uint32_t width;
   uint32_t height;
   uint8_t* font;
+  yield_lock lk;
 } video;
 
 
 void putpixel(uint32_t color, int x, int y) {
     if(!video.initialized) return;
-    video.framebuffer[x + y*video.width] = color;
+    acquire(&video.lk);
+    video.buffer_next[x + y*video.width] = color;
+    release(&video.lk);
 }
 
 // void putpixel24(uint32_t color, int x, int y) {
@@ -47,6 +51,7 @@ void putpixel(uint32_t color, int x, int y) {
 void video_refresh()
 {
     if(!video.initialized) return;
+    acquire(&video.lk);
     // only write changed pixels to video memory
     for(uint i=0; i<video.buffer_pixel_size; i++) {
         if(video.buffer_next[i] != video.buffer_curr[i]) {
@@ -54,12 +59,15 @@ void video_refresh()
             video.framebuffer[i] = video.buffer_next[i];
         }
     }
+    release(&video.lk);
 }
+
 void video_refresh_rect(uint x, uint y, uint w, uint h)
 {
     if(!video.initialized) return;
     uint off = y*video.width + x;
     uint i,j;
+    acquire(&video.lk);
     for(i=0; i<h;i++) {
         for(j=0; j<w;j++) {
             if(video.buffer_next[off] != video.buffer_curr[off]) {
@@ -70,19 +78,21 @@ void video_refresh_rect(uint x, uint y, uint w, uint h)
         }
         off += video.width - w;
     }
+    release(&video.lk);
 }
 
 void fillrect(uint32_t color, int x, int y, int w, int h) {
     if(!video.initialized) return;
     uint32_t* where = &video.buffer_next[x + y*video.width];
     int i, j;
- 
+    acquire(&video.lk);
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             *where++ = color;
         }
         where += video.width - w;
     }
+    release(&video.lk);
 }
 
 void drawpic(uint32_t* buff, int x, int y, int w, int h) {
@@ -98,13 +108,14 @@ void drawpic(uint32_t* buff, int x, int y, int w, int h) {
     }
     uint32_t* where = &video.buffer_next[x + y*video.width];
     int i, j;    
- 
+    acquire(&video.lk);
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             *where++ = *buff++;
         }
         where += video.width - w;
     }
+    release(&video.lk);
 }
  
 void drawchar(unsigned char c, int x, int y, uint32_t bgcolor, uint32_t fgcolor)
@@ -114,6 +125,7 @@ void drawchar(unsigned char c, int x, int y, uint32_t bgcolor, uint32_t fgcolor)
     int mask[8]={128,64,32,16,8,4,2,1}; // should match FONT_WIDTH
 	unsigned char *glyph=video.font+(int)c*FONT_HEIGHT;
     uint32_t* buff = &video.buffer_next[x + y*video.width];
+    acquire(&video.lk);
 	for(cy=0;cy<FONT_HEIGHT;cy++){
         // optimized but only usable for font width == 8
         *buff++ = glyph[cy]&mask[0]?fgcolor:bgcolor;
@@ -129,12 +141,15 @@ void drawchar(unsigned char c, int x, int y, uint32_t bgcolor, uint32_t fgcolor)
 		// }
         buff += video.width - FONT_WIDTH;
 	}
+    release(&video.lk);
 }
 
 void screen_scroll_up(uint32_t row, uint32_t bgcolor)
 {
     if(!video.initialized) return;
+    acquire(&video.lk);
     memmove(video.buffer_next, ((void*) video.buffer_next) + row * video.pitch, (video.height - row)*video.pitch);
+    release(&video.lk);
     fillrect(bgcolor, 0, video.height - row, video.width, row);
 }
 
