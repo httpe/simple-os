@@ -92,7 +92,9 @@ int ipv4_process_packet(void* buf, uint len)
     hdr->hdr_checksum = orig_checksum;
     char* eq = (orig_checksum == our_checksum) ? "==":"!=";
     
-    printf("IPv4 Pkt Received, Chksum: Received[0x%x] %s Calculated[0x%x]:\n", orig_checksum, eq, our_checksum);
+    printf("IPv4 Pkt Received from %u.%u.%u.%u, Chksum: Received[0x%x] %s Calculated[0x%x]:\n", 
+        hdr->src.addr[0], hdr->src.addr[1], hdr->src.addr[2], hdr->src.addr[3], 
+        orig_checksum, eq, our_checksum);
     
     uint8_t* buff = (uint8_t*) buf;
     for(uint i=0; i<len; i++) {
