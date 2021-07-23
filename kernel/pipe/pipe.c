@@ -1,15 +1,14 @@
+#include <kernel/pipe.h>
+#include <kernel/stat.h>
+#include <kernel/process.h>
+#include <kernel/errno.h>
+#include <kernel/lock.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <common.h>
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
-#include <kernel/errno.h>
-#include <kernel/stat.h>
-#include <kernel/file_system.h>
-#include <kernel/process.h>
-
-#define N_MAX_PIPE 64
 
 typedef struct pipe {
     uint id;
@@ -19,19 +18,21 @@ typedef struct pipe {
     int r;
     int w;
     uint ref;
+    yield_lock lk;
 } pipe;
 
 typedef struct pipe_meta {
     uint next_pipe_id;
     pipe* all_pipe;
+    yield_lock lk;
 } pipe_meta;
 
-static pipe* name2pipe(struct fs_mount_point* mp, const char* name, uint* idx) {
-    pipe_meta* meta = (pipe_meta*) mp->fs_meta;
+static pipe* name2pipe(pipe_meta* meta, const char* name, uint* idx) {
     for(int i=0; i< N_MAX_PIPE; i++) {
         pipe* p = &meta->all_pipe[i];
         if(p->ref) {
-            if(strlen(p->name) > 0 && strcmp(name, p->name) == 0) {
+            // skip "/" which means unamed pipe
+            if(strcmp(p->name, "/") != 0 && strcmp(name, p->name) == 0) {
                 if(idx != NULL) {
                     *idx = i;
                 }
@@ -68,7 +69,10 @@ static int pipe_read(struct fs_mount_point* mount_point, const char * path, char
     }
 
     pipe_meta* meta = (pipe_meta*) mount_point->fs_meta;
+    acquire(&meta->lk);
     pipe* p = &meta->all_pipe[fi->fh];
+    acquire(&p->lk);
+    release(&meta->lk);
 
     // if(size == 0) {
     //     // size zero means read all available
@@ -79,7 +83,9 @@ static int pipe_read(struct fs_mount_point* mount_point, const char * path, char
     while(read_in < size) {
         if(bytes_ready(p) == 0)  {
             // buffer is empty
+            release(&p->lk);
             yield();
+            acquire(&p->lk);
             // // use offset to choose blocking vs non-blocking behavior
             // if(offset == 0) {
             //     // block until the pipe get written
@@ -96,7 +102,7 @@ static int pipe_read(struct fs_mount_point* mount_point, const char * path, char
             }
         }
     }
-
+    release(&p->lk);
     return read_in;
 }
 
@@ -111,13 +117,18 @@ static int pipe_write(struct fs_mount_point* mount_point, const char * path, con
     }
 
     pipe_meta* meta = (pipe_meta*) mount_point->fs_meta;
+    acquire(&meta->lk);
     pipe* p = &meta->all_pipe[fi->fh];
+    acquire(&p->lk);
+    release(&meta->lk);
 
     uint written = 0;
     while(written < size) {
         if(free_space(p) == 0)  {
             // buffer is full
+            release(&p->lk);
             yield();
+            acquire(&p->lk);
             // if(offset == 0) {
             //     // block until the pipe get read
             //     yield();
@@ -132,30 +143,34 @@ static int pipe_write(struct fs_mount_point* mount_point, const char * path, con
             }
         }
     }
-
+    release(&p->lk);
     return written;
 }
 
 static int pipe_getattr(struct fs_mount_point* mount_point, const char * path, struct fs_stat * st, struct fs_file_info *fi)
 {
     pipe* p;
+    pipe_meta* meta = (pipe_meta*) mount_point->fs_meta;
     memset(st, 0, sizeof(*st));
+    acquire(&meta->lk);
     if(fi) {
-        // use fi in order to getattr on opened unnamed pipe
-        pipe_meta* meta = (pipe_meta*) mount_point->fs_meta;
+        // check fi first in order to do getattr on opened unnamed pipe
         p = &meta->all_pipe[fi->fh];
     } else if(strcmp("/", path) == 0) {
         st->mode = S_IRWXU | S_IRWXG | S_IRWXO | S_IFIFO;
+        release(&meta->lk);
         return 0;
     } else {
-        p = name2pipe(mount_point, path, NULL);
+        p = name2pipe(meta, path, NULL);
     }
 
     if(p) {
         st->size = bytes_ready(p);
         st->mode = S_IRWXU | S_IRWXG | S_IRWXO | S_IFIFO;
+        release(&meta->lk);
         return 0;
     } else {
+        release(&meta->lk);
         return -ENOENT;
     }
 }
@@ -163,20 +178,23 @@ static int pipe_getattr(struct fs_mount_point* mount_point, const char * path, s
 static int pipe_open(struct fs_mount_point* mount_point, const char * path, struct fs_file_info *fi)
 {
     uint idx;
-    pipe* p0 = name2pipe(mount_point, path, &idx);
+    pipe_meta* meta = (pipe_meta*) mount_point->fs_meta;
+
+    acquire(&meta->lk);
+    pipe* p0 = name2pipe(meta, path, &idx);
     if(p0) {
         p0->ref++;
         fi->fh = idx;
     } else {
-        pipe_meta* global = (pipe_meta*) mount_point->fs_meta;
         for(int i=0; i< N_MAX_PIPE; i++) {
-            pipe* p = &global->all_pipe[i];
+            pipe* p = &meta->all_pipe[i];
             if(p->ref == 0) {
-                p->id = global->next_pipe_id++;
+                p->id = meta->next_pipe_id++;
                 p->name = strdup(path);
-                // use flags to represent pipe size
-                uint size = ((uint) fi->flags) >> 4;
+                // use high bits of flags to represent pipe size
+                uint size = ((uint) fi->flags) & ~ (uint) 0xF;
                 if(size <= 1) {
+                    release(&meta->lk);
                     return -EINVAL;
                 }
                 p->size = size;
@@ -190,6 +208,7 @@ static int pipe_open(struct fs_mount_point* mount_point, const char * path, stru
             }
         }
     }
+    release(&meta->lk);
     return 0;
 }
 
@@ -203,17 +222,22 @@ static int pipe_release(struct fs_mount_point* mount_point, const char * path, s
     }
 
     pipe_meta* meta = (pipe_meta*) mount_point->fs_meta;
+    acquire(&meta->lk);
     pipe* p = &meta->all_pipe[fi->fh];
 
     if(p) {
+        acquire(&p->lk);
         p->ref--;
-        if(p->ref == 0) { 
+        if(p->ref == 0) {
+            // no need to release p->lk here because it will be freed
             free(p->name);
             free(p->buf);
             memset(p, 0, sizeof(*p));
+        } else {
+            release(&p->lk);
         }
     }
-
+    release(&meta->lk);
 	return 0;
 }
 

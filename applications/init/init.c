@@ -145,9 +145,10 @@ static void test_file_system() {
     printf("Unlink(%d)\n", res_unlink);
 }
 
-void pipe_test() {
-    // Pipe FS uses high byte of the open flag to determine the pipe buffer size
-    int fd_pipe = open("/pipe", (255 << 4) | O_RDWR);
+void test_pipe() {
+    // Pipe FS uses high bits of the open flag to determine the pipe buffer size
+    // Here we are asking for 16 << 4  == 255 bytes
+    int fd_pipe = open("/pipe", (16 << 4) | O_RDWR);
     if(fd_pipe < 0) {
         printf("Open pipe error (%d)\n", fd_pipe);
     }
@@ -194,7 +195,8 @@ int main(int argc, char* argv[]) {
     // test_multi_process();
     // test_libc();
     // test_file_system();
-    pipe_test();
+    // test_pipe();
+    UNUSED_ARG(test_pipe);
     UNUSED_ARG(test_multi_process);
     UNUSED_ARG(test_libc);
     UNUSED_ARG(test_file_system);
