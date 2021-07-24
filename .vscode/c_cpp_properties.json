@@ -19,15 +19,13 @@
         },
         {
             "name": "Linux",
-            "includePath": [
-            ],
+            "includePath": [],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "gnu17",
             "cppStandard": "gnu++14",
-            "intelliSenseMode": "linux-gcc-x86",
-            "compilerArgs": [
-            ]
+            "intelliSenseMode": "${default}",
+            "compilerArgs": []
         },
         {
             "name": "i686-elf",
