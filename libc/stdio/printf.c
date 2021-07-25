@@ -3,14 +3,15 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 // Adapted from https://github.com/mit-pdos/xv6-public/blob/master/printf.c
-static int int2str(int xx, int base, int sgn, char* out)
+static int int2str(long long xx, int base, int sgn, char* out)
 {
 	static char digits[] = "0123456789ABCDEF";
-	char buf[16];
+	char buf[32];
 	int i, neg, j;
-	unsigned int x;
+	unsigned long long x;
 
 	neg = 0;
 	if(sgn && xx < 0){
@@ -48,7 +49,7 @@ static int vprintf0(struct printf_output* out, const char* restrict format, va_l
 	while (*format != '\0') {
 		size_t maxrem = INT_MAX - written;
 
-		if (format[0] != '%' || format[1] == '%') {
+		if (format[0] != '%' || (format[0] == '%' && format[1] == '%')) {
 			if (format[0] == '%')
 				format++;
 			size_t amount = 1;
@@ -65,7 +66,7 @@ static int vprintf0(struct printf_output* out, const char* restrict format, va_l
 			continue;
 		}
 
-		const char* format_begun_at = format++;
+		const char* format_begun_at = format++; // skip %
 
 		if (*format == 'c') {
 			format++;
@@ -88,26 +89,31 @@ static int vprintf0(struct printf_output* out, const char* restrict format, va_l
 			if (!out->write(out, str, len))
 				return -1;
 			written += len;
-		} else if (*format == 'd' || *format == 'u') {
+		} else if (*format == 'd' || *format == 'u' || *format == 'x' || *format == 'p' || *format == 'l' ||  *format == 'h') {
+			int length_specifier = 0;
+			while(*format == 'l' || *format == 'h') {
+				if(*format == 'l') {
+					length_specifier++;
+				} else {
+					length_specifier--;
+				}
+				format++;
+			}
 			int sgn = *format == 'd';
 			format++;
-			int number = va_arg(parameters, int);
-			char str[16];
+			long long number;
+			 if(length_specifier == 1) {
+				number = va_arg(parameters, long);
+			} else if(length_specifier == 2) {
+				number = va_arg(parameters, long long);
+			} else {
+				number = va_arg(parameters, int);
+			}
+			length_specifier = 0;
+			
+			char str[32];
 
 			size_t len = int2str(number, 10, sgn, str);
-			if (maxrem < len) {
-				// TODO: Set errno to EOVERFLOW.
-				return -1;
-			}
-			if (!out->write(out, str, len))
-				return -1;
-			written += len;
-		} else if (*format == 'x' || *format == 'p') {
-			format++;
-			int number = va_arg(parameters, int);
-			char str[16];
-
-			size_t len = int2str(number, 16, 0, str);
 			if (maxrem < len) {
 				// TODO: Set errno to EOVERFLOW.
 				return -1;
