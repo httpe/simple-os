@@ -1,11 +1,12 @@
-#include <stdio.h>
-#include <common.h>
-
 #include <kernel/timer.h>
+#include <kernel/time.h>
+#include <kernel/process.h>
+#include <kernel/lock.h>
+#include <arch/i386/kernel/cpu.h>
 #include <arch/i386/kernel/isr.h>
 #include <arch/i386/kernel/port_io.h>
-
-#include <kernel/process.h>
+#include <stdio.h>
+#include <common.h>
 
 // Ref: http://www.jamesmolloy.co.uk/tutorial_html/5.-IRQs%20and%20the%20PIT.html
 // Ref: https://github.com/cfenollosa/os-tutorial/blob/master/23-fixes/cpu/timer.c
@@ -14,16 +15,46 @@
 static uint32_t tick_between_call_to_scheduler = 0;
 static uint32_t timer_freq = 0;
 static uint32_t tick = 0;
+static uint64_t init_cpu_cycle;
+static int64_t cpu_cycle_per_second;
+static time_t init_ts;
+static date_time init_dt;
 
 static void timer_callback(trapframe *regs) {
     UNUSED_ARG(regs);
-    tick++;
-    if(tick % timer_freq == 0) {
-        // printf("Timer: 1 second elapsed\n", tick_between_call_to_scheduler / timer_freq);
+
+    if(!init_cpu_cycle) {
+        init_cpu_cycle = rdtsc();
+        init_dt = current_datetime();
+        init_ts = datetime2epoch(&init_dt);
     }
+
+    tick++;
+
+    // Calibrate CPU Speed for performance benchmarks periodically (every 2s)
+    if(tick % (timer_freq*2) == 0) {
+        uint64_t cycle = rdtsc();
+
+        // int64_t cycle_per_second = (cycle - init_cpu_cycle) / tick * timer_freq;
+        // printf("Timer: Cycle per second: %lld, diff: %lld\n", cycle_per_second, cycle_per_second - cpu_cycle_per_second);
+        // cpu_cycle_per_second = cycle_per_second;
+        
+        date_time dt =  current_datetime();
+        time_t ts = datetime2epoch(&dt);
+        int64_t cycle_per_second = (cycle - init_cpu_cycle) / (ts - init_ts);
+        // printf("Timer: Cycle per second: %lld, diff: %lld\n", cycle_per_second, cycle_per_second - cpu_cycle_per_second);
+        cpu_cycle_per_second =  cycle_per_second;
+
+    }
+    
     if(tick_between_call_to_scheduler > 0 && tick % tick_between_call_to_scheduler == 0) {
         yield();
     }
+}
+
+int64_t cpu_freq()
+{
+    return cpu_cycle_per_second;
 }
 
 /*
