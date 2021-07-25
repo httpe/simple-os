@@ -13,6 +13,7 @@
 #include <kernel/icmp.h>
 #include <kernel/cpu.h>
 #include <kernel/video.h>
+#include <kernel/fd.h>
 #include <arch/i386/kernel/isr.h>
 
 int sys_exec(trapframe* r)
@@ -104,7 +105,7 @@ int sys_open(trapframe* r)
     if(abs_path == NULL) {
         return -ENOENT;
     }
-    int res = fs_open(abs_path, flags);
+    int res = open_fd(abs_path, flags);
     free(abs_path);
     return res;
 }
@@ -112,7 +113,7 @@ int sys_open(trapframe* r)
 int sys_close(trapframe* r)
 {
     int32_t fd = *(int*) (r->esp + 4);
-    return fs_close(fd);
+    return close_fd(fd);
 }
 
 int sys_read(trapframe* r)
@@ -120,7 +121,7 @@ int sys_read(trapframe* r)
     int32_t fd = *(int*) (r->esp + 4);
     void* buf = *(void**) (r->esp + 8);
     uint32_t size = *(uint32_t*) (r->esp + 12);
-    return fs_read(fd, buf, size);
+    return read_fd(fd, buf, size);
 }
 
 int sys_write(trapframe* r)
@@ -128,7 +129,7 @@ int sys_write(trapframe* r)
     int32_t fd = *(int*) (r->esp + 4);
     void* buf = *(void**) (r->esp + 8);
     uint32_t size = *(uint32_t*) (r->esp + 12);
-    return fs_write(fd, buf, size);
+    return write_fd(fd, buf, size);
 }
 
 int sys_seek(trapframe* r)
@@ -136,13 +137,13 @@ int sys_seek(trapframe* r)
     int32_t fd = *(int*) (r->esp + 4);
     int32_t offset = *(int32_t*) (r->esp + 8);
     int32_t whence = *(int32_t*) (r->esp + 12);
-    return fs_seek(fd, offset, whence);
+    return seek_fd(fd, offset, whence);
 }
 
 int sys_dup(trapframe* r)
 {
     int32_t fd = *(int*) (r->esp + 4);
-    return fs_dup(fd);
+    return dup_fd(fd);
 }
 
 int sys_getattr_path(trapframe* r)
@@ -153,7 +154,7 @@ int sys_getattr_path(trapframe* r)
     if(abs_path == NULL) {
         return -ENOENT;
     }
-    int res = fs_getattr_path(abs_path, st);
+    int res = fs_getattr(abs_path, st, NULL);
     free(abs_path);
     return res;
 }
@@ -162,7 +163,7 @@ int sys_getattr_fd(trapframe* r)
 {
     int fd = *(int*) (r->esp + 4);
     struct fs_stat* st = *(struct fs_stat**) (r->esp + 8);
-    return fs_getattr_fd(fd, st);
+    return getattr_fd(fd, st);
 }
 
 int sys_truncate_path(trapframe* r)
@@ -173,7 +174,7 @@ int sys_truncate_path(trapframe* r)
     if(abs_path == NULL) {
         return -ENOENT;
     }
-    int res = fs_truncate_path(abs_path, size);
+    int res = fs_truncate(abs_path, size, NULL);
     free(abs_path);
     return res;
 }
@@ -182,7 +183,7 @@ int sys_truncate_fd(trapframe* r)
 {
     int fd = *(int*) (r->esp + 4);
     uint size = *(uint*) (r->esp + 8);
-    return fs_truncate_fd(fd, size);
+    return truncate_fd(fd, size);
 }
 
 int sys_get_pid(trapframe* r)

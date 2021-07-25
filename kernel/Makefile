@@ -36,6 +36,7 @@ tar/tar.o \
 elf/elf.o \
 block_io/block_io.o \
 vfs/vfs.o \
+fd/fd.o \
 fat/fat.o \
 console/console.o \
 kernel/kernel.o \

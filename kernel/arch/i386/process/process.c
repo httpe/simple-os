@@ -8,6 +8,7 @@
 #include <kernel/panic.h>
 #include <kernel/memory_bitmap.h>
 #include <kernel/vfs.h>
+#include <kernel/fd.h>
 #include <kernel/stat.h>
 #include <kernel/errno.h>
 #include <kernel/elf.h>
@@ -204,12 +205,7 @@ void exit(int exit_code)
 {
     proc* p = curr_proc();
 
-    // close fd
-    for(int fd=0; fd<N_FILE_DESCRIPTOR_PER_PROCESS; fd++) {
-        if(p->files[fd] != NULL) {
-            fs_close(fd);
-        }
-    }
+    close_all_fd();
 
     acquire(&process_table.lk);
     // pass children to init
@@ -318,13 +314,7 @@ int fork()
     p_new->orig_size = p_curr->orig_size;
     *p_new->tf = *p_curr->tf;
 
-    // duplicate fd
-    for(int i=0;i<N_FILE_DESCRIPTOR_PER_PROCESS;i++) {
-        if(p_curr->files[i] != NULL) {
-            p_curr->files[i]->ref++;
-            p_new->files[i] = p_curr->files[i];
-        }
-    }
+    copy_fd(p_curr, p_new);
 
     // child process uses the same working directory
     p_new->cwd = strdup(p_curr->cwd);
@@ -428,7 +418,7 @@ int chdir(const char* path)
     char* abs_path = get_abs_path(path);
     proc* p = curr_proc();
     fs_stat st = {0};
-    int r = fs_getattr_path(abs_path, &st);
+    int r = fs_getattr(abs_path, &st, NULL);
     if(r < 0) {
         free(abs_path);
         return r;
@@ -461,7 +451,7 @@ int exec(const char* path, char* const * argv)
         return -1;
     }
     fs_stat st = {0};
-    int fs_res = fs_getattr_path(abs_path, &st);
+    int fs_res = fs_getattr(abs_path, &st, NULL);
     if(fs_res < 0) {
         printf("exec: Cannot open the file\n");
         free(abs_path);
@@ -474,18 +464,18 @@ int exec(const char* path, char* const * argv)
     }
     // printf("exec: program size: %u\n", st.size);
 
-    int fd = fs_open(abs_path, 0);
+    int fd = open_fd(abs_path, 0);
     if(fd < 0) {
         free(abs_path);
         return -1;
     }
     char* file_buffer = malloc(st.size);
-    fs_res = fs_read(fd, file_buffer, st.size);
+    fs_res = read_fd(fd, file_buffer, st.size);
     if(fs_res < 0) {
         free(abs_path);
         return -1;
     }
-    fs_close(fd);
+    close_fd(fd);
     
 
     if (!is_elf(file_buffer)) {
