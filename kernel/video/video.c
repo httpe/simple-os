@@ -170,46 +170,6 @@ void get_vga_font_size(uint32_t* w, uint32_t* h)
     *h = FONT_HEIGHT;
 }
 
-static uint64_t video_benchmark() {
-    uint64_t draw_time = 0;
-    uint64_t refresh_time = 0;
-    
-    const uint n_iteration = 100;
-
-    uint64_t t0 = rdtsc();
-
-    for(uint i=0; i < n_iteration; i++) {
-        char c = (i%2 == 0)?'A':'B';
-
-        uint64_t tt0 = rdtsc();
-        for(uint y=0;y < video.height/FONT_HEIGHT;y++) {
-            for(uint x=0;x < video.width/FONT_WIDTH; x++) {
-                drawchar(c, x * FONT_WIDTH, y * FONT_HEIGHT, 0x0, 0x00FFFFFF);
-                // video_refresh_rect(x * FONT_WIDTH, y * FONT_HEIGHT, FONT_WIDTH, FONT_HEIGHT);
-            }
-        }
-        uint64_t tt1 = rdtsc();
-        video_refresh();
-        uint64_t tt2 = rdtsc();
-
-        draw_time += tt1 - tt0;
-        refresh_time += tt2 - tt1;
-    }
-
-    uint64_t t1 = rdtsc();
-    uint64_t total_cycle = t1 - t0;
-    const uint64_t cpu_freq = 3600750000;
-    uint fps = cpu_freq / (total_cycle / n_iteration);
-
-    uint draw_pct = (draw_time * 100) / total_cycle;
-    uint refresh_pct = (refresh_time * 100) / total_cycle;
-    uint refresh_fps = cpu_freq / (refresh_time / n_iteration);
-
-    printf("Video Benchmark: FPS[%d]:RefreshFPS[%d]:DRAW_PCT[%d]:REFRESH_PCT[%d]\n", fps, refresh_fps, draw_pct, refresh_pct);
-    
-    return fps;
-}
-
 int init_video(uint32_t info_phy_addr)
 {
     multiboot_info_t* info = (multiboot_info_t*) (info_phy_addr + 0xC0000000);
@@ -286,10 +246,6 @@ int init_video(uint32_t info_phy_addr)
     memmove(video.framebuffer, video.buffer_curr, video.buffer_byte_size);
 
     video.initialized = 1;
-
-    // Run Video Driver Performance benchmark
-    // video_benchmark();
-    UNUSED_ARG(video_benchmark);
 
     return 0;
 }

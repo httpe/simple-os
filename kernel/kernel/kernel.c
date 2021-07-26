@@ -13,6 +13,8 @@
 #include <kernel/block_io.h>
 #include <kernel/vfs.h>
 #include <kernel/network.h>
+#include <kernel/video.h>
+#include <arch/i386/kernel/cpu.h>
 
 typedef void entry_main(void);
 
@@ -38,6 +40,23 @@ void test_malloc()
 	kfree(d);
 	printf("free(e)\n");
 	kfree(e);
+
+	// Kernel Heap Performance Benchmark
+	uint64_t t0 = rdtsc();
+    void* buf[100];
+    for(int i=0; i<10; i++) {
+        for(int j=0;j<100;j++) {
+            buf[j] = kmalloc(1234);
+        }
+        for(int j=0;j<100;j++) {
+            kfree(buf[j]);
+        }
+    }
+    uint64_t t1 = rdtsc();
+    int64_t total_cycle = t1 - t0;
+	int64_t freq = cpu_freq();
+    int64_t op_per_sec = freq / (total_cycle / (10*100));
+	printf("Kernel heap benchmark: %lld operations per second\n", op_per_sec);
 }
 
 void test_ata()
@@ -78,6 +97,53 @@ void test_paging()
 	PANIC("Failed to trigger page fault");
 }
 
+void test_video()
+{
+    // Run Video Driver Performance benchmark
+    uint64_t draw_time = 0;
+    uint64_t refresh_time = 0;
+    
+    const uint n_iteration = 100;
+
+    uint64_t t0 = rdtsc();
+
+	uint32_t font_width, font_height, screen_width, screen_height;
+	get_vga_font_size(&font_width, &font_height);
+	get_screen_size(&screen_width, &screen_height);
+	uint char_w = screen_width/font_width, char_h = screen_height/font_height;
+
+    for(uint i=0; i < n_iteration; i++) {
+        char c = (i%2 == 0)?'A':'B';
+
+        uint64_t tt0 = rdtsc();
+        for(uint y=0;y < char_h;y++) {
+            for(uint x=0;x < char_w; x++) {
+                drawchar(c, x * FONT_WIDTH, y * FONT_HEIGHT, 0x0, 0x00FFFFFF);
+                // video_refresh_rect(x * FONT_WIDTH, y * FONT_HEIGHT, FONT_WIDTH, FONT_HEIGHT);
+            }
+        }
+        uint64_t tt1 = rdtsc();
+        video_refresh();
+        uint64_t tt2 = rdtsc();
+
+        draw_time += tt1 - tt0;
+        refresh_time += tt2 - tt1;
+    }
+
+    uint64_t t1 = rdtsc();
+    uint64_t total_cycle = t1 - t0;
+    int64_t freq = cpu_freq();
+    uint fps = freq / (total_cycle / n_iteration);
+
+    uint draw_pct = (draw_time * 100) / total_cycle;
+    uint refresh_pct = (refresh_time * 100) / total_cycle;
+    uint refresh_fps = freq / (refresh_time / n_iteration);
+
+    printf("Video Benchmark: FPS[%d]:RefreshFPS[%d]:DRAW_PCT[%d]:REFRESH_PCT[%d]\n", fps, refresh_fps, draw_pct, refresh_pct);
+    
+    return fps;
+}
+
 void init()
 {
 	initialize_block_storage();
@@ -103,11 +169,13 @@ void kernel_main(uint32_t mbt_physical_addr) {
 	// test_malloc();
 	// test_ata();
 	// test_paging();
+	// test_video();
 
 	// unused tests
 	UNUSED_ARG(test_malloc);
 	UNUSED_ARG(test_ata);
 	UNUSED_ARG(test_paging);
+	UNUSED_ARG(test_video);
 
 	// Enter user space and running init
 	init_first_process();
