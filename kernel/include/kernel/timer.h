@@ -4,6 +4,5 @@
 #include <stdint.h>
 
 void init_timer(uint32_t freq, uint32_t tick_between_process_switch);
-int64_t cpu_freq();
 
 #endif

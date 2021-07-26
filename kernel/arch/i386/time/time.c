@@ -1,4 +1,5 @@
 #include <kernel/time.h>
+#include <arch/i386/kernel/cpu.h>
 #include <arch/i386/kernel/port_io.h>
 #include <kernel/timer.h>
 #include <kernel/lock.h>
@@ -191,4 +192,23 @@ time_t datetime2epoch(date_time* tim_p) {
         tim_p->tm_wday += 7;
 
     return tim;
+}
+
+// Estimate CPU frequency
+int64_t cpu_freq()
+{
+    date_time dt0 = current_datetime() , dt;
+    time_t ts0 = datetime2epoch(&dt0), ts;
+    do {
+        dt = current_datetime();
+        ts = datetime2epoch(&dt);
+    } while(ts == ts0);
+    uint64_t cycle0 = rdtsc();
+    do {
+        dt0 = current_datetime();
+        ts0 = datetime2epoch(&dt0);
+    } while(ts0 == ts);
+    uint64_t cycle1 = rdtsc();
+    int64_t cycle_per_second = cycle1 - cycle0;
+    return cycle_per_second;
 }

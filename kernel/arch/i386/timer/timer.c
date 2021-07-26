@@ -15,19 +15,10 @@
 static uint32_t tick_between_call_to_scheduler = 0;
 static uint32_t timer_freq = 0;
 static uint64_t tick = 0;
-static uint64_t init_cpu_cycle;
-static int64_t cpu_cycle_per_second;
 static time_t init_ts;
-static date_time init_dt;
 
 static void timer_callback(trapframe *regs) {
     UNUSED_ARG(regs);
-
-    if(!init_cpu_cycle) {
-        init_cpu_cycle = rdtsc();
-        init_dt = current_datetime();
-        init_ts = datetime2epoch(&init_dt);
-    }
 
     tick++;
     
@@ -35,29 +26,24 @@ static void timer_callback(trapframe *regs) {
         yield();
     }
 
-    // Calibrate tick and CPU speed at second precision
+    // Calibrate tick at second precision
     if(tick % (timer_freq) == 0) {
-        uint64_t cycle = rdtsc();
-        date_time dt =  current_datetime();
-        time_t ts = datetime2epoch(&dt);
-        int64_t sec_elapsed = ts - init_ts;
-        uint64_t tick_est = sec_elapsed * timer_freq;
-        if(tick_est > tick) {
-            printf("Timer: Calibrating tick, %llu => %llu\n", tick, tick_est);
-            tick = tick_est;
-        }
-        if(sec_elapsed > 0) {
-            int64_t cycle_per_second = (cycle - init_cpu_cycle) / sec_elapsed;
-            // printf("Timer: Cycle per second: %lld, diff: %lld\n", cycle_per_second, cycle_per_second - cpu_cycle_per_second);
-            cpu_cycle_per_second =  cycle_per_second;
+        if(!init_ts) {
+                date_time init_dt = current_datetime();
+                init_ts = datetime2epoch(&init_dt);
+        } else {
+            date_time dt =  current_datetime();
+            time_t ts = datetime2epoch(&dt);
+            int64_t sec_elapsed = ts - init_ts;
+            uint64_t tick_est = sec_elapsed * timer_freq;
+            if(tick_est > tick) {
+                printf("Timer: Calibrating tick, %llu => %llu\n", tick, tick_est);
+                tick = tick_est;
+            }
         }
     }
 }
 
-int64_t cpu_freq()
-{
-    return cpu_cycle_per_second;
-}
 
 /*
 Programmable Interval Timer Spec (https://wiki.osdev.org/PIT)
