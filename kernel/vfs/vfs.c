@@ -100,7 +100,7 @@ int fs_mount(const char* target, enum file_system_type file_system_type,
     if(strcmp(target, "/") != 0) {
         // Make sure the mount point already exist in the parent folder
         fs_stat st = {0};
-        int res_getattr = fs_getattr(target, &st, NULL);
+        int res_getattr = fs_getattr(target, &st, -1);
         if(res_getattr < 0) {
             return res_getattr;
         }
@@ -293,7 +293,7 @@ int fs_rename(const char * from, const char* to, uint flags)
     return res;
 }
 
-int fs_open(const char * path, int flags, file** fp)
+int fs_open(const char * path, int flags)
 {
     const char* remaining_path = NULL;
     fs_mount_point* mp = find_mount_point(path, &remaining_path);
@@ -309,6 +309,7 @@ int fs_open(const char * path, int flags, file** fp)
     for(int i=0;i<N_FILE_STRUCTURE;i++) {
         if(vfs.file_table[i].ref == 0) {
             f = &vfs.file_table[i];
+            ret = i;
             break;
         }
     }
@@ -317,7 +318,6 @@ int fs_open(const char * path, int flags, file** fp)
         ret = -ENFILE;
         goto end;
     }
-
 
     fs_file_info fi = {.flags = flags, .fh=0};
     if(mp->operations.open != NULL) {
@@ -341,14 +341,21 @@ int fs_open(const char * path, int flags, file** fp)
         .writable = (flags & O_WRONLY) || (flags & O_RDWR)
     };
 
-    if(fp) {
-        *fp = f;
-    }
-    ret = 0;
-
 end:
     release(&vfs.lk);
     return ret;
+}
+
+file* idx2file(int file_idx)
+{
+    if(file_idx < 0 || file_idx >= N_FILE_STRUCTURE) {
+        return NULL;
+    }
+    file* f = &vfs.file_table[file_idx];
+    if(f->ref == 0) {
+        return NULL;
+    }
+    return f;
 }
 
 struct fs_dir_filler_info {
@@ -398,12 +405,13 @@ int fs_readdir(const char * path, uint entry_offset, fs_dirent* buf, uint buf_si
     return filler_info.entry_written;
 }
 
-int fs_getattr(const char * path, struct fs_stat * stat, file* opened_file)
+int fs_getattr(const char * path, struct fs_stat * stat, int file_idx)
 {
     const char* remaining_path;
     fs_mount_point* mp;
     struct fs_file_info fi;
     struct fs_file_info* pfi = NULL;
+    file* opened_file = idx2file(file_idx);
     if(opened_file) {
         remaining_path = opened_file->path;
         mp = opened_file->mount_point;
@@ -420,12 +428,13 @@ int fs_getattr(const char * path, struct fs_stat * stat, file* opened_file)
     return res;
 }
 
-int fs_truncate(const char * path, uint size, file* opened_file)
+int fs_truncate(const char * path, uint size, int file_idx)
 {
     const char* remaining_path;
     fs_mount_point* mp;
     struct fs_file_info fi;
     struct fs_file_info* pfi = NULL;
+    file* opened_file = idx2file(file_idx);
     if(opened_file) {
         remaining_path = opened_file->path;
         mp = opened_file->mount_point;
@@ -442,19 +451,22 @@ int fs_truncate(const char * path, uint size, file* opened_file)
     return res;
 }
 
-int fs_dupfile(file* f)
+int fs_dupfile(int file_idx)
 {
     acquire(&vfs.lk);
+    file* f = idx2file(file_idx);
     f->ref++;
     release(&vfs.lk);
 
     return 0;
 }
 
-int fs_close(file* f)
+int fs_release(int file_idx)
 {
 
     acquire(&vfs.lk);
+    file* f = idx2file(file_idx);
+    if(!f) return -1;
     f->ref--;
     if(f->ref == 0) {
         struct fs_file_info fi = {.flags = f->open_flags, .fh=f->inum};
@@ -475,8 +487,9 @@ int fs_close(file* f)
     return 0;
 }
 
-int fs_read(file* f, void *buf, uint size)
+int fs_read(int file_idx, void *buf, uint size)
 {
+    file* f = idx2file(file_idx);
     if(f->mount_point->operations.read == NULL) {
         // if file system does not support this operation
         return -EPERM;
@@ -495,8 +508,9 @@ int fs_read(file* f, void *buf, uint size)
     return res;
 }
 
-int fs_write(file* f, void *buf, uint size)
+int fs_write(int file_idx, void *buf, uint size)
 {
+    file* f = idx2file(file_idx);
     if(f->mount_point->operations.write == NULL) {
         // if file system does not support this operation
         return -EPERM;
@@ -515,9 +529,9 @@ int fs_write(file* f, void *buf, uint size)
     return res;
 }
 
-int fs_seek(file* f, int offset, int whence)
+int fs_seek(int file_idx, int offset, int whence)
 {
-
+    file* f = idx2file(file_idx);
     if(whence == SEEK_WHENCE_CUR) {
         f->offset += offset;
     } else if(whence == SEEK_WHENCE_SET) {

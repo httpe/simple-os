@@ -8,7 +8,6 @@
 #include <kernel/panic.h>
 #include <kernel/memory_bitmap.h>
 #include <kernel/vfs.h>
-#include <kernel/fd.h>
 #include <kernel/stat.h>
 #include <kernel/errno.h>
 #include <kernel/elf.h>
@@ -201,11 +200,84 @@ proc* curr_proc()
     return curr_cpu()->current_process;
 }
 
+int alloc_handle(struct handle_map* pmap)
+{
+    if(pmap == NULL) return -1;
+    // handle is the index into (a process's) struct handle_storage
+    proc* p = curr_proc();
+    for(int handle=0; handle<MAX_HANDLE_PER_PROCESS;handle++) {
+        if(p->handles[handle].type == HANDLE_TYPE_UNUSED) {
+            p->handles[handle] = *pmap;
+            return handle;
+        }
+    }
+    // too many opended files
+    return -EMFILE;
+}
+
+int dup_grd(struct handle_map* pmap)
+{
+    if(pmap->type == HANDLE_TYPE_FILE) {
+        return fs_dupfile(pmap->grd);
+    }
+    return 0;
+}
+
+int dup_handle(int handle)
+{
+    if(handle >= MAX_HANDLE_PER_PROCESS) return -1;
+    struct handle_map* pmap = get_handle(handle);
+    if(pmap == NULL) return -1;
+    int dup = alloc_handle(pmap);
+    if(dup < 0) return dup; 
+    int r = dup_grd(pmap);
+    if(r < 0) {
+        struct handle_map* pmap = get_handle(dup);
+        pmap->type = HANDLE_TYPE_UNUSED;
+        return r;
+    }
+    return dup;
+}
+
+void dup_handles_to(proc* from, proc* to)
+{
+    for(int handle=0;handle<MAX_HANDLE_PER_PROCESS;handle++) {
+        struct handle_map* pmap = &from->handles[handle];
+        if(pmap->type == HANDLE_TYPE_UNUSED) continue;
+        int r = dup_grd(pmap);
+        if(r == 0) to->handles[handle] = *pmap;
+    }
+}
+
+int release_handle(int handle)
+{
+    if(handle >= MAX_HANDLE_PER_PROCESS) return -1;
+    struct handle_map* pmap = get_handle(handle);
+    if(pmap == NULL) return -1;
+    if(pmap->type == HANDLE_TYPE_FILE) {
+        int r = fs_release(pmap->grd);
+        if(r < 0) return r;
+    }
+    pmap->type = HANDLE_TYPE_UNUSED;
+    return 0;
+}
+
+struct handle_map* get_handle(int handle)
+{
+    if(handle >= MAX_HANDLE_PER_PROCESS) return NULL;
+    proc* p = curr_proc();
+    struct handle_map* pmap = &p->handles[handle];
+    if(pmap->type == HANDLE_TYPE_UNUSED) return NULL;
+    return pmap;
+}
+
 void exit(int exit_code)
 {
     proc* p = curr_proc();
 
-    close_all_fd();
+    for(int handle=0; handle<MAX_HANDLE_PER_PROCESS; handle++) {
+        release_handle(handle);
+    }
 
     acquire(&process_table.lk);
     // pass children to init
@@ -314,7 +386,7 @@ int fork()
     p_new->orig_size = p_curr->orig_size;
     *p_new->tf = *p_curr->tf;
 
-    copy_fd(p_curr, p_new);
+    dup_handles_to(p_curr, p_new);
 
     // child process uses the same working directory
     p_new->cwd = strdup(p_curr->cwd);
@@ -418,7 +490,7 @@ int chdir(const char* path)
     char* abs_path = get_abs_path(path);
     proc* p = curr_proc();
     fs_stat st = {0};
-    int r = fs_getattr(abs_path, &st, NULL);
+    int r = fs_getattr(abs_path, &st, -1);
     if(r < 0) {
         free(abs_path);
         return r;
@@ -443,45 +515,32 @@ int getcwd(char* buf, size_t buf_size)
     return 0;
 }
 
+static void* read_file(const char* path)
+{
+    char* abs_path = get_abs_path(path);
+    if(abs_path == NULL) return NULL;
+    int file_idx = fs_open(abs_path, 0);
+    free(abs_path);
+    if(file_idx < 0) return NULL;
+    fs_stat st = {0};
+    int fs_res = fs_getattr(NULL, &st, file_idx);
+    if(fs_res < 0 || st.size == 0) return NULL;
+    char* file_buffer = malloc(st.size);
+    fs_res = fs_read(file_idx, file_buffer, st.size);
+    fs_release(file_idx);
+    if(fs_res < 0) return NULL;
+    return file_buffer;
+}
+
 int exec(const char* path, char* const * argv) 
 {
     // Load executable from file system
-    char* abs_path = get_abs_path(path);
-    if(abs_path == NULL) {
-        return -1;
-    }
-    fs_stat st = {0};
-    int fs_res = fs_getattr(abs_path, &st, NULL);
-    if(fs_res < 0) {
-        printf("exec: Cannot open the file\n");
-        free(abs_path);
-        return -1;
-    }
-    if(st.size == 0) {
-        printf("exec: File has size zero\n");
-        free(abs_path);
-        return -1;
-    }
-    // printf("exec: program size: %u\n", st.size);
-
-    int fd = open_fd(abs_path, 0);
-    if(fd < 0) {
-        free(abs_path);
-        return -1;
-    }
-    char* file_buffer = malloc(st.size);
-    fs_res = read_fd(fd, file_buffer, st.size);
-    if(fs_res < 0) {
-        free(abs_path);
-        return -1;
-    }
-    close_fd(fd);
-    
+    char* file_buffer = read_file(path);
+    if(file_buffer == NULL) return -1;
 
     if (!is_elf(file_buffer)) {
         printf("exec: Invalid program\n");
         free(file_buffer);
-        free(abs_path);
         return -1;
     }
 
@@ -491,6 +550,7 @@ int exec(const char* path, char* const * argv)
     // parse and load ELF binary
     uint32_t vaddr_ub = 0;
     uint32_t entry_point = load_elf(page_dir, file_buffer, &vaddr_ub);
+    free(file_buffer);
 
     // allocate stack to just below the higher half kernel mapping
     uint32_t esp = (uint32_t) MAP_MEM_PA_ZERO_TO;
@@ -516,7 +576,6 @@ int exec(const char* path, char* const * argv)
             // stack overflow, no room to store 3 (fake return PC, argc, argv) + argc+1 (pointer to previous arguments plus pointer to this arg)  + 1 (a terminating zero)
             unmap_pages(curr_page_dir(), ustack_start, PAGE_SIZE*USER_STACK_PAGE_SIZE);
             free_user_space(page_dir);
-            free(abs_path);
             return -1;
         }
         memmove(ustack_dst + (esp - ustack_start), argv[argc], size);
@@ -554,6 +613,5 @@ int exec(const char* path, char* const * argv)
     PANIC_ASSERT(is_vaddr_accessible(curr_page_dir(), p->tf->eip, false, false));
     PANIC_ASSERT(is_vaddr_accessible(curr_page_dir(), p->tf->esp, false, false));
     
-    free(abs_path);
     return 0;
 }

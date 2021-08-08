@@ -2,15 +2,14 @@
 #define _KERNEL_PROCESS_H
 
 #include <kernel/paging.h>
-#include <kernel/file_system.h>
 #include <arch/i386/kernel/isr.h>
 
 // maximum number of processes
 #define N_PROCESS        64  
 // number of pages allocating to each process's kernel stack
 #define N_KERNEL_STACK_PAGE_SIZE 1
-// maximum number of files opened in one process
-#define N_FILE_DESCRIPTOR_PER_PROCESS 16
+// maximum number of opened hanldes for one process
+#define MAX_HANDLE_PER_PROCESS 16
 
 // max number of command line arguments
 #define MAX_ARGC 10
@@ -26,6 +25,16 @@ struct trapframe;
 
 enum procstate { PROC_STATE_UNUSED, PROC_STATE_EMBRYO, PROC_STATE_SLEEPING, PROC_STATE_RUNNABLE, PROC_STATE_RUNNING, PROC_STATE_ZOMBIE };
 
+enum handle_type {
+    HANDLE_TYPE_UNUSED = 0,
+    HANDLE_TYPE_FILE
+};
+
+struct handle_map {
+    int type; // enum handle_type, resource type
+    int grd; // global resource descriptor (unique among each source type)
+};
+
 // Per-process state
 typedef struct proc {
   int32_t pid;                        // Process ID
@@ -39,7 +48,7 @@ typedef struct proc {
   uint32_t size;                      // process size, a pointer to the end of the process memory
   uint32_t orig_size;                 // original size, size shall not shrink below this
   int32_t exit_code;                  // exit code for zombie process
-  file *files[N_FILE_DESCRIPTOR_PER_PROCESS];  // Opened files
+  struct handle_map handles[MAX_HANDLE_PER_PROCESS];             // Opened handles for any system resources, e.g. files
   char* cwd;                          // Current working directory
   uint no_schedule;                   // if non zero, will not be scheduled to other process
 } proc;
@@ -58,6 +67,12 @@ char* get_abs_path(const char* path);
 int chdir(const char* path);
 int getcwd(char* buf, size_t buf_size);
 int exec(const char* path, char* const* argv);
+
+// Manage per-process handles
+int alloc_handle(struct handle_map* pmap);
+struct handle_map* get_handle(int handle);
+int dup_handle(int handle);
+int release_handle(int handle);
 
 // defined in switch_kernel_context.asm
 extern void switch_kernel_context(struct context **old_context, struct context *new_context);

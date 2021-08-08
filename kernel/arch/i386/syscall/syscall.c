@@ -13,7 +13,6 @@
 #include <kernel/icmp.h>
 #include <kernel/cpu.h>
 #include <kernel/video.h>
-#include <kernel/fd.h>
 #include <arch/i386/kernel/isr.h>
 
 int sys_exec(trapframe* r)
@@ -105,45 +104,72 @@ int sys_open(trapframe* r)
     if(abs_path == NULL) {
         return -ENOENT;
     }
-    int res = open_fd(abs_path, flags);
+    int file_idx = fs_open(abs_path, flags);
     free(abs_path);
-    return res;
+    if(file_idx < 0) return -1;
+    struct handle_map map = (struct handle_map) {.type = HANDLE_TYPE_FILE, .grd = file_idx};
+    int handle = alloc_handle(&map);
+    return handle;
 }
 
 int sys_close(trapframe* r)
 {
-    int32_t fd = *(int*) (r->esp + 4);
-    return close_fd(fd);
+    int32_t handle = *(int*) (r->esp + 4);
+    struct handle_map* pmap = get_handle(handle);
+    if(pmap == NULL) return -1;
+    int res = release_handle(handle);
+    return res;
 }
 
 int sys_read(trapframe* r)
 {
-    int32_t fd = *(int*) (r->esp + 4);
+    int32_t handle = *(int*) (r->esp + 4);
     void* buf = *(void**) (r->esp + 8);
     uint32_t size = *(uint32_t*) (r->esp + 12);
-    return read_fd(fd, buf, size);
+    struct handle_map* pmap = get_handle(handle);
+    if(pmap == NULL) return -1;
+    if(pmap->type == HANDLE_TYPE_FILE) {
+        return fs_read(pmap->grd, buf, size);
+    } else {
+        return -1;
+    }
 }
 
 int sys_write(trapframe* r)
 {
-    int32_t fd = *(int*) (r->esp + 4);
+    int32_t handle = *(int*) (r->esp + 4);
     void* buf = *(void**) (r->esp + 8);
     uint32_t size = *(uint32_t*) (r->esp + 12);
-    return write_fd(fd, buf, size);
+    struct handle_map* pmap = get_handle(handle);
+    if(pmap == NULL) return -1;
+    if(pmap->type == HANDLE_TYPE_FILE) {
+        return fs_write(pmap->grd, buf, size);
+    } else {
+        return -1;
+    }
 }
 
 int sys_seek(trapframe* r)
 {
-    int32_t fd = *(int*) (r->esp + 4);
+    int32_t handle = *(int*) (r->esp + 4);
     int32_t offset = *(int32_t*) (r->esp + 8);
     int32_t whence = *(int32_t*) (r->esp + 12);
-    return seek_fd(fd, offset, whence);
+    struct handle_map* pmap = get_handle(handle);
+    if(pmap == NULL) return -1;
+    if(pmap->type == HANDLE_TYPE_FILE) {
+        return fs_seek(pmap->grd, offset, whence);
+    } else {
+        return -1;
+    }
 }
 
 int sys_dup(trapframe* r)
 {
-    int32_t fd = *(int*) (r->esp + 4);
-    return dup_fd(fd);
+    int32_t handle = *(int*) (r->esp + 4);
+    struct handle_map* pmap = get_handle(handle);
+    if(pmap == NULL) return -1;
+    int new_handle = dup_handle(handle);
+    return new_handle;
 }
 
 int sys_getattr_path(trapframe* r)
@@ -154,16 +180,22 @@ int sys_getattr_path(trapframe* r)
     if(abs_path == NULL) {
         return -ENOENT;
     }
-    int res = fs_getattr(abs_path, st, NULL);
+    int res = fs_getattr(abs_path, st, -1);
     free(abs_path);
     return res;
 }
 
 int sys_getattr_fd(trapframe* r)
 {
-    int fd = *(int*) (r->esp + 4);
+    int handle = *(int*) (r->esp + 4);
     struct fs_stat* st = *(struct fs_stat**) (r->esp + 8);
-    return getattr_fd(fd, st);
+    struct handle_map* pmap = get_handle(handle);
+    if(pmap == NULL) return -1;
+    if(pmap->type == HANDLE_TYPE_FILE) {
+        return fs_getattr(NULL, st, pmap->grd);
+    } else {
+        return -1;
+    }
 }
 
 int sys_truncate_path(trapframe* r)
@@ -174,16 +206,22 @@ int sys_truncate_path(trapframe* r)
     if(abs_path == NULL) {
         return -ENOENT;
     }
-    int res = fs_truncate(abs_path, size, NULL);
+    int res = fs_truncate(abs_path, size, -1);
     free(abs_path);
     return res;
 }
 
 int sys_truncate_fd(trapframe* r)
 {
-    int fd = *(int*) (r->esp + 4);
+    int handle = *(int*) (r->esp + 4);
     uint size = *(uint*) (r->esp + 8);
-    return truncate_fd(fd, size);
+    struct handle_map* pmap = get_handle(handle);
+    if(pmap == NULL) return -1;
+    if(pmap->type == HANDLE_TYPE_FILE) {
+        return fs_truncate(NULL, size, pmap->grd);
+    } else {
+        return -1;
+    }
 }
 
 int sys_get_pid(trapframe* r)
