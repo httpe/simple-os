@@ -100,6 +100,7 @@ static int vprintf0(struct printf_output* out, const char* restrict format, va_l
 				format++;
 			}
 			int sgn = *format == 'd';
+			int base = (*format == 'x') ? 16:10;
 			format++;
 			long long number;
 			 if(length_specifier == 1) {
@@ -112,8 +113,7 @@ static int vprintf0(struct printf_output* out, const char* restrict format, va_l
 			length_specifier = 0;
 			
 			char str[32];
-
-			size_t len = int2str(number, 10, sgn, str);
+			size_t len = int2str(number, base, sgn, str);
 			if (maxrem < len) {
 				// TODO: Set errno to EOVERFLOW.
 				return -1;
