@@ -97,7 +97,7 @@ void test_paging()
 	PANIC("Failed to trigger page fault");
 }
 
-void test_video()
+uint test_video()
 {
     // Run Video Driver Performance benchmark
     uint64_t draw_time = 0;
