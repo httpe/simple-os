@@ -101,13 +101,13 @@ int is_interrupt_enabled()
 
 void disable_interrupt() 
 {
-    assert(is_interrupt_enabled());
+    PANIC_ASSERT(is_interrupt_enabled());
     asm volatile("cli");
 }
 
 void enable_interrupt()
 {
-    assert(!is_interrupt_enabled());
+    PANIC_ASSERT(!is_interrupt_enabled());
     asm volatile("sti");
 }
 
