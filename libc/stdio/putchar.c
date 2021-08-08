@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #if defined(__is_libk)
-#include <kernel/serial.h>
+#include <kernel/tty.h>
 #else
 #include <syscall.h>
 #include <common.h>
@@ -10,9 +10,7 @@ static inline _syscall3(SYS_WRITE, int, sys_write, int, fd, const void*, buf, ui
 
 int putchar(int ic) {
 #if defined(__is_libk)
-    if (is_serial_port_initialized()) {
-        write_serial((char) ic);
-    }
+    terminal_putchar((char) ic);
 #else
 	char c = (char) ic;
 	sys_write(0, &c, 1);
