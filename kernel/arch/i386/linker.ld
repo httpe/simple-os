@@ -21,13 +21,16 @@ SECTIONS
 		*(.multiboot)
 	}
 
-	/* .start_init will be executed right after entring the user space*/
-	/* Load .start_init in the user space address area */
-	/* PHY: physical frame address, requesting bootloader to place the code here by the "AT" instruction */
+	/* .start_init will be executed right after entering the user space
+		Below we will tell the bootloader (through EFI headers) to place code of .start_init
+		at the physical memory address START_INIT_PHY_BEGIN by the "AT" instruction */
 	START_INIT_PHY_BEGIN = .;
-	/* VIRTUAL: virtual address where the code is accessible from kernel based on the higher half kernel memory mapping */
+	/* VIRTUAL: After the higher half kernel memory mapping, the kernel can read start_init code at this virtual address */
 	START_INIT_VIRTUAL_BEGIN = START_INIT_PHY_BEGIN + MAP_MEM_PA_ZERO_TO;
-	/* RELOC: address where the code shall be copied to before executing */
+	/* RELOC: virtual address where the start_init code shall be copied to before executing
+		Instruct the compiler to generate the start_init code as if it will be loaded at START_INIT_RELOC_BEGIN
+		i.e. the page (0x1000 = size of one page) right below the kernel space (area >= MAP_MEM_PA_ZERO_TO) 
+	*/
 	START_INIT_RELOC_BEGIN = MAP_MEM_PA_ZERO_TO - 0x1000;
 	. = START_INIT_RELOC_BEGIN;
 	.start_init ALIGN (4K) : AT (START_INIT_PHY_BEGIN) {
@@ -42,8 +45,8 @@ SECTIONS
 	/* "." is used to determine the absolute addresses in the generated binary file 
 	   they will be generated based on the offset plus the value of .
 	*/
-	/* Adding 0xC0000000 to pertend the whole program was loaded at 0xC0000000 
-	   (use += instead of than = to takle the size of multiboot into consideration */
+	/* Adding 0xC0000000 to pretend the whole program was loaded at 0xC0000000 
+	   (use += instead of than = to take the size of multiboot into consideration */
 	. += MAP_MEM_PA_ZERO_TO;
 
 	/* Next we'll put the .text section. */
