@@ -14,8 +14,11 @@ cd $SIMPLE_OS_SRC
 # Install system headers
 ./headers.sh
 
-cd $TOOL_CHAIN_BUILD_DIR/build-newlib
+cd $TOOL_CHAIN_BUILD_DIR/simple-newlib
 git pull
+cd $TOOL_CHAIN_BUILD_DIR/build-newlib
+rm -rf $TOOL_CHAIN_BUILD_DIR/build-newlib/*
+../simple-newlib/configure --prefix=/usr --target=i686-simpleos
 make -j4 all
 
 make DESTDIR="$TOOL_CHAIN_ROOT" install
