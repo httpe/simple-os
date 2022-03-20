@@ -35,7 +35,7 @@ Although the final goal is to make the system self-hosting, we have planned for 
       - Cooperative and preemptive multi-tasking (single CPU, synchronized by disabling interrupt when doing system call)
       - Exec system call based on the USTAR read-only file system
 
-1. **Milestone Four: Filesystem,  Libc and Hosted Tool-chain**
+1. **Milestone Four: Filesystem, Libc and Hosted Tool-chain**
     - Provide a readable & writable file system (FAT or Ext) and corresponding system calls
     - Build user space standard C library with system calls, e.g. printf, malloc and open/read/write. Potentially port [Newlib](https://wiki.osdev.org/Porting_Newlib) as our standard C library.
     - Build our [OS specific/hosted compiling tool-chain](https://wiki.osdev.org/OS_Specific_Toolchain) (Binutils and GCC)
@@ -44,45 +44,55 @@ Although the final goal is to make the system self-hosting, we have planned for 
       - [Simple-newlib](https://github.com/httpe/simple-newlib): Ported Newlib 4.1.0 with all system calls implemented
       - [Simple-gcc](https://github.com/httpe/simple-gcc) and [Simple-binutils](https://github.com/httpe/simple-binutils): Hosted Binutils 2.35.1 / GCC 10.2.0 tool-chain established (See HostedToolchain.md)
 
-1. **Milestone Five: Shell, User Space Applications and Compiler**
+1. **Milestone Five: Shell and User Space Applications**
     - Write a shell to allow navigating through the file system and execute applications
     - Write an editor to show file content, allowing editing and saving to disk
     - Port a simplified C compiler to the system
-    - Compile and run the text editor inside the system
-    - **In Progress**
+    - **Finished**
       - A shell with `cd` and program execution was implemented
       - Implemented various file management utilities including `ls`, `mkdir`, `rmdir`, `mv`, `cp` and `rm`
       - Ported the simple text editor [Kilo](https://viewsourcecode.org/snaptoken/kilo/index.html), with basic editing functionalities and C syntax highlighting
 
-1. **Milestone Six: Multi-core CPU support and IPC**
-    - Support multi-core CPU [SMP](https://wiki.osdev.org/SMP) through [APIC](https://wiki.osdev.org/APIC)
+1. **Milestone Six: Locks and IPC**
     - Provide [synchronization mechanism](https://wiki.osdev.org/Synchronization_Primitives) for multi-tasking environment, like locks
     - Provide inter process communication ([IPC](https://wiki.osdev.org/Category:IPC)) mechanism like pipe and signal
-    - **In Progress**
+    - **Finished**
       - Pipe is implemented with memory circular buffer as an file system
       - Mutex lock (yield when waiting) and Readers–writer lock implemented
 
-1. **Milestone Seven: Networking**
+1. **Milestone Seven: Graphics**
+    - Switch to [VESA Video Modes](https://wiki.osdev.org/Getting_VBE_Mode_Info) using the [VBE](http://www.petesqbsite.com/sections/tutorials/tuts/vbe3.pdf) (VESA BIOS Extensions Standard) functions (Ref: [VESA Tutorial](https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial))
+    - Provide [basic graphical drawing routines](https://wiki.osdev.org/Drawing_In_Protected_Mode), like drawing a line, a rectangle
+    - Enable higher resolution text console (showing more than 80*25 characters), including text drawing ([VGA Font](https://wiki.osdev.org/VGA_Fonts)), screen scrolling and text cursor
+    - Write an image viewer
+    - **Finished**
+      - Bootloader can now switch to VESA video modes and pass the VBE information to the kernel through multi-boot structure
+      - Implemented a video driver supporting [double buffering](https://wiki.osdev.org/Double_Buffering) which only redraw changed pixel by comparing with a third video buffer
+      - TTY now support emulated text mode under video modes. Text cursor is also available
+      - Image viewer `image` implemented with the support of [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h)
+
+1. **Milestone Eight: Networking**
     - Allow connecting to the Internet
     - Implement DNS query and ping command
     - Implement [Ethernet](https://en.wikipedia.org/wiki/Ethernet_frame), [ARP](https://en.wikipedia.org/wiki/Address_Resolution_Protocol), [IPv4](https://en.wikipedia.org/wiki/IPv4), [ICMP](https://en.wikipedia.org/wiki/Internet_Control_Message_Protocol)/[ping](https://en.wikipedia.org/wiki/Ping_(networking_utility)) and [UDP](https://en.wikipedia.org/wiki/User_Datagram_Protocol) protocol
+    - Implement a subset of POSIX socket API
     - **In Progress**
       - `RTL8139` NIC driver implemented
       - Ethernet layer implemented (no caching)
       - ARP probe/announcement implemented
       - IPv4 layer implemented
       - `ping` utility implemented (ICMP protocol)
+      - Socket API supporting ICMP protocol implemented
 
-1. **Milestone Eight: Graphics**
-    - Switch to [VESA Video Modes](https://wiki.osdev.org/Getting_VBE_Mode_Info) using the [VBE](http://www.petesqbsite.com/sections/tutorials/tuts/vbe3.pdf) (VESA BIOS Extensions Standard) functions (Ref: [VESA Tutorial](https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial))
-    - Provide [basic graphical drawing routines](https://wiki.osdev.org/Drawing_In_Protected_Mode), like drawing a line, a rectangle
-    - Enable higher resolution text console (showing more than 80*25 characters), including text drawing ([VGA Font](https://wiki.osdev.org/VGA_Fonts)), screen scrolling and text cursor
-    - Write an image viewer
-    - **In Progress**
-      - Bootloader can now switch to VESA video modes and pass the VBE information to the kernel through multi-boot structure
-      - Implemented a video driver supporting [double buffering](https://wiki.osdev.org/Double_Buffering) which only redraw changed pixel by comparing with a third video buffer
-      - TTY now support emulated text mode under video modes. Text cursor is also available
-      - Image viewer `image` implemented with the support of [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h)
+1. **Milestone Nine: Compiler**
+    - Port a simplified C compiler
+    - Compile our text editor in our OS
+
+1. **Milestone Ten: Window Manager and GUI**
+    - Allow switching between two consoles at the same time
+    - Split screen to show two consoles
+    - Allow dynamically open and close new consoles
+    - Enable mouse and allow simple button interaction
 
 1. **Final Goal: Self-hosting**
     - Port a sophisticate enough compiler to the system
