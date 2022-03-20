@@ -151,7 +151,7 @@ You can test run the compiled kernel by QEMU:
 ./qemu.sh
 ```
 
-Anything written to the serial port (all outputs to the screen will be copied to the serial port by the kernel) will be logged into `serial_port_output.txt`.
+Anything written to the serial port (all outputs to the screen will be copied to the serial port by the kernel) will be logged into `serial_port_output.txt`. Kernel debug info will also be available through the the file.
 
 The script also check if there is a `testfs.fat` image file under root dir, if so, it will mount it through the `-hdb` argument when starting QEMU. This file should be a hard disk image of a FAT-32 file system. Simple-OS will try to mount it under `/home`.
 

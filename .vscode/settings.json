@@ -14,5 +14,11 @@
     "C_Cpp.files.exclude": {
         "**/build-toolchain/**": true,
         "**/.vscode": true
-    }
+    },
+    "logViewer.watch": [
+        {
+            "title": "Kernel Debug Output",
+            "pattern": "serial_port_output.txt"
+        }
+    ]
 }
