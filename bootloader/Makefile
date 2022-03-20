@@ -2,9 +2,10 @@ DEFAULT_HOST!=../default-host.sh
 HOST?=$(DEFAULT_HOST)
 HOSTARCH!=../target-triplet-to-arch.sh $(HOST)
 
-KERNEL_ROOT=$(SYSROOT)
-# This must be in sync of KERNEL_BOOT_IMG in main.c
-KERNEL_BOOT_IMG=$(SYSROOT)$(BOOTDIR)/simple_os.kernel
+# shell assignment operator ‘!=’
+# Ref: https://www.gnu.org/software/make/manual/html_node/Setting.html#Setting
+SYSROOT!=realpath $(SYSROOT)
+
 # Pad the final binary to 16384 bytes (32 * 512 byte sectors)
 # This variable must be in sync with: bootloader.asm and main.c, search "BOOTLOADER_MAX_SIZE" there
 BOOTLOADER_MAX_SIZE=16384
@@ -21,13 +22,6 @@ string/string.o \
 tar/tar.o \
 elf/elf.o \
 video/video.o \
-
-
-
-# shell assignment operator ‘!=’
-# Ref: https://www.gnu.org/software/make/manual/html_node/Setting.html#Setting
-KERNEL_ROOT!=realpath $(KERNEL_ROOT)
-KERNEL_BOOT_IMG!=realpath $(KERNEL_BOOT_IMG)
 
 # Detecting Linux vs macOS
 UNAME := $(shell uname)
@@ -66,10 +60,12 @@ endif
 	cp $< $@
 	dd if=/dev/zero of=$@ bs=1 count=0 seek=$(BOOTLOADER_MAX_SIZE)
 
-# Hardcoded path /kernel.bin to be loaded by bootloader
+# A tar file system including all the files under the SYSROOT
+# Including the kernel image /boot/simple_os.kernel
+# Use --transform to clean up absolute paths recorded in the TAR ball
+# e.g. $(SYSROOT)/boot/simple_os.kernel -> /boot/simple_os.kernel
 kernel.tar:
-	# Use KERNEL_ROOT as file name root, i.e. $(KERNEL_ROOT)/kernel.bin -> /kernel.bin in the tar ball
-	$(TAR) -P -cvf $@ --transform="s,^$(KERNEL_ROOT)/,/," $(KERNEL_ROOT)/*
+	$(TAR) -P -cvf $@ --transform="s,^$(SYSROOT)/,/," $(SYSROOT)/*
 
 bootable_kernel.bin: bootloader_padded.bin kernel.tar
 	# concat the kernel tarball

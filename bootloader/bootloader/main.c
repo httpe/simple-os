@@ -12,7 +12,7 @@
 #include "../arch/i386/ata.h"
 #include "../arch/i386/tty.h"
 
-// The whole bootloader binary is assumed to take the first 16 sectors
+// The whole bootloader binary is assumed to take the first 32 sectors
 // must be in sync of BOOTLOADER_MAX_SIZE in Makefile
 #define BOOTLOADER_SECTORS 32
 #define KERNEL_BOOT_IMG "/boot/simple_os.kernel"

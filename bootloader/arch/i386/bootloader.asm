@@ -33,7 +33,7 @@ boot:
     ; real mode addressing is segment*16 + offset, so the 512 bytes MBR take 0x200 bytes
     ; and thus we choose to load from disk to 0:0x7e00
     ; must be in sync of BOOTLOADER_MAX_SIZE in Makefile
-    mov dh, 31
+    mov dh, (32 - 1)
     mov bx, 0x7e00
     call disk_load  ; dl shall be loaded automatically during system boot to point to the current disk/media of this MBR
 
@@ -136,4 +136,4 @@ MSG_PROT_MODE db "Started in 32-bit protected mode", 0
 
 ; The boot loader shall be exactly 8192 bytes (16 sectors in total, one MBR sector and 15 utility sectors)
 ; Must be inline with items related to BOOTLOADER_MAX_SIZE
-times 8190-512-($-$$) db 0
+times (16*512)-512-($-$$) db 0
