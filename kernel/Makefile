@@ -47,7 +47,7 @@ network/network.o \
 pipe/pipe.o \
 video/video.o \
 lock/lock.o \
-# socket/socket.o \
+socket/socket.o \
 
 
 OBJS=\

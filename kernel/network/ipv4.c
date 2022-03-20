@@ -1,6 +1,6 @@
 #include <kernel/ipv4.h>
 #include <kernel/icmp.h>
-// #include <kernel/socket.h>
+#include <kernel/socket.h>
 #include <kernel/process.h>
 #include <kernel/rtl8139.h>
 #include <kernel/arp.h>
@@ -83,7 +83,7 @@ int ipv4_send_pkt(void* buf, uint16_t pkt_len) {
     return res;
 }
 
-int ipv4_opt_from_header(ipv4_header* hdr, ipv4_opt* opt)
+int ipv4_opt_from_header(const ipv4_header* hdr, ipv4_opt* opt)
 {
     *opt = (ipv4_opt) {.protocol = hdr->protocol, .dst = hdr->dst, .ttl = hdr->ttl, .src = hdr->src};
     return 0;
@@ -104,40 +104,31 @@ int ipv4_process_packet(void* buf, uint len)
         hdr->src.addr[0], hdr->src.addr[1], hdr->src.addr[2], hdr->src.addr[3], 
         orig_checksum, eq, our_checksum);
 
-    uint8_t* buff = (uint8_t*) buf;
-    for(uint i=0; i<len; i++) {
-        if(i % 16 == 0 && i != 0) {
-            printf("\n");
-        }
-        printf("0x%x ", buff[i]);
-    }
-    printf("\n");
-
     last_received_pkt_len = len;
     memmove(ipv4_receive_buffer, buf, len);
     pkt_received++;
 
-    // int n_socket_processed = 0;
-    // if(hdr->protocol == IPv4_PROTOCAL_ICMP) {
-    //     PANIC_ASSERT(len >= sizeof(ipv4_header));
-    //     n_socket_processed = socket_process_pkt(IPPROTO_ICMP, buf + sizeof(ipv4_header), len - sizeof(ipv4_header));
-    // } else {
-    //     // other unrecognized protocols
-    //     n_socket_processed = socket_process_pkt(IPPROTO_RAW, buf, len);
-    // }
+    int n_socket_processed = 0;
+    if(hdr->protocol == IPv4_PROTOCAL_ICMP) {
+        PANIC_ASSERT(len >= sizeof(ipv4_header));
+        n_socket_processed = socket_process_pkt(IPPROTO_ICMP, buf, len);
+    } else {
+        // other unrecognized protocols
+        n_socket_processed = socket_process_pkt(IPPROTO_RAW, buf, len);
+    }
 
-    // // if package does not belong to any socket, print it out and drop
-    // if(n_socket_processed == 0) {
-    //     printf("IPv4 Pkt received, no one listening, unkown protocol:\n");
-    //     uint8_t* buff = (uint8_t*) buf;
-    //     for(uint i=0; i<len; i++) {
-    //         if(i % 16 == 0 && i != 0) {
-    //             printf("\n");
-    //         }
-    //         printf("0x%x ", buff[i]);
-    //     }
-    //     printf("\n");
-    // }
+    // if package does not belong to any socket, print it out and drop
+    if(n_socket_processed == 0) {
+        printf("IPv4 Pkt received, no one listening, unkown protocol:\n");
+        uint8_t* buff = (uint8_t*) buf;
+        for(uint i=0; i<len; i++) {
+            if(i % 16 == 0 && i != 0) {
+                printf("\n");
+            }
+            printf("0x%x ", buff[i]);
+        }
+        printf("\n");
+    }
 
     return 0;
 }

@@ -9,7 +9,7 @@
 #include <kernel/icmp.h>
 #include <kernel/cpu.h>
 #include <kernel/video.h>
-// #include <kernel/socket.h>
+#include <kernel/socket.h>
 #include <network.h>
 #include <common.h>
 #include <stdio.h>
@@ -113,58 +113,58 @@ int sys_open(trapframe* r)
     return handle;
 }
 
-// int sys_socket_open(trapframe* r)
-// {
-//     int domain = *(int*) (r->esp + 4);
-//     int type = *(int*) (r->esp + 8);
-//     int protocol = *(int*) (r->esp + 12);
-//     int socket_idx = socket(domain, type, protocol);
-//     if(socket_idx < 0) return -1;
-//     struct handle_map map = (struct handle_map) {.type = HANDLE_TYPE_SOCKET, .grd = socket_idx};
-//     int handle = alloc_handle(&map);
-//     return handle;
-// }
+int sys_socket_open(trapframe* r)
+{
+    int domain = *(int*) (r->esp + 4);
+    int type = *(int*) (r->esp + 8);
+    int protocol = *(int*) (r->esp + 12);
+    int socket_idx = socket(domain, type, protocol);
+    if(socket_idx < 0) return -1;
+    struct handle_map map = (struct handle_map) {.type = HANDLE_TYPE_SOCKET, .grd = socket_idx};
+    int handle = alloc_handle(&map);
+    return handle;
+}
 
-// int sys_socket_setopt(trapframe* r)
-// {
-//     int socket_handle = *(int*) (r->esp + 4);
-//     int level = *(int*) (r->esp + 8);
-//     int option_name = *(int*) (r->esp + 12);
-//     void* option_value = *(void**) (r->esp + 16);
-//     int option_len = *(int*) (r->esp + 20);
-//     struct handle_map* map = get_handle(socket_handle);
-//     if(map == NULL || map->type != HANDLE_TYPE_SOCKET) return -1;
-//     int res  = setsockopt(map->grd, level, option_name, option_value, option_len);
-//     return res;
-// }
+int sys_socket_setopt(trapframe* r)
+{
+    int socket_handle = *(int*) (r->esp + 4);
+    int level = *(int*) (r->esp + 8);
+    int option_name = *(int*) (r->esp + 12);
+    void* option_value = *(void**) (r->esp + 16);
+    int option_len = *(int*) (r->esp + 20);
+    struct handle_map* map = get_handle(socket_handle);
+    if(map == NULL || map->type != HANDLE_TYPE_SOCKET) return -1;
+    int res  = setsockopt(map->grd, level, option_name, option_value, option_len);
+    return res;
+}
 
-// int sys_socket_sendto(trapframe* r)
-// {
-//     int socket_handle = *(int*) (r->esp + 4);
-//     void* message = *(void**) (r->esp + 8);
-//     size_t length = *(int*) (r->esp + 12);
-//     int flags = *(int*) (r->esp + 16);
-//     struct sockaddr* dest_addr = *(struct sockaddr**) (r->esp + 20);
-//     socklen_t dest_len = *(int*) (r->esp + 24);
-//     struct handle_map* map = get_handle(socket_handle);
-//     if(map == NULL || map->type != HANDLE_TYPE_SOCKET) return -1;
-//     int res  = sendto(map->grd, message, length, flags, dest_addr, dest_len);
-//     return res;
-// }
+int sys_socket_sendto(trapframe* r)
+{
+    int socket_handle = *(int*) (r->esp + 4);
+    void* message = *(void**) (r->esp + 8);
+    size_t length = *(int*) (r->esp + 12);
+    int flags = *(int*) (r->esp + 16);
+    struct sockaddr* dest_addr = *(struct sockaddr**) (r->esp + 20);
+    socklen_t dest_len = *(int*) (r->esp + 24);
+    struct handle_map* map = get_handle(socket_handle);
+    if(map == NULL || map->type != HANDLE_TYPE_SOCKET) return -1;
+    int res  = sendto(map->grd, message, length, flags, dest_addr, dest_len);
+    return res;
+}
 
-// int sys_socket_recvfrom(trapframe* r)
-// {
-//     int socket_handle = *(int*) (r->esp + 4);
-//     void* buffer = *(void**) (r->esp + 8);
-//     size_t length = *(int*) (r->esp + 12);
-//     int flags = *(int*) (r->esp + 16);
-//     struct sockaddr* address = *(struct sockaddr**) (r->esp + 20);
-//     socklen_t* address_len = *(socklen_t**) (r->esp + 24);
-//     struct handle_map* map = get_handle(socket_handle);
-//     if(map == NULL || map->type != HANDLE_TYPE_SOCKET) return -1;
-//     int res = recvfrom(map->grd, buffer, length, flags, address, address_len);
-//     return res;
-// }
+int sys_socket_recvfrom(trapframe* r)
+{
+    int socket_handle = *(int*) (r->esp + 4);
+    void* buffer = *(void**) (r->esp + 8);
+    size_t length = *(int*) (r->esp + 12);
+    int flags = *(int*) (r->esp + 16);
+    struct sockaddr* address = *(struct sockaddr**) (r->esp + 20);
+    socklen_t* address_len = *(socklen_t**) (r->esp + 24);
+    struct handle_map* map = get_handle(socket_handle);
+    if(map == NULL || map->type != HANDLE_TYPE_SOCKET) return -1;
+    int res = recvfrom(map->grd, buffer, length, flags, address, address_len);
+    return res;
+}
 
 int sys_close(trapframe* r)
 {
@@ -579,7 +579,6 @@ void syscall_handler(trapframe* r)
     case SYS_DRAW_PICTURE:
         r->eax = sys_draw_picture(r);
         break;
-
     case SYS_NETWORK_RECEIVE_IPv4_PKT:
         r->eax = sys_network_receive_ipv4_pkt(r);
         break;
@@ -595,18 +594,17 @@ void syscall_handler(trapframe* r)
     case SYS_FINALIZE_ICMP_PKT:
         r->eax = sys_finalize_icmp_pkt(r);
         break;
-
-    // case SYS_SOCKET_OPEN:
-    //     r->eax = sys_socket_open(r);
-    //     break;
-    // case SYS_SOCKET_SETOPT:
-    //     r->eax = sys_socket_setopt(r);
-    //     break;
-    // case SYS_SOCKET_SENDTO:
-    //     r->eax = sys_socket_sendto(r);
-    //     break;
-    // case SYS_SOCKET_RECVFROM:
-    //     r->eax = sys_socket_recvfrom(r);
+    case SYS_SOCKET_OPEN:
+        r->eax = sys_socket_open(r);
+        break;
+    case SYS_SOCKET_SETOPT:
+        r->eax = sys_socket_setopt(r);
+        break;
+    case SYS_SOCKET_SENDTO:
+        r->eax = sys_socket_sendto(r);
+        break;
+    case SYS_SOCKET_RECVFROM:
+        r->eax = sys_socket_recvfrom(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);

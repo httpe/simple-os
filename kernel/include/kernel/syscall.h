@@ -41,11 +41,11 @@
 #define SYS_PREP_ICMP_PKT 33
 #define SYS_FINALIZE_ICMP_PKT 34
 
+#define SYS_SOCKET_OPEN 35
+#define SYS_SOCKET_SETOPT 36
+#define SYS_SOCKET_SENDTO 37
+#define SYS_SOCKET_RECVFROM 38
 
-// #define SYS_SOCKET_OPEN 30
-// #define SYS_SOCKET_SETOPT 31
-// #define SYS_SOCKET_SENDTO 32
-// #define SYS_SOCKET_RECVFROM 33
 
 // defined in interrupt.asm
 extern void int88();

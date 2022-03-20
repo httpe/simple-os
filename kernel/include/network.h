@@ -182,6 +182,92 @@ typedef struct {
     icmp_rest_of_header rest;
 } icmp_opt;
 
+
+///////////////////////////////
+//
+// Socket
+//
+///////////////////////////////
+
+
+// Socket Domain/Address Family
+#define AF_UNSPEC 0
+#define AF_INET 1
+
+// Socket type
+#define SOCK_RAW 0
+#define SOCK_DGRAM 1
+#define SOCK_STREAM 2
+
+// Protocal type (from Linux <netinet/in.h>)
+#define IPPROTO_IP 0          /* Dummy protocol (TCP for SOCK_STREAM, UDP for SOCK_DGRAM, raw IPv4 protocol for SOCK_RAW) */
+#define IPPROTO_ICMP 1        /* Internet Control Message Protocol.  */
+#define IPPROTO_TCP 6         /* Transmission Control Protocol.  */
+#define IPPROTO_UDP 17        /* User Datagram Protocol.  */
+#define IPPROTO_RAW 255       /* Raw IP packets (user provides IPv4 header manually)  */
+
+// From Linux <sys/socket.h>
+/* Setsockoptions(2) level. Thanks to BSD these must match IPPROTO_xxx */
+#define SOL_IP		0
+#define SOL_ICMP	1     // linux does not have this
+#define SOL_TCP		6
+#define SOL_UDP		17
+#define SOL_RAW		255
+
+#define SOL_SOCKET 256  // linux is 1
+
+
+// SOL_SOCKET level options
+/* This define is also used outside of Newlib, e.g. in MinGW-w64 */
+#ifndef _TIMEVAL_DEFINED
+#define _TIMEVAL_DEFINED
+
+/*
+ * Structure returned by gettimeofday(2) system call, and used in other calls.
+ */
+struct timeval {
+	time_t		tv_sec;		/* seconds */
+	suseconds_t	tv_usec;	/* and microseconds */
+};
+#endif /* _TIMEVAL_DEFINED */
+#define SO_RCVTIMEO 1         // receive timeout, struct timeval
+
+// SOL_IP level options
+// https://man7.org/linux/man-pages/man7/ip.7.html
+#define IP_TTL 1              // uint8_t
+#define IP_PROTOCOL 2         // uint8_t
+
+// SOL_ICMP level options
+#define ICMP_TYPE 1           // uint8_t
+#define ICMP_CODE 2           // uint8_t
+#define ICMP_ECHO_ID 3        // uint16_t
+#define ICMP_ECHO_SEQ 4       // uint16_t
+
+
+typedef int32_t socklen_t;
+typedef uint32_t sa_family_t;
+
+typedef struct sockaddr {
+    sa_family_t  sa_family; // AF_*
+    char         sa_data[14];
+} sockaddr;
+
+// From POSIX netinet/in.h
+typedef uint16_t in_port_t;
+typedef uint32_t in_addr_t;
+typedef struct  in_addr {
+  in_addr_t  s_addr;
+} in_addr;
+typedef struct sockaddr_in {
+    sa_family_t  sa_family; // AF_INET
+    in_port_t       sin_port;
+    struct  in_addr sin_addr;
+    char            sin_zero[8];
+} sockaddr_in;
+
+#define INADDR_ANY 0
+#define INADDR_BROADCAST 0xFFFFFFFF
+
 ///////////////////////////////
 //
 // Inline Network Utility
@@ -209,92 +295,15 @@ static inline void switch_endian(uint8_t* buf, uint32_t n) {
 
 ///////////////////////////////
 //
-// Socket
-//
-///////////////////////////////
-
-
-// // Socket Domain/Address Family
-// #define AF_UNSPEC 0
-// #define AF_INET 1
-
-// // Socket type
-// #define SOCK_RAW 0
-// #define SOCK_DGRAM 1
-// #define SOCK_STREAM 2
-
-// // Protocal type (from Linux <netinet/in.h>)
-// #define IPPROTO_IP 0          /* Dummy protocol (TCP for SOCK_STREAM, UDP for SOCK_DGRAM, raw IPv4 protocol for SOCK_RAW) */
-// #define IPPROTO_ICMP 1        /* Internet Control Message Protocol.  */
-// #define IPPROTO_TCP 6         /* Transmission Control Protocol.  */
-// #define IPPROTO_UDP 17        /* User Datagram Protocol.  */
-// #define IPPROTO_RAW 255       /* Raw IP packets (user provides IPv4 header manually)  */
-
-// // From Linux <sys/socket.h>
-// /* Setsockoptions(2) level. Thanks to BSD these must match IPPROTO_xxx */
-// #define SOL_IP		0
-// #define SOL_ICMP	1     // linux does not have this
-// #define SOL_TCP		6
-// #define SOL_UDP		17
-// #define SOL_RAW		255
-
-// #define SOL_SOCKET 256  // linux is 1
-
-
-// // SOL_SOCKET level options
-// struct timeval {
-//   time_t         tv_sec;      // seconds
-//   suseconds_t    tv_usec;     // microseconds
-// };
-// #define SO_RCVTIMEO 1         // receive timeout, struct timeval
-
-// // SOL_IP level options
-// // https://man7.org/linux/man-pages/man7/ip.7.html
-// #define IP_TTL 1              // uint8_t
-// #define IP_PROTOCOL 2         // uint8_t
-
-// // SOL_ICMP level options
-// #define ICMP_TYPE 1           // uint8_t
-// #define ICMP_CODE 2           // uint8_t
-// #define ICMP_ECHO_ID 3        // uint16_t
-// #define ICMP_ECHO_SEQ 4       // uint16_t
-
-
-// typedef int32_t socklen_t;
-// typedef uint32_t sa_family_t;
-
-// typedef struct sockaddr {
-//     sa_family_t  sa_family; // AF_*
-//     char         sa_data[14];
-// } sockaddr;
-
-// // From POSIX netinet/in.h
-// typedef uint16_t in_port_t;
-// typedef uint32_t in_addr_t;
-// typedef struct  in_addr {
-//   in_addr_t  s_addr;
-// } in_addr;
-// typedef struct sockaddr_in {
-//     sa_family_t  sa_family; // AF_INET
-//     in_port_t       sin_port;
-//     struct  in_addr sin_addr;
-//     char            sin_zero[8];
-// } sockaddr_in;
-
-// #define INADDR_ANY 0
-// #define INADDR_BROADCAST 0xFFFFFFFF
-
-///////////////////////////////
-//
 // Network System Calls
 //
 //////////////////////////////
 
 
-// static inline _syscall3(SYS_SOCKET_OPEN, int, syscall_socket_open, int, domain, int, type, int, protocol)
-// static inline _syscall5(SYS_SOCKET_SETOPT, int, syscall_socket_setopt, int, socket, int, level, int, option_name, void*, option_value, socklen_t, option_len)
-// static inline _syscall6(SYS_SOCKET_SENDTO, int, syscall_socket_sendto, int, socket, void*, message, size_t, length, int, flags, sockaddr*, dest_addr, socklen_t, dest_len)
-// static inline _syscall6(SYS_SOCKET_RECVFROM, int, syscall_socket_recvfrom, int, socket, void*, buffer, size_t, length, int, flags, sockaddr*, address, socklen_t, address_len)
+static inline _syscall3(SYS_SOCKET_OPEN, int, syscall_socket_open, int, domain, int, type, int, protocol)
+static inline _syscall5(SYS_SOCKET_SETOPT, int, syscall_socket_setopt, int, socket, int, level, int, option_name, void*, option_value, socklen_t, option_len)
+static inline _syscall6(SYS_SOCKET_SENDTO, int, syscall_socket_sendto, int, socket, void*, message, size_t, length, int, flags, sockaddr*, dest_addr, socklen_t, dest_len)
+static inline _syscall6(SYS_SOCKET_RECVFROM, int, syscall_socket_recvfrom, int, socket, void*, buffer, size_t, length, int, flags, sockaddr*, address, socklen_t*, address_len)
 
 static inline _syscall3(SYS_NETWORK_RECEIVE_IPv4_PKT, int, syscall_receive_ipv4_packet, void*, buf, uint, len, uint, timeout_sec)
 
