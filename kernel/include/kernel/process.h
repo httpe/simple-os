@@ -27,7 +27,8 @@ enum procstate { PROC_STATE_UNUSED, PROC_STATE_EMBRYO, PROC_STATE_SLEEPING, PROC
 
 enum handle_type {
     HANDLE_TYPE_UNUSED = 0,
-    HANDLE_TYPE_FILE
+    HANDLE_TYPE_FILE,
+    // HANDLE_TYPE_SOCKET
 };
 
 struct handle_map {

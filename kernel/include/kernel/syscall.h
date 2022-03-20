@@ -34,9 +34,18 @@
 #define SYS_RMDIR 27
 #define SYS_REFRESH_SCREEN 28
 #define SYS_DRAW_PICTURE 29
+
 #define SYS_NETWORK_RECEIVE_IPv4_PKT 30
-#define SYS_PREP_ICMP_PKT 31
-#define SYS_SEND_ICMP_PKT 32
+#define SYS_PREP_IPV4_PKT 31
+#define SYS_SEND_IPV4_PKT 32
+#define SYS_PREP_ICMP_PKT 33
+#define SYS_FINALIZE_ICMP_PKT 34
+
+
+// #define SYS_SOCKET_OPEN 30
+// #define SYS_SOCKET_SETOPT 31
+// #define SYS_SOCKET_SENDTO 32
+// #define SYS_SOCKET_RECVFROM 33
 
 // defined in interrupt.asm
 extern void int88();

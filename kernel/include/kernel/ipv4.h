@@ -12,4 +12,6 @@ int ipv4_wait_for_next_packet(void* buf, uint buf_size, uint timeout_sec);
 int ipv4_prep_pkt(ipv4_opt* opt, void* buf, uint16_t buf_len);
 int ipv4_send_pkt(void* buf, uint16_t pkt_len);
 
+int ipv4_opt_from_header(ipv4_header* hdr, ipv4_opt* opt);
+
 #endif

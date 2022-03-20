@@ -41,7 +41,7 @@ int init_arp()
         .sha = rtl8139_mac()
     };
     mac_addr dest_mac = {.addr = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}}; // broadcast
-    eth_opt opt = (eth_opt) {.dest_mac = dest_mac, .type = ETHER_TYPE_ARP, .data_len = sizeof(pl)};
+    eth_opt opt = (eth_opt) {.dest_mac = dest_mac, .type = ETHER_TYPE_ARP};
     arp.transmit_hdr_len = eth_prep_pkt(&opt, arp.transmit_buff, ARP_TRANSMIT_BUFF_LEN);
     PANIC_ASSERT(arp.transmit_hdr_len > 0);
     memmove(arp.transmit_buff + arp.transmit_hdr_len, &pl, sizeof(pl));

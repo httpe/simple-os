@@ -45,11 +45,8 @@ int init_ethernet()
 
 
 
-int eth_prep_pkt(eth_opt* opt,  void* buf, uint16_t buf_len) {
-    uint16_t pkt_len = sizeof(eth_header) + opt->data_len;
-    if(pkt_len > buf_len || pkt_len > RTL8139_TRANSMIT_BUF_SIZE) {
-        return -1;
-    }
+int eth_prep_pkt(eth_opt* opt, void* buf, uint16_t buf_len) {
+    if(sizeof(eth_header) > buf_len) return -1;
     eth_header* header = (eth_header*) buf;
     *header = (eth_header) {
         .dest = opt->dest_mac,

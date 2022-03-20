@@ -11,28 +11,11 @@ int init_icmp()
     return 0;
 }
 
-int icmp_process_packet(void* buf, uint16_t len)
-{
-    UNUSED_ARG(buf);
-    UNUSED_ARG(len);
-    return 0;
-}
-
 int icmp_prep_pkt(icmp_opt* opt, void* buf, uint16_t buf_len) {
-    ipv4_opt ipv4 = {
-        .dst = opt->ipv4.dst, 
-        .protocol = IPv4_PROTOCAL_ICMP, 
-        .ttl = opt->ipv4.ttl,
-        .data_len =  sizeof(icmp_header) + opt->data_len
-        };
-    int len_hdr = ipv4_prep_pkt(&ipv4, buf, buf_len);
-    if(len_hdr < 0) {
-        return len_hdr;
-    }
-    if(buf_len < len_hdr + sizeof(icmp_header)) {
+    if(buf_len < sizeof(icmp_header)) {
         return -1;
     }
-    icmp_header* hdr = (icmp_header*) (buf + len_hdr);
+    icmp_header* hdr = (icmp_header*) buf;
     *hdr = (icmp_header) {
         .code = opt->code,
         .type = opt->type,
@@ -43,12 +26,27 @@ int icmp_prep_pkt(icmp_opt* opt, void* buf, uint16_t buf_len) {
     } else {
         return -1;
     }
-    return len_hdr + sizeof(icmp_header);
+    return sizeof(icmp_header);
 }
 
-int icmp_send_pkt(icmp_opt* opt, void* buf, uint16_t pkt_len) {
-    icmp_header* hdr = (icmp_header*) (buf + pkt_len - opt->data_len - sizeof(icmp_header));
-    hdr->checksum = ipv4_icmp_checksum(hdr, sizeof(icmp_header) + opt->data_len);
-    int res = ipv4_send_pkt(buf, pkt_len);
-    return res;
+// int icmp_send_pkt(int header_offset, void* buf, uint16_t pkt_len) {
+//     if(header_offset < 0) return -1;
+//     icmp_header* hdr = (icmp_header*) (buf + header_offset);
+//     hdr->checksum = ipv4_icmp_checksum(hdr, pkt_len - header_offset);
+//     int res = ipv4_send_pkt(buf, pkt_len);
+//     return res;
+// }
+
+int icmp_finalize_pkt(icmp_header* hdr, uint16_t pkt_len)
+{
+    hdr->checksum = ipv4_icmp_checksum(hdr, pkt_len);
+    return 0;
 }
+
+// icmp_opt* new_icmp_opt()
+// {
+//     icmp_opt* opt = malloc(sizeof(icmp_opt));
+//     memset(opt, 0, sizeof(icmp_opt));
+//     opt->ipv4.protocol = IPv4_PROTOCAL_ICMP;
+//     return opt;
+// }

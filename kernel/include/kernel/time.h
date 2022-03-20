@@ -2,6 +2,7 @@
 #define _TIME_H
 
 #include <stdint.h>
+#include <kernel/types.h>
 
 // From Linux struct_tm.h
 /* ISO C `broken-down time' structure.  */
@@ -22,8 +23,6 @@ typedef struct date_time
   const char *tm_zone;		/* Timezone abbreviation.  */
 
 } date_time;
-
-typedef int64_t time_t;
 
 date_time current_datetime();
 time_t datetime2epoch(date_time* tim_p);

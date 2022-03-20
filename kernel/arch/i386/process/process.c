@@ -1,20 +1,22 @@
-#include <stddef.h>
-#include <string.h>
-#include <stdio.h>
-#include <common.h>
-#include <stdlib.h>
 #include <kernel/process.h>
+#include <arch/i386/kernel/segmentation.h>
+#include <arch/i386/kernel/cpu.h>
 #include <kernel/paging.h>
 #include <kernel/panic.h>
 #include <kernel/memory_bitmap.h>
+// #include <kernel/socket.h>
 #include <kernel/vfs.h>
 #include <kernel/stat.h>
 #include <kernel/errno.h>
 #include <kernel/elf.h>
 #include <kernel/cpu.h>
 #include <kernel/lock.h>
-#include <arch/i386/kernel/segmentation.h>
-#include <arch/i386/kernel/cpu.h>
+#include <stddef.h>
+#include <string.h>
+#include <stdio.h>
+#include <common.h>
+#include <stdlib.h>
+
 
 // Source: xv6/proc.h
 
@@ -257,7 +259,11 @@ int release_handle(int handle)
     if(pmap->type == HANDLE_TYPE_FILE) {
         int r = fs_release(pmap->grd);
         if(r < 0) return r;
-    }
+    } 
+    // else if(pmap->type == HANDLE_TYPE_SOCKET) {
+    //     int r = close_socket(pmap->grd);
+    //     if(r < 0) return r;
+    // }
     pmap->type = HANDLE_TYPE_UNUSED;
     return 0;
 }
