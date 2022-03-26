@@ -327,6 +327,13 @@ int fs_open(const char * path, int flags)
             ret = res;
             goto end;
         }
+    } else if (mp->operations.getattr != NULL) {
+        fs_stat st;
+        int res = mp->operations.getattr(mp, remaining_path, &st, &fi);
+        if(res < 0) {
+            ret = res;
+            goto end;
+        }
     }
 
     *f = (file) {
