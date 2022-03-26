@@ -16,3 +16,4 @@ serial_port_output.txt
 toolchain/
 build-toolchain/
 stb_image.h
+mnt/
