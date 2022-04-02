@@ -137,6 +137,14 @@ static int vprintf0(struct printf_output* out, const char* restrict format, va_l
 	return written;
 }
 
+static bool print2serial(struct printf_output* out, const char* data, size_t length) {
+	(void) out;
+	const unsigned char* bytes = (const unsigned char*) data;
+	for (size_t i = 0; i < length; i++)
+		if (serial_putchar(bytes[i]) == EOF)
+			return false;
+	return true;
+}
 
 static bool print2tty(struct printf_output* out, const char* data, size_t length) {
 	(void) out;
@@ -158,6 +166,16 @@ static bool print2str(struct printf_output* out, const char* data, size_t length
 	out->size -= length;
 	
 	return true;
+}
+
+// print to debug/serial output rather than screen
+int kprintf(const char* restrict format, ...) {
+	va_list parameters;
+	struct printf_output out = (struct printf_output) {.write = print2serial};
+	va_start(parameters, format);
+	int r = vprintf0(&out, format, parameters);
+	va_end(parameters);
+	return r;
 }
 
 int printf(const char* restrict format, ...) {
