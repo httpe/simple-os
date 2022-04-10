@@ -506,6 +506,11 @@ static void trim_file_name(char* str)
 // Convert the 8.3 filename entry to its displayed version
 static void fat_standardize_short_name(char* filename, fat32_direntry_short* short_entry)
 {
+    if(short_entry->name[0] == 0 && short_entry->ext[0] == 0) {
+        // the name is empty
+        filename[0] = 0;
+        return;
+    }
     memmove(filename,short_entry->name, FAT_SHORT_NAME_LEN);
     if(filename[0] == '.') {
         // dot entry shall have name '.' or '..'
@@ -1769,7 +1774,8 @@ static int fat32_open(struct fs_mount_point* mount_point, const char * path, str
     }
     
     if(HAS_ATTR(fi->flags, O_TRUNC)) {
-        int res = fat32_truncate(mount_point, path, 0, fi);
+        // we haven't allocated file handle, so pass fi == NULL in here
+        int res = fat32_truncate(mount_point, path, 0, NULL);
         if(res < 0) {
             return res;
         }
