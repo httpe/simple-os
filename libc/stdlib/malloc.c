@@ -19,6 +19,8 @@ void* malloc(uint32_t size) {
 #else
 
 #include <syscall.h>
+#include <stddef.h>
+// #include <stdio.h>
 
 static inline _syscall1(SYS_SBRK, void*, sbrk, int, size_delta)
 
@@ -45,6 +47,9 @@ static Header *freep;
 void
 free(void *ap)
 {
+  // printf("free(%u)\n", ap);
+  if(ap == NULL) return;
+  
   Header *bp, *p;
 
   bp = (Header*)ap - 1;
@@ -84,6 +89,7 @@ morecore(uint nu)
 void*
 malloc(uint nbytes)
 {
+  // printf("malloc(%u)\n", nbytes);
   Header *p, *prevp;
   uint nunits;
 
