@@ -420,9 +420,6 @@ int fs_getattr(const char * path, struct fs_stat * stat, int file_idx)
     struct fs_file_info fi;
     struct fs_file_info* pfi = NULL;
     file* opened_file = idx2file(file_idx);
-    if(opened_file == NULL) {
-        return -ENOENT;
-    }
     if(opened_file) {
         remaining_path = opened_file->path;
         mp = opened_file->mount_point;
@@ -446,9 +443,6 @@ int fs_truncate(const char * path, uint size, int file_idx)
     struct fs_file_info fi;
     struct fs_file_info* pfi = NULL;
     file* opened_file = idx2file(file_idx);
-    if(opened_file == NULL) {
-        return -ENOENT;
-    }
     if(opened_file) {
         remaining_path = opened_file->path;
         mp = opened_file->mount_point;
@@ -469,12 +463,14 @@ int fs_dupfile(int file_idx)
 {
     acquire(&vfs.lk);
     file* f = idx2file(file_idx);
-    if(f == NULL) {
+
+    if(!f) {
+        release(&vfs.lk);
         return -ENOENT;
     }
+
     f->ref++;
     release(&vfs.lk);
-
     return 0;
 }
 
@@ -487,7 +483,6 @@ int fs_release(int file_idx)
         release(&vfs.lk);
         return -ENOENT;
     }
-    if(!f) return -1;
     f->ref--;
     if(f->ref == 0) {
         struct fs_file_info fi = {.flags = f->open_flags, .fh=f->inum};
