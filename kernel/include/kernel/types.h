@@ -13,10 +13,15 @@ typedef int32_t suseconds_t;
 #define	_SUSECONDS_T_DECLARED
 #endif
 
+#ifndef _SIZE_T_DECLARED
 typedef __SIZE_TYPE__ size_t;
-typedef int64_t time_t;
+#define	_SIZE_T_DECLARED
+#endif
 
-#define _SSIZE_T_DECLARED
+#ifndef _TIME_T_DECLARED
+typedef int64_t time_t;
+#define	_TIME_T_DECLARED
+#endif
 
 
 #endif
