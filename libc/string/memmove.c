@@ -32,6 +32,8 @@
 
 // Optimized memcpy from Newlib
 void* memmove(void* dst_void, const void* src_void, size_t length) {
+	if(dst_void == src_void) return dst_void;
+
 	char* dst = dst_void;
 	const char* src = src_void;
 	long* aligned_dst;
