@@ -21,9 +21,6 @@
                 "add-symbol-file-auto bootloader/bootloader.elf",
                 "add-symbol-file-auto kernel/simple_os.kernel",
                 "add-symbol-file-auto applications/shell/shell.elf",
-                "dir bootloader",
-                "dir kernel",
-                
             ]
         },
         {
