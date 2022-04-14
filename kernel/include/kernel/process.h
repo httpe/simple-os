@@ -7,14 +7,16 @@
 // maximum number of processes
 #define N_PROCESS        64  
 // number of pages allocating to each process's kernel stack
-#define N_KERNEL_STACK_PAGE_SIZE 1
+// 256 page = 1Mib
+#define N_KERNEL_STACK_PAGE_SIZE 256
 // maximum number of opened hanldes for one process
 #define MAX_HANDLE_PER_PROCESS 16
 
 // max number of command line arguments
 #define MAX_ARGC 10
 // user program stack size in pages
-#define USER_STACK_PAGE_SIZE 1
+// 256 page = 1Mib
+#define USER_STACK_PAGE_SIZE 256
 
 // process context, architecture specific
 struct context;
