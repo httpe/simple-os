@@ -532,6 +532,12 @@ static void fat_standardize_short_name(char* filename, fat32_direntry_short* sho
         // If DIR_Name[0] == 0x05, then the actual file name character for this byte is 0xE5
        filename[0] = 0xE5;
     }
+    // 8.3 filename is case insensitive, so convert to all capital letter here
+    for(int i = 0;filename[i];i++) {
+        if(filename[i] >= 'a' && filename[i] <= 'z') {
+            filename[i] -= ('a' - 'A');
+        }
+    }
 }
 
 static void fat32_reset_dir_iterator(fat_dir_iterator* iter)
@@ -621,6 +627,9 @@ static fat_iterate_dir_status fat32_iterate_dir(fat32_meta* meta, fat_dir_iterat
                 for(uint i=0; i<lfn_name_byte_len/2; i++) {
                     char usc2_first = start_of_filename[i*2];
                     char usc2_second = start_of_filename[i*2+1];
+                    if(usc2_first == 0 && usc2_second == 0) {
+                        break;
+                    }
                     // Unicode (and UCS-2) is compatible with 7-bit ASCII / US-ASCII
                     if(usc2_first < 0 || usc2_second != 0) {
                         // if not US-ASCII
@@ -813,13 +822,13 @@ static int fat32_set_short_name(fat32_file_entry* file_entry)
 // Return: numeric tail appended for short name collision prevention
 static int fat32_set_numeric_tail(fat32_meta* meta, fat_dir_iterator* iter, fat32_file_entry* file_entry)
 {
-    char shortname[FAT_SHORT_NAME_LEN + FAT_SHORT_EXT_LEN+1];
+    char shortname[FAT_SHORT_NAME_LEN + FAT_SHORT_EXT_LEN + 1 + 1] = {0}; // +1 for the dot ".", +1 for \0
     fat32_file_entry existing_entry = {0};
-    char buff[FAT_SHORT_NAME_LEN];
+    char buff[FAT_SHORT_NAME_LEN + 1] = {0};//+1 for \0, not necessary but just in case
 
     // Assume we always need to add numeric tail here
     // Ref: http://elm-chan.org/fsw/ff/00index_e.html
-    for (uint number_tail = 1; number_tail <= 999999; number_tail++) {
+    for (uint number_tail = 1; number_tail <= 0xFFFFFF; number_tail++) {
         uint seq = number_tail;
         int i=FAT_SHORT_NAME_LEN - 1;
         do {
