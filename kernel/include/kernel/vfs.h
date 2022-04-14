@@ -28,6 +28,7 @@ int fs_open(const char * path, int flags);
 int fs_release(int file_idx);
 int fs_read(int file_idx, void *buf, uint size);
 int fs_seek(int file_idx, int offset, int whence);
+int fs_tell(int file_idx);
 int fs_write(int file_idx, void *buf, uint size);
 int fs_dupfile(int file_idx);
 

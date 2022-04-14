@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <kernel/errno.h>
 #include <kernel/stat.h>
@@ -419,6 +420,9 @@ int fs_getattr(const char * path, struct fs_stat * stat, int file_idx)
     struct fs_file_info fi;
     struct fs_file_info* pfi = NULL;
     file* opened_file = idx2file(file_idx);
+    if(opened_file == NULL) {
+        return -ENOENT;
+    }
     if(opened_file) {
         remaining_path = opened_file->path;
         mp = opened_file->mount_point;
@@ -442,6 +446,9 @@ int fs_truncate(const char * path, uint size, int file_idx)
     struct fs_file_info fi;
     struct fs_file_info* pfi = NULL;
     file* opened_file = idx2file(file_idx);
+    if(opened_file == NULL) {
+        return -ENOENT;
+    }
     if(opened_file) {
         remaining_path = opened_file->path;
         mp = opened_file->mount_point;
@@ -462,6 +469,9 @@ int fs_dupfile(int file_idx)
 {
     acquire(&vfs.lk);
     file* f = idx2file(file_idx);
+    if(f == NULL) {
+        return -ENOENT;
+    }
     f->ref++;
     release(&vfs.lk);
 
@@ -473,6 +483,10 @@ int fs_release(int file_idx)
 
     acquire(&vfs.lk);
     file* f = idx2file(file_idx);
+    if(f == NULL) {
+        release(&vfs.lk);
+        return -ENOENT;
+    }
     if(!f) return -1;
     f->ref--;
     if(f->ref == 0) {
@@ -497,6 +511,9 @@ int fs_release(int file_idx)
 int fs_read(int file_idx, void *buf, uint size)
 {
     file* f = idx2file(file_idx);
+    if(f == NULL) {
+        return -ENOENT;
+    }
     if(f->mount_point->operations.read == NULL) {
         // if file system does not support this operation
         return -EPERM;
@@ -518,6 +535,9 @@ int fs_read(int file_idx, void *buf, uint size)
 int fs_write(int file_idx, void *buf, uint size)
 {
     file* f = idx2file(file_idx);
+    if(f == NULL) {
+        return -ENOENT;
+    }
     if(f->mount_point->operations.write == NULL) {
         // if file system does not support this operation
         return -EPERM;
@@ -539,6 +559,9 @@ int fs_write(int file_idx, void *buf, uint size)
 int fs_seek(int file_idx, int offset, int whence)
 {
     file* f = idx2file(file_idx);
+    if(f == NULL) {
+        return -ENOENT;
+    }
     if(whence == SEEK_WHENCE_CUR) {
         f->offset += offset;
     } else if(whence == SEEK_WHENCE_SET) {
@@ -560,6 +583,15 @@ int fs_seek(int file_idx, int offset, int whence)
 
     return 0;
     
+}
+
+int fs_tell(int file_idx)
+{
+    file* f = idx2file(file_idx);
+    if(f == NULL) {
+        return -ENOENT;
+    }
+    return f->offset;
 }
 
 
