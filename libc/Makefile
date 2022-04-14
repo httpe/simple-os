@@ -45,6 +45,7 @@ string/strdup.o \
 assert/assert.o \
 stdlib/getenv.o \
 time/time.o \
+stdio/fileio.o \
 
 HOSTEDOBJS=\
 $(ARCH_HOSTEDOBJS) \
