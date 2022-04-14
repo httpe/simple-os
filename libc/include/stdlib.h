@@ -12,6 +12,7 @@ void abort(void);
 
 void free(void *ap);
 void* malloc(unsigned int nbytes);
+char *getenv(const char *name);
 
 #ifdef __cplusplus
 }

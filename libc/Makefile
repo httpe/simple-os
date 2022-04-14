@@ -43,6 +43,7 @@ string/strcmp.o \
 string/strcpy.o \
 string/strdup.o \
 assert/assert.o \
+stdlib/getenv.o \
 
 HOSTEDOBJS=\
 $(ARCH_HOSTEDOBJS) \
