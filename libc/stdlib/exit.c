@@ -1,10 +1,10 @@
-#include <stdio.h>
 #include <stdlib.h>
 
 #if defined(__is_libk)
 #include <kernel/panic.h>
 #else
 #include <syscall.h>
+// #include <stdio.h>
 static inline _syscall1(SYS_EXIT, int, sys_exit, int, exit_code)
 #endif
 
@@ -14,6 +14,7 @@ void exit(int exit_code) {
 	(void) exit_code; // suppress unused arg warning
 	PANIC("Kernel abort()");
 #else
+	// printf("exit(%d)\n", exit_code);
 	sys_exit(exit_code);
 #endif
 	while (1) { }
