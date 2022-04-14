@@ -46,6 +46,8 @@
 #define SYS_SOCKET_SENDTO 37
 #define SYS_SOCKET_RECVFROM 38
 
+#define SYS_CURR_TIME_EPOCH 70
+#define SYS_GET_FILE_OFFSET 80
 
 // defined in interrupt.asm
 extern void int88();

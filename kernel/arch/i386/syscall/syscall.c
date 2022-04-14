@@ -217,6 +217,23 @@ int sys_seek(trapframe* r)
     }
 }
 
+int sys_get_file_offset(trapframe* r)
+{
+    int32_t handle = *(int*) (r->esp + 4);
+    struct handle_map* pmap = get_handle(handle);
+    if(pmap == NULL) return -1;
+    if(pmap->type == HANDLE_TYPE_FILE) {
+        int offset = fs_tell(pmap->grd);
+        if(offset < 0) {
+            return -1;
+        } else {
+            return offset;
+        }
+    } else {
+        return -1;
+    }
+}
+
 int sys_dup(trapframe* r)
 {
     int32_t handle = *(int*) (r->esp + 4);
@@ -290,6 +307,13 @@ int sys_curr_date_time(trapframe* r)
     date_time* dt = *(date_time**) (r->esp + 4);
     *dt = current_datetime();
     return 0;
+}
+
+int sys_curr_time_epoch(trapframe* r)
+{
+    UNUSED_ARG(r);
+    date_time dt = current_datetime();
+    return datetime2epoch(&dt);
 }
 
 int sys_unlink(trapframe* r)
@@ -605,6 +629,12 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_SOCKET_RECVFROM:
         r->eax = sys_socket_recvfrom(r);
+        break;
+    case SYS_CURR_TIME_EPOCH:
+        r->eax = sys_curr_time_epoch(r);
+        break;
+    case SYS_GET_FILE_OFFSET:
+        r->eax = sys_get_file_offset(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);
