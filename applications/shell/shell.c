@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-_syscall0(SYS_TEST, int, sys_halt)
+_syscall0(SYS_TEST, int, sys_test)
 
 #define MAX_COMMAND_LEN 255
 #define MAX_PATH_LEN 4096
@@ -121,6 +121,12 @@ int main(int argc, char* argv[]) {
     char prev_command[MAX_COMMAND_LEN + 1] = {0};
     int prev_n_command_read;
 
+    // for debugging
+    char** default_commands = (char *[]) {
+      NULL
+    };
+    int default_command_char_idx = 0;
+
     char* cwd = malloc(MAX_PATH_LEN+1);
 
     while(1) {
@@ -136,7 +142,13 @@ int main(int argc, char* argv[]) {
         n_command_read = 0;
         while(1) {
             int k;
-            while((k = readKey()) <= 0);
+
+            if(NULL != *default_commands) {
+              k = (*default_commands)[default_command_char_idx++];
+            } else {
+              while((k = readKey()) <= 0);
+            }
+            
             if(k == '\n') {
                 write(STDOUT_FILENO, &"\n", 1);
                 break;
@@ -159,6 +171,11 @@ int main(int argc, char* argv[]) {
                 command[n_command_read++] = c;
             }
         }
+        if(NULL != *default_commands) {
+          default_commands++;
+          default_command_char_idx = 0;
+        }
+        
         memmove(prev_command, command, MAX_COMMAND_LEN + 1);
         prev_n_command_read = n_command_read;
 
@@ -189,14 +206,26 @@ int main(int argc, char* argv[]) {
                 printf("cd error(%d): %s\n", r, strerror(-r));
             }
 
-        } else if(strcmp(part, "halt") == 0) {
-            sys_halt();
+        } else if(strcmp(part, "systest") == 0) {
+            sys_test();
         } else {
             // try execute programs
             struct stat st = {0};
             char prog_path[255] = {0};
             if(*part == '/') {
-              strncpy(prog_path, part, 254);
+              // invoke binary by absolute path 
+              int abs_path_len = strlen(part);
+              if(abs_path_len > 250) {
+                printf("Path too long\n");
+                continue;
+              }
+              strncpy(prog_path, part, 250);
+              strncat(prog_path, ".elf", 254 - abs_path_len);
+              int r_stat = stat(prog_path, &st);
+              if(!(r_stat == 0 && S_ISREG(st.st_mode))) {
+                printf("shell exec: Executable ELF not found\n");
+                continue;
+              }
             } else {
               // Mimic PATH environ vairbale
               // Search for these places for the binary, also append the .elf suffix
