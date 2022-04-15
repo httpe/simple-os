@@ -21,6 +21,10 @@
                 "add-symbol-file-auto bootloader/bootloader.elf",
                 "add-symbol-file-auto kernel/simple_os.kernel",
                 "add-symbol-file-auto applications/shell/shell.elf",
+                // "add-symbol-file-auto applications/test/test.elf",
+                // these dir are needed for asm files
+                "dir kernel",
+                "dir bootloader",
             ]
         },
         {
