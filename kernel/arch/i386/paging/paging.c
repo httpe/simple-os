@@ -249,6 +249,7 @@ static uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, boo
 //@return number of frames mapped
 uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32_t* frames,  bool is_kernel, bool is_writeable, bool consecutive_frame)
 {
+    PANIC_ASSERT(!consecutive_frame || frames==NULL);
     if(page_count == 0) {
         return 0;
     }
@@ -370,9 +371,9 @@ static uint unmap_pages_from(pde* page_dir, uint page_index, uint page_count, bo
 
 // Link two virtual address space pages between page dirs by with the same physical memory space
 // Find a continuous virtual space in pd_target and map to the physical frames under [vaddr,vaddr+size-1] vaddr space in pd_source
-// If the virtual space in pd_source is not mapped, allocate frame & map before linking
+// If the virtual space in pd_source is not mapped and allow_alloc_source is true, allocate frame & map to current page dir before linking
 //@return vaddr of beginning of the linked space in pd_target
-uint32_t link_pages_between(pde* pd_source, uint32_t vaddr, uint32_t size, pde* pd_target, bool alloc_source_rw, bool target_rw)
+uint32_t link_pages(pde* pd_source, uint32_t vaddr, uint32_t size, pde* pd_target, bool allow_alloc_source, bool alloc_source_rw, bool target_rw)
 {
     PANIC_ASSERT(pd_source != pd_target);
     
@@ -400,13 +401,14 @@ uint32_t link_pages_between(pde* pd_source, uint32_t vaddr, uint32_t size, pde* 
 
     PANIC_ASSERT(dir_idx_source < PAGE_DIR_SIZE);
     PANIC_ASSERT(dir_idx_target < PAGE_DIR_SIZE);
-    page_t* table_source = get_page_table(pd_source, dir_idx_source, true);
+    page_t* table_source = get_page_table(pd_source, dir_idx_source, allow_alloc_source);
     page_t* table_target = get_page_table(pd_target, dir_idx_target, true);
 
     while(page_linked < page_count) {
         page_t* pte_source = &table_source[table_idx_source];
 
         uint frame_index;
+        PANIC_ASSERT(allow_alloc_source || pte_source->present);
         if(!pte_source->present) {
             frame_index = first_free_frame();
             // printf("Link page, frame[%u]\n", frame_index);
@@ -429,6 +431,9 @@ uint32_t link_pages_between(pde* pd_source, uint32_t vaddr, uint32_t size, pde* 
         }
 
         page_linked++;
+        if(page_linked >= page_count) {
+            break;
+        }
 
         table_idx_source++;
         if(table_idx_source >= PAGE_TABLE_SIZE) {
@@ -436,7 +441,7 @@ uint32_t link_pages_between(pde* pd_source, uint32_t vaddr, uint32_t size, pde* 
             table_idx_source = 0;
             dir_idx_source++;
             PANIC_ASSERT(dir_idx_source < PAGE_DIR_SIZE);
-            table_source = get_page_table(pd_source, dir_idx_source, true);
+            table_source = get_page_table(pd_source, dir_idx_source, allow_alloc_source);
         }
 
         table_idx_target++;
@@ -448,6 +453,9 @@ uint32_t link_pages_between(pde* pd_source, uint32_t vaddr, uint32_t size, pde* 
             table_target = get_page_table(pd_target, dir_idx_target, true);
         }
     }
+
+    return_page_table(pd_source, table_source);
+    return_page_table(pd_target, table_target);
     
     return VADDR_FROM_PAGE_INDEX(page_idx_target) + offset;
 }
@@ -624,13 +632,13 @@ pde* copy_user_space(pde* page_dir)
     for(uint32_t i=0;i<kernel_page_dir_idx;i++) {
         if(page_dir[i].present) {
             // copy page dir entry
-            new_page_dir[i] = page_dir[i];
-            // allocate one new page table
-            uint32_t page_table_vaddr = alloc_pages(curr_page_dir(), 1, true, true);
-            uint32_t page_table_paddr = vaddr2paddr(curr_page_dir(), page_table_vaddr);
-            new_page_dir[i].page_table_frame = FRAME_INDEX_FROM_ADDR(page_table_paddr);
-
+            PANIC_ASSERT(!new_page_dir[i].present);
             page_t* new_page_table =  get_page_table(new_page_dir, i, true);
+            uint32_t new_page_table_frame = new_page_dir[i].page_table_frame;
+            new_page_dir[i] = page_dir[i];
+            new_page_dir[i].page_table_frame = new_page_table_frame;
+            PANIC_ASSERT(new_page_dir[i].page_table_frame !=  page_dir[i].page_table_frame);
+
             page_t* page_table = get_page_table(page_dir, i, false);
             
             for(int j=0;j<PAGE_TABLE_SIZE;j++) {
@@ -641,18 +649,20 @@ pde* copy_user_space(pde* page_dir)
                     if(is_curr_page_dir(page_dir)) {
                         src = VADDR_FROM_PAGE_INDEX(page_idx);
                     } else {
-                        src = link_pages_between(page_dir, VADDR_FROM_PAGE_INDEX(page_idx), PAGE_SIZE, curr_page_dir(), false, false);
+                        src = link_pages(page_dir, VADDR_FROM_PAGE_INDEX(page_idx), PAGE_SIZE, curr_page_dir(), false, false, false);
                     }
-                    uint32_t dst = link_pages_between(new_page_dir, VADDR_FROM_PAGE_INDEX(page_idx), PAGE_SIZE, curr_page_dir(), page_table[j].rw, true);
+                    uint32_t dst = link_pages(new_page_dir, VADDR_FROM_PAGE_INDEX(page_idx), PAGE_SIZE, curr_page_dir(), true, page_table[j].rw, true);
                     memmove((char*) dst, (char*) src, PAGE_SIZE);
                     unmap_pages_from(curr_page_dir(), PAGE_INDEX_FROM_VADDR(dst), 1, false, false);
                     if(!is_curr_page_dir(page_dir)) {
                         unmap_pages_from(curr_page_dir(), PAGE_INDEX_FROM_VADDR(src), 1, false, false);
                     }
+
                     // copy page table entry
                     uint32_t new_frame = new_page_table[j].frame;
                     new_page_table[j] = page_table[j];
                     new_page_table[j].frame = new_frame;
+                    PANIC_ASSERT(new_page_table[j].frame !=  page_table[j].frame);
                 }
             }
             return_page_table(page_dir, page_table);

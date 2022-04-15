@@ -34,7 +34,7 @@ uint32_t alloc_pages_at(pde* page_dir, uint32_t page_index, size_t page_count, b
 void dealloc_pages(pde* page_dir, uint32_t page_index, size_t page_count);
 
 uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32_t* frames,  bool is_kernel, bool is_writeable, bool consecutive_frame);
-uint32_t link_pages_between(pde* pd_source, uint32_t vaddr, uint32_t size, pde* pd_target, bool alloc_source_rw, bool target_rw);
+uint32_t link_pages(pde* pd_source, uint32_t vaddr, uint32_t size, pde* pd_target, bool allow_alloc_source, bool alloc_source_rw, bool target_rw);
 void unmap_pages(pde* page_dir, uint32_t vaddr, uint32_t size);
 
 bool is_vaddr_accessible(pde* page_dir, uint32_t vaddr, bool is_from_kernel_code, bool is_writing);

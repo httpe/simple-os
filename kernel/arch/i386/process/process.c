@@ -132,7 +132,7 @@ void init_first_process()
     PANIC_ASSERT((uint32_t)START_INIT_SIZE > 0);
     PANIC_ASSERT(0!=*(char*)START_INIT_VIRTUAL_BEGIN);
 
-    uint32_t dst = link_pages_between(p->page_dir, (uint32_t) START_INIT_RELOC_BEGIN, (uint32_t)START_INIT_SIZE, curr_page_dir(), true, true);
+    uint32_t dst = link_pages(p->page_dir, (uint32_t) START_INIT_RELOC_BEGIN, (uint32_t)START_INIT_SIZE, curr_page_dir(), true, true, true);
     memmove((char*) dst, START_INIT_VIRTUAL_BEGIN, (uint32_t)START_INIT_SIZE);
     unmap_pages(curr_page_dir(), dst, (uint32_t)START_INIT_SIZE);
 
@@ -384,12 +384,30 @@ int fork()
 {
     proc* p_new = create_process();
     proc* p_curr = curr_proc();
+    // printf("Forking from PID: %d\n", p_curr->pid);
     // Duplicate user space content, kernel space will be mapped in scheduler
     p_new->page_dir = copy_user_space(p_curr->page_dir);
     p_new->parent = p_curr;
     p_new->size = p_curr->size;
     p_new->orig_size = p_curr->orig_size;
     *p_new->tf = *p_curr->tf;
+
+    // PANIC_ASSERT(p_curr->tf != p_new->tf);
+    // PANIC_ASSERT(p_curr->tf->eip == p_new->tf->eip);
+    // uint32_t curr_eip_paddr = vaddr2paddr(p_curr->page_dir, p_curr->tf->eip);
+    // uint32_t new_eip_paddr = vaddr2paddr(p_new->page_dir, p_new->tf->eip);
+    // PANIC_ASSERT(curr_eip_paddr != new_eip_paddr);
+    // uint32_t new_eip_curr_vaddr = link_pages(p_new->page_dir, p_new->tf->eip, sizeof(uint32_t), curr_page_dir(), false, false, false);
+    // uint32_t new_eip_curr_vaddr_paddr = vaddr2paddr(p_curr->page_dir, new_eip_curr_vaddr);
+    // PANIC_ASSERT(new_eip_paddr == new_eip_curr_vaddr_paddr);
+    // uint32_t curr_eip_code0 = *(uint32_t*)p_curr->tf->eip;
+    // uint32_t new_eip_code0 = *(uint32_t*)new_eip_curr_vaddr;
+    // PANIC_ASSERT(curr_eip_code0  == new_eip_code0);
+    // unmap_pages(curr_page_dir(), new_eip_curr_vaddr, sizeof(uint32_t));
+
+    // uint32_t new_esp = link_pages(
+    //     p_new->page_dir, p_new->tf->esp, MAP_MEM_PA_ZERO_TO - p_new->tf->esp, curr_page_dir(), false, false, false);
+    // unmap_pages(curr_page_dir(), new_esp, MAP_MEM_PA_ZERO_TO - p_new->tf->esp);
 
     dup_handles_to(p_curr, p_new);
 
@@ -564,7 +582,7 @@ int exec(const char* path, char* const * argv)
     alloc_pages_at(page_dir, PAGE_INDEX_FROM_VADDR(ustack_start) - 1, 1, false, false);
 
     // copy argv strings to the high end of the stack area
-    char* ustack_dst = (char*) link_pages_between(page_dir, ustack_start, PAGE_SIZE*USER_STACK_PAGE_SIZE, curr_page_dir(), false, true);
+    char* ustack_dst = (char*) link_pages(page_dir, ustack_start, PAGE_SIZE*USER_STACK_PAGE_SIZE, curr_page_dir(), false, false, true);
 
     uint32_t ustack[3+MAX_ARGC+1]; // +1: add a termination zero
     int argc;
@@ -578,6 +596,7 @@ int exec(const char* path, char* const * argv)
         // & ~3 to maintain 4 bytes alignment
         esp = (esp - size) & ~3;
         if(esp < ustack_start + sizeof(void*)*(3 + argc + 1 + 1)) {
+            PANIC('PROC CREATE ARG STACK OVERFLOW');
             // stack overflow, no room to store 3 (fake return PC, argc, argv) + argc+1 (pointer to previous arguments plus pointer to this arg)  + 1 (a terminating zero)
             unmap_pages(curr_page_dir(), ustack_start, PAGE_SIZE*USER_STACK_PAGE_SIZE);
             free_user_space(page_dir);

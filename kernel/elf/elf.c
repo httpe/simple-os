@@ -26,7 +26,7 @@ Elf32_Addr load_elf(pde* page_dir, const char* buff, uint32_t* vaddr_ub) {
         Elf32_Phdr program_header = program_header_table[i];
         if (program_header.p_type == PT_LOAD) {
             char* src_ptr = (char*)buff + program_header.p_offset;
-            char* dest_ptr = (char*) link_pages_between(page_dir, program_header.p_vaddr, program_header.p_memsz, curr_page_dir(), (program_header.p_flags & PF_W)==PF_W, true);
+            char* dest_ptr = (char*) link_pages(page_dir, program_header.p_vaddr, program_header.p_memsz, curr_page_dir(), true, (program_header.p_flags & PF_W)==PF_W, true);
             memset(dest_ptr, 0, program_header.p_memsz);
             memmove(dest_ptr, src_ptr, program_header.p_filesz);
             unmap_pages(curr_page_dir(), (uint32_t)dest_ptr, program_header.p_memsz);
