@@ -131,6 +131,7 @@ void isr_handler(trapframe* r) {
         interrupt_handler handler = interrupt_handlers[r->trapno];
         handler(r);
     }
+    while(1);
 }
 
 // Note: we assume there is NO any dynamic memory alloc/dealloc/mapping in interrupt handler except the syscall one
