@@ -13,14 +13,16 @@ global int_ret
 common_stub:
     ; 1. Save CPU state
     
-    ; save the segment descriptors
+    ; save the (user-space/ring 3) segment descriptors
+    ; CS is saved by int instruction already
     push ds
     push es
     push fs
     push gs
     pusha ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
 
-    ; switch to kernel code segment
+    ; switch to kernel data segment
+    ; cs has been switched by int instruction already
 	mov ax, KERNEL_DATA_SEG 
 	mov ds, ax
 	mov es, ax
