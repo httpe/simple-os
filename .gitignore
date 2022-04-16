@@ -17,3 +17,4 @@ toolchain/
 build-toolchain/
 stb_image.h
 mnt/
+*.map

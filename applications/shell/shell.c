@@ -124,10 +124,10 @@ int main(int argc, char* argv[]) {
     // for debugging
     char** default_commands = (char *[]) {
       // "systest\n",
-      "test\n",
-      "fasm /src/test_fasm.asm /home/testfasm.elf\n",
-      "/home/testfasm\n",
-      "fasm /src/fasm/libc/fasm.asm /home/fasm.o\n",
+      "test_SmallerC\n",
+      // "fasm /src/test_fasm.asm /home/testfasm.elf\n",
+      // "/home/testfasm\n",
+      // "fasm /src/fasm/libc/fasm.asm /home/fasm.o\n",
       NULL
     };
     int default_command_char_idx = 0;

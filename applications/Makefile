@@ -31,9 +31,10 @@ cp/cp.elf \
 image/image.elf \
 test/test.elf \
 fasm/fasm.elf \
+SmallerC/test_SmallerC.elf
 
 
-.PHONY: all clean install test/test.elf fasm/fasm.elf
+.PHONY: all clean install test/test.elf fasm/fasm.elf SmallerC/test_SmallerC.elf
 # .SUFFIXES: .o .c .S
 
 all: $(BINARIES)
@@ -77,6 +78,15 @@ fasm/fasm.elf: $(TOOL_CHAIN_BUILD_DIR)/fasm/fasm
 	cp fasm/test_fasm.asm $(SYSROOT)/src
 	cp -r $(TOOL_CHAIN_BUILD_DIR)/fasm/source $(SYSROOT)/src/fasm
 
+$(TOOL_CHAIN_BUILD_DIR)/SmallerC:
+	cd $(TOOL_CHAIN_BUILD_DIR); git clone https://github.com/httpe/SmallerC
+	cd $(TOOL_CHAIN_BUILD_DIR)/SmallerC; make
+
+SmallerC/test_SmallerC.elf: $(TOOL_CHAIN_BUILD_DIR)/SmallerC
+	# make sure Smaller C libc is the latest
+	cd $(TOOL_CHAIN_BUILD_DIR)/SmallerC; git pull; make
+	export PATH=$(TOOL_CHAIN_BUILD_DIR)/SmallerC:$(TOOL_CHAIN_BUILD_DIR)/fasm:$$PATH; smlrcc -simpleos -o SmallerC/test_SmallerC.elf -SI $(TOOL_CHAIN_BUILD_DIR)/SmallerC/v0100/include/ -SL $(TOOL_CHAIN_BUILD_DIR)/SmallerC -asm n2f -map SmallerC/test_SmallerC.map SmallerC/test_SmallerC.c
+
 %.elf: %.c
 	$(TOOL_CHAIN_ROOT)/usr/bin/i686-simpleos-gcc -MD -o $@ $< -std=gnu11 $(CFLAGS) $(CPPFLAGS) $(LIBS)
 
@@ -96,6 +106,8 @@ clean:
 	rm -f $(BINARIES)
 	rm -f $(OBJS) *.o */*.o */*/*.o
 	rm -f $(OBJS:.o=.d) *.d */*.d */*/*.d
+	(cd $(TOOL_CHAIN_BUILD_DIR)/SmallerC && make clean) || echo "No need to clean SmallerC"
+
 
 install: image/stb_image.h $(BINARIES)
 	mkdir -p $(DESTDIR)$(BINDIR)
