@@ -249,7 +249,6 @@ static uint32_t find_contiguous_free_pages(pde* page_dir, size_t page_count, boo
 //@return number of frames mapped
 uint map_pages_at(pde* page_dir, uint page_index, uint page_count, uint32_t* frames,  bool is_kernel, bool is_writeable, bool consecutive_frame)
 {
-    PANIC_ASSERT(!consecutive_frame || frames==NULL);
     if(page_count == 0) {
         return 0;
     }
