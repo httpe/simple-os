@@ -29,9 +29,11 @@ rmdir/rmdir.elf \
 ping/ping.elf \
 cp/cp.elf \
 image/image.elf \
+test/test.elf \
+fasm/fasm.elf \
 
 
-.PHONY: all clean install
+.PHONY: all clean install test/test.elf fasm/fasm.elf
 # .SUFFIXES: .o .c .S
 
 all: $(BINARIES)
@@ -41,6 +43,39 @@ all: $(BINARIES)
 
 # init/init.o: init/init.c
 # 	$(CC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) $(CPPFLAGS)
+
+KERNEL_CRT_DIR=$(PROJECT_ROOT)/kernel/arch/$(HOSTARCH)/crt
+LIBC_DIR=$(PROJECT_ROOT)/libc
+LIBC_CRT_DIR=$(LIBC_DIR)/arch/$(HOSTARCH)/crt
+
+APP_LINK_LIST_HEAD=\
+$(LIBC_CRT_DIR)/crt0.o \
+$(KERNEL_CRT_DIR)/crti.o \
+$(KERNEL_CRT_DIR)/crtbegin.o \
+
+APP_LINK_LIST_TAIL=\
+-nostdlib \
+-lu \
+-lgcc \
+$(KERNEL_CRT_DIR)/crtend.o \
+$(KERNEL_CRT_DIR)/crtn.o \
+
+# Test building executable from our own libc (libu) using standalone GCC
+test/test.elf:
+	$(TOOL_CHAIN_ROOT)/usr/bin/i686-elf-gcc -MD -MP -ffreestanding -std=gnu11 -g -isystem $(SYSROOT)/usr/include -c test/test.c -o test/test.o
+	$(TOOL_CHAIN_ROOT)/usr/bin/i686-elf-gcc --sysroot $(SYSROOT) -o $@ -g $(APP_LINK_LIST_HEAD) test/test.o $(APP_LINK_LIST_TAIL)
+
+$(TOOL_CHAIN_BUILD_DIR)/fasm/fasm:
+	curl https://flatassembler.net/fasm-1.73.30.tgz --output $(TOOL_CHAIN_BUILD_DIR)/fasm-1.73.30.tgz
+	cd  $(TOOL_CHAIN_BUILD_DIR) && tar -xf fasm-1.73.30.tgz
+
+fasm/fasm.elf: $(TOOL_CHAIN_BUILD_DIR)/fasm/fasm
+	$(TOOL_CHAIN_BUILD_DIR)/fasm/fasm $(TOOL_CHAIN_BUILD_DIR)/fasm/source/libc/fasm.asm fasm/fasm.o
+	$(TOOL_CHAIN_ROOT)/usr/bin/i686-elf-gcc -L $(LIBC_DIR) -o $@ -g $(APP_LINK_LIST_HEAD) fasm/fasm.o $(APP_LINK_LIST_TAIL)
+	# Copy some ASM source codes to test our ported FASM
+	mkdir -p $(SYSROOT)/src
+	cp fasm/test_fasm.asm $(SYSROOT)/src
+	cp -r $(TOOL_CHAIN_BUILD_DIR)/fasm/source $(SYSROOT)/src/fasm
 
 %.elf: %.c
 	$(TOOL_CHAIN_ROOT)/usr/bin/i686-simpleos-gcc -MD -o $@ $< -std=gnu11 $(CFLAGS) $(CPPFLAGS) $(LIBS)

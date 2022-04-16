@@ -430,12 +430,13 @@ int sys_getcwd(trapframe* r)
 
 int sys_test(trapframe* r)
 {
-    printf("SYS_TEST triggered\n");
     int arg0 = *(int*) (r->esp + 0);
     int arg1 = *(int*) (r->esp + 4);
     int arg2 = *(int*) (r->esp + 8);
     int arg3 = *(int*) (r->esp + 12);
     int arg4 = *(int*) (r->esp + 16);
+
+    printf("SYS_TEST triggered with arguments: %d (skip), %d, %d, %d, %d\n", arg0, arg1, arg2, arg3, arg4);
 
     // UNUSED_ARG(r);
 

@@ -7,6 +7,7 @@ export TAR=${TAR:-tar}
  
  # Root of hosted tool chain
 export PROJECT_ROOT="$(pwd)"
+export TOOL_CHAIN_BUILD_DIR="$(pwd)/build-toolchain"
 export TOOL_CHAIN_ROOT="$(pwd)/toolchain"
 export CROSSCOMPILERBIN=$TOOL_CHAIN_ROOT/usr/bin
 

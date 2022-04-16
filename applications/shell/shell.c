@@ -123,6 +123,11 @@ int main(int argc, char* argv[]) {
 
     // for debugging
     char** default_commands = (char *[]) {
+      // "systest\n",
+      "test\n",
+      "fasm /src/test_fasm.asm /home/testfasm.elf\n",
+      "/home/testfasm\n",
+      "fasm /src/fasm/libc/fasm.asm /home/fasm.o\n",
       NULL
     };
     int default_command_char_idx = 0;
@@ -265,7 +270,7 @@ int main(int argc, char* argv[]) {
                 while(1) {
                   int wait_ret = wait(&child_exit_status);
                   if(wait_ret < 0) {
-                      // printf("No child exited\n");
+                      printf("Shell: No child exited but SYS_WAIT returned\n");
                   } else {
                       int exit_code = WEXITSTATUS(child_exit_status);
                       if(exit_code != 0) {

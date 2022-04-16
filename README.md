@@ -88,6 +88,8 @@ Although the final goal is to make the system self-hosting, we have planned for 
     - Port an assembler
     - Port a simplified C compiler
     - Compile our text editor within our OS
+    - **In Progress**
+      - [FASM](https://flatassembler.net/index.php) ported
 
 1. **Milestone Ten: Window Manager and GUI**
     - Allow switching between two consoles at the same time
@@ -114,6 +116,7 @@ Although the final goal is to make the system self-hosting, we have planned for 
         sudo apt -y update
         sudo apt -y install build-essential autoconf automake git
         sudo apt -y install bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo libisl-dev curl
+        sudo apt -y install gcc-multilib
         sudo apt -y install qemu-system-x86 nasm
     ```
 
