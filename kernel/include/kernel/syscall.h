@@ -49,6 +49,8 @@
 #define SYS_CURR_TIME_EPOCH 70
 #define SYS_GET_FILE_OFFSET 80
 
+#define SYS_BRK 90
+
 // defined in interrupt.asm
 extern void int88();
 

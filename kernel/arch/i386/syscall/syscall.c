@@ -26,33 +26,57 @@ int sys_exec(trapframe* r)
     return exec(path, argv);
 }
 
+int sys_brk(trapframe* r)
+{
+    uint32_t new_size = *(uint32_t*) (r->esp + 4);
+
+    proc* p = curr_proc();
+    uint32_t old_size = p->size;
+    if(new_size < p->orig_size) {
+        // mimic Linux syscall, return current break if invalid new break specified
+        // capturing brk(0) calls
+        return old_size;
+    }
+    
+    p->size = new_size;
+    uint32_t old_last_pg_idx = PAGE_INDEX_FROM_VADDR(old_size - 1);
+    uint32_t new_last_pg_idx =  PAGE_INDEX_FROM_VADDR(new_size - 1);
+    if(new_last_pg_idx > old_last_pg_idx) {
+        alloc_pages_at(p->page_dir, old_last_pg_idx + 1, new_last_pg_idx - old_last_pg_idx, false, true);
+    } else if(new_last_pg_idx < old_last_pg_idx) {
+        dealloc_pages(p->page_dir, new_last_pg_idx + 1, old_last_pg_idx - new_last_pg_idx); 
+    }
+
+    return new_size;
+}
+
 // increase/decrease process image size
 int sys_sbrk(trapframe* r)
 {
     int32_t delta = *(int32_t*) (r->esp + 4);
     
     proc* p = curr_proc();
-    uint32_t orig_size = p->size;
+    uint32_t old_size = p->size;
     uint32_t new_size = p->size + delta;
     if(new_size < p->orig_size) {
         return -EINVAL;
     } 
     p->size = new_size;
-    uint32_t orig_last_pg_idx = PAGE_INDEX_FROM_VADDR(orig_size - 1);
+    uint32_t old_last_pg_idx = PAGE_INDEX_FROM_VADDR(old_size - 1);
     uint32_t new_last_pg_idx =  PAGE_INDEX_FROM_VADDR(new_size - 1);
-    if(new_last_pg_idx > orig_last_pg_idx) {
-        alloc_pages_at(p->page_dir, orig_last_pg_idx + 1, new_last_pg_idx - orig_last_pg_idx, false, true);
-    } else if(new_last_pg_idx < orig_last_pg_idx) {
-        dealloc_pages(p->page_dir, new_last_pg_idx + 1, orig_last_pg_idx - new_last_pg_idx); 
+    if(new_last_pg_idx > old_last_pg_idx) {
+        alloc_pages_at(p->page_dir, old_last_pg_idx + 1, new_last_pg_idx - old_last_pg_idx, false, true);
+    } else if(new_last_pg_idx < old_last_pg_idx) {
+        dealloc_pages(p->page_dir, new_last_pg_idx + 1, old_last_pg_idx - new_last_pg_idx); 
     }
     // if(delta > 0) {
-    //     memset((void*) orig_size, 0, delta);
+    //     memset((void*) old_size, 0, delta);
     // }
-    // PANIC_ASSERT(is_vaddr_accessible(p->page_dir, orig_size, false, true));
+    // PANIC_ASSERT(is_vaddr_accessible(p->page_dir, old_size, false, true));
     // if(delta > 0) {
-    //     PANIC_ASSERT(is_vaddr_accessible(p->page_dir, orig_size + delta - 1, false, true));
+    //     PANIC_ASSERT(is_vaddr_accessible(p->page_dir, old_size + delta - 1, false, true));
     //     if(delta > PAGE_SIZE) {
-    //         PANIC_ASSERT(is_vaddr_accessible(p->page_dir, orig_size + PAGE_SIZE, false, true));
+    //         PANIC_ASSERT(is_vaddr_accessible(p->page_dir, old_size + PAGE_SIZE, false, true));
     //     }
     // }
     // PANIC_ASSERT(!is_vaddr_accessible(p->page_dir, 0xEFFFFFFF, false, true));
@@ -61,7 +85,7 @@ int sys_sbrk(trapframe* r)
     // uint32_t p2 = vaddr2paddr(p->page_dir, 0xbfffff94);
 
     // returning int but shall cast back to uint
-    return (int) orig_size;
+    return (int) old_size;
 }
 
 int sys_print(trapframe* r)
@@ -406,17 +430,24 @@ int sys_getcwd(trapframe* r)
 
 int sys_test(trapframe* r)
 {
-    UNUSED_ARG(r);
+    printf("SYS_TEST triggered\n");
+    int arg0 = *(int*) (r->esp + 0);
+    int arg1 = *(int*) (r->esp + 4);
+    int arg2 = *(int*) (r->esp + 8);
+    int arg3 = *(int*) (r->esp + 12);
+    int arg4 = *(int*) (r->esp + 16);
 
-    printf("Halting...\n");
+    // UNUSED_ARG(r);
 
-    while(1) {
-        // process_IRQ(1);
-        yield();
-        PANIC_ASSERT(!is_interrupt_enabled());
-    }    
+    // printf("Halting...\n");
 
-    return 0;
+    // while(1) {
+    //     // process_IRQ(1);
+    //     yield();
+    //     PANIC_ASSERT(!is_interrupt_enabled());
+    // }    
+
+    return 123;
 }
 
 int sys_mkdir(trapframe* r)
@@ -635,6 +666,9 @@ void syscall_handler(trapframe* r)
         break;
     case SYS_GET_FILE_OFFSET:
         r->eax = sys_get_file_offset(r);
+        break;
+    case SYS_BRK:
+        r->eax = sys_brk(r);
         break;
     default:
         printf("Unrecognized Syscall: %d\n", r->eax);
