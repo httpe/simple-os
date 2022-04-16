@@ -85,8 +85,9 @@ Although the final goal is to make the system self-hosting, we have planned for 
       - Socket API supporting ICMP protocol implemented
 
 1. **Milestone Nine: Compiler**
+    - Port an assembler
     - Port a simplified C compiler
-    - Compile our text editor in our OS
+    - Compile our text editor within our OS
 
 1. **Milestone Ten: Window Manager and GUI**
     - Allow switching between two consoles at the same time
