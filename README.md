@@ -85,11 +85,12 @@ Although the final goal is to make the system self-hosting, we have planned for 
       - Socket API supporting ICMP protocol implemented
 
 1. **Milestone Nine: Compiler**
-    - Port an assembler
-    - Port a simplified C compiler
+    - Port an assembler, e.g. [FASM](https://flatassembler.net/index.php)
+    - Port a simplified C compiler, e.g. [SmallerC](https://github.com/alexfru/SmallerC)
     - Compile our text editor within our OS
     - **In Progress**
-      - [FASM](https://flatassembler.net/index.php) ported
+      - FASM ported
+      - SmallerC hosted-toolchain built (libc ported)
 
 1. **Milestone Ten: Window Manager and GUI**
     - Allow switching between two consoles at the same time
