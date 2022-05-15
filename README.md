@@ -90,7 +90,7 @@ Although the final goal is to make the system self-hosting, we have planned for 
     - Compile our text editor within our OS
     - **In Progress**
       - FASM ported
-      - SmallerC hosted-toolchain built (libc ported)
+      - SmallerC hosted-toolchain built ([libc ported](https://github.com/httpe/SmallerC))
 
 1. **Milestone Ten: Window Manager and GUI**
     - Allow switching between two consoles at the same time
