@@ -4,6 +4,7 @@
 #include <kernel/panic.h>
 #include <kernel/vfs.h>
 #include <kernel/process.h>
+#include <kernel/time.h>
 #include <kernel/ethernet.h>
 #include <kernel/ipv4.h>
 #include <kernel/icmp.h>

@@ -1,18 +1,18 @@
-#ifndef _STAT_H
-#define _STAT_H
+#ifndef _FSSTAT_H
+#define _FSSTAT_H
 
 #include <stdint.h>
-#include <kernel/time.h>
+#include <datetime.h>
 
 // Mimic Linux stat.h
 
 typedef struct fs_stat {
-    uint64_t mount_point_id;        /* Mount Point ID  */
-    uint64_t inum;                 /* File serial number. */
-    uint64_t nlink;              /* Link count.  */
-    uint32_t mode;              /* File mode.  */
-    uint64_t size;              /* Size of file, in bytes.  */
-    uint64_t blocks;             /* Number 512-byte blocks allocated. */
+    uint32_t mount_point_id;     /* Mount Point ID  */
+    uint32_t inum;               /* File serial number. */
+    uint32_t nlink;              /* Link count.  */
+    uint32_t mode;               /* File mode.  */
+    uint32_t size;               /* Size of file, in bytes.  */
+    uint32_t blocks;             /* Number 512-byte blocks allocated. */
     date_time mtime;             /* Time of last modification.  */
     date_time ctime;             /* Time of last status change.  */
 } fs_stat;

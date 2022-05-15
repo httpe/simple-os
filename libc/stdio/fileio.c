@@ -2,7 +2,7 @@
 #include<string.h>
 #include<syscall.h>
 #include<common.h>
-#include <kernel/stat.h>
+#include <fsstat.h>
 
 
 static inline _syscall3(SYS_READ, int, sys_read, int, fd, void*, buf, uint, size)

@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 #include <kernel/errno.h>
-#include <kernel/stat.h>
+#include <fsstat.h>
 #include <kernel/block_io.h>
 #include <kernel/vfs.h>
 #include <kernel/fat.h>

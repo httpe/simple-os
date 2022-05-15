@@ -2,7 +2,7 @@
 #define _KERNEL_FILE_SYSTEM_H
 
 #include <kernel/block_io.h>
-#include <kernel/stat.h>
+#include <fsstat.h>
 #include <stdint.h>
 #include <common.h>
 

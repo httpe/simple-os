@@ -5,7 +5,8 @@
 #include <stddef.h>
 
 #include <kernel/errno.h>
-#include <kernel/stat.h>
+#include <kernel/time.h>
+#include <fsstat.h>
 #include <kernel/fat.h>
 
 #define HAS_ATTR(file,attr) (((file)&(attr)) == (attr))

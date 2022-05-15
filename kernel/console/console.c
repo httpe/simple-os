@@ -5,7 +5,7 @@
 #include <kernel/console.h>
 #include <kernel/keyboard.h>
 #include <kernel/tty.h>
-#include <kernel/stat.h>
+#include <fsstat.h>
 #include <kernel/lock.h>
 #include <arch/i386/kernel/cpu.h>
 

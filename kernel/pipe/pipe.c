@@ -1,5 +1,5 @@
 #include <kernel/pipe.h>
-#include <kernel/stat.h>
+#include <fsstat.h>
 #include <kernel/process.h>
 #include <kernel/errno.h>
 #include <kernel/lock.h>

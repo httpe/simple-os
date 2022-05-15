@@ -1,7 +1,7 @@
 #ifndef _SYSCALL_H
 #define _SYSCALL_H
 
-#include <kernel/syscall.h>
+#include <syscallnum.h>
 
 #define _syscall0(syscall_num, retval_type, name) \
 retval_type name() \

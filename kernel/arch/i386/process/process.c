@@ -6,7 +6,7 @@
 #include <kernel/memory_bitmap.h>
 #include <kernel/socket.h>
 #include <kernel/vfs.h>
-#include <kernel/stat.h>
+#include <fsstat.h>
 #include <kernel/errno.h>
 #include <kernel/elf.h>
 #include <kernel/cpu.h>
