@@ -107,6 +107,7 @@ install-kernel: simple_os.kernel
 
 install-reserved-path:
 	mkdir -p $(DESTDIR)/home
+	mkdir -p $(DESTDIR)/tmp
 	touch $(DESTDIR)/console
 	touch $(DESTDIR)/pipe
 
