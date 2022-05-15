@@ -94,6 +94,7 @@ int readKey() {
     return c;
   }
 }
+extern char** environ;
 
 int main(int argc, char* argv[]) {
     // Clear screen
@@ -109,18 +110,7 @@ int main(int argc, char* argv[]) {
     write(STDOUT_FILENO, "\x1b[H", 3);
 
     printf("Welcome to the Shell (%d x %d)!\n", row, col);
-    printf("Shell ARGC(%d)\n", argc);
-    for(int i=0; i<argc; i++) {
-        printf("  %d: %s\n", i, argv[i]);
-    }
-    printf("Use 'help' command to show usage\n");
     
-    
-    char command[MAX_COMMAND_LEN + 1] = {0};
-    int n_command_read;
-    char prev_command[MAX_COMMAND_LEN + 1] = {0};
-    int prev_n_command_read;
-
     // for debugging
     char** default_commands = (char *[]) {
       // "systest\n",
@@ -131,6 +121,20 @@ int main(int argc, char* argv[]) {
       NULL
     };
     int default_command_char_idx = 0;
+
+    printf("Shell ARGC(%d)\n", argc);
+    for(int i=0; i<argc; i++) {
+        printf("  %d: %s\n", i, argv[i]);
+        if(strcmp(argv[i], "-c") == 0) {
+          default_commands = &argv[i+1];
+        }
+    }
+    printf("Use 'help' command to show usage\n");
+    
+    char command[MAX_COMMAND_LEN + 1] = {0};
+    int n_command_read;
+    char prev_command[MAX_COMMAND_LEN + 1] = {0};
+    int prev_n_command_read;
 
     char* cwd = malloc(MAX_PATH_LEN+1);
 
@@ -281,7 +285,7 @@ int main(int argc, char* argv[]) {
                 }
             } else {
                 // child
-                int ret = execve(program_argv[0], program_argv, NULL);
+                int ret = execve(program_argv[0], program_argv, environ);
                 printf("shell exec error(%d)\n", ret);
                 exit(ret);
             }

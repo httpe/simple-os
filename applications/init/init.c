@@ -212,8 +212,9 @@ int main(int argc, char* argv[]) {
     } else {
         // child
         char* shell_argv[] = {"/usr/bin/shell.elf", NULL};
+        char* shell_envp[] = {"SHELL=/usr/bin/shell.elf", NULL};
         printf("EXEC Shell\n");
-        execve("/usr/bin/shell.elf", shell_argv, NULL);
+        execve("/usr/bin/shell.elf", shell_argv, shell_envp);
     }
 
 }

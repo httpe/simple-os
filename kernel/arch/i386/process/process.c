@@ -555,8 +555,13 @@ static void* read_file(const char* path)
     return file_buffer;
 }
 
-int exec(const char* path, char* const * argv) 
+int exec(const char* path, char* const * argv, char* const* envp) 
 {
+    if(!argv || !argv[0] || !envp) {
+        printf("exec error: illegal argv or envp\n");
+        return -1;
+    }
+
     // Load executable from file system
     char* file_buffer = read_file(path);
     if(file_buffer == NULL) return -1;
@@ -581,39 +586,64 @@ int exec(const char* path, char* const * argv)
     // allocate one read-only page below the user stack to catch stack overflow or heap over growth
     alloc_pages_at(page_dir, PAGE_INDEX_FROM_VADDR(ustack_start) - 1, 1, false, false);
 
-    // copy argv strings to the high end of the stack area
-    char* ustack_dst = (char*) link_pages(page_dir, ustack_start, PAGE_SIZE*USER_STACK_PAGE_SIZE, curr_page_dir(), false, false, true);
+    // user stack layout, from low address to high address
+    // [one page user stack padding to detect stack overflow] [free stack space] (esp points to here) [0xFFFFFFFF] [argc] [argv] [envp] (start of argv arrray) [argv[0]] ... [argv[argc-1]] [NULL] (start of env variables) [envp[0]] ... [envp[MAX_ENV_VAR_COUNT-1]] [NULL] (start of actual content of args) [argv[argc-1][0], argv[argc-1][1], ... ] ... [argv[0][0], argv[0][1], ...]
 
-    uint32_t ustack[3+MAX_ARGC+1]; // +1: add a termination zero
-    int argc;
-    for(argc=0; argc<MAX_ARGC; argc++) {
-        if(argv[argc] == 0) {
-            ustack[3 + argc] = 0;
+    // copy argv/envp strings to the high end of the stack area
+    uint32_t ustack_start_linked = link_pages(page_dir, ustack_start, PAGE_SIZE*USER_STACK_PAGE_SIZE, curr_page_dir(), false, false, true);
+    uint32_t esp_linked = ustack_start_linked + (esp - ustack_start);
+
+    // fake return PC, argc, argv, envp, ... (pointer to args), NULL, ... (pointers to env vars), NULL
+    uint32_t ustack[4+MAX_ARGC+2] = {0};
+    
+    int argc = 0;
+    int envc = 0;
+    char* arg;
+    int is_arg;
+    while(argc+envc<MAX_ARGC) {
+        if(argv && argv[argc]) {
+            arg = argv[argc];
+            is_arg = 1;
+        } else if(envp && envp[envc]) {
+            arg = envp[envc];
+            is_arg = 0;
+        } else {
             break;
         }
+
         // copy the argv content to memory right above any mapped memory specified by the ELF binary
-        uint32_t size = strlen(argv[argc]) + 1;
+        uint32_t size = strlen(arg) + 1;
         // & ~3 to maintain 4 bytes alignment
         esp = (esp - size) & ~3;
-        if(esp < ustack_start + sizeof(void*)*(3 + argc + 1 + 1)) {
-            PANIC('PROC CREATE ARG STACK OVERFLOW');
-            // stack overflow, no room to store 3 (fake return PC, argc, argv) + argc+1 (pointer to previous arguments plus pointer to this arg)  + 1 (a terminating zero)
-            unmap_pages(curr_page_dir(), ustack_start, PAGE_SIZE*USER_STACK_PAGE_SIZE);
+        esp_linked = ustack_start_linked + (esp - ustack_start);
+        if(esp < ustack_start + sizeof(ustack)) {
+            // stack overflow
+            printf("exec error: args too long\n");
+            unmap_pages(curr_page_dir(), ustack_start_linked, PAGE_SIZE*USER_STACK_PAGE_SIZE);
             free_user_space(page_dir);
             return -1;
         }
-        memmove(ustack_dst + (esp - ustack_start), argv[argc], size);
-        ustack[3 + argc] = esp;
+        memmove((char*)esp_linked, arg, size);
+
+        if(is_arg) {
+            ustack[4 + argc++] = esp;
+        } else {
+            ustack[4 + argc + 1 + envc++] = esp;
+        }
+
     }
-    
+
+    esp -= sizeof(ustack);
+    esp_linked = ustack_start_linked + (esp - ustack_start);
+
     // user stack, mimic a normal function call
     ustack[0] = 0xFFFFFFFF; // fake return PC
     ustack[1] = argc;
-    ustack[2] = esp - sizeof(void*)*(argc + 1);
+    ustack[2] = esp + sizeof(*ustack) * 4; // argv
+    ustack[3] = esp + sizeof(*ustack) * (4 + argc + 1); // envp
 
-    uint32_t rem_stack_size = sizeof(void*)*(3 + argc + 1);
-    esp -= rem_stack_size;
-    memmove(ustack_dst + (esp - ustack_start), ustack, rem_stack_size);
+    memmove((char*)esp_linked, ustack, sizeof(ustack));
+    unmap_pages(curr_page_dir(), ustack_start_linked, PAGE_SIZE*USER_STACK_PAGE_SIZE);
 
     // maintain trapframe
     proc* p = curr_proc();

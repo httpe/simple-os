@@ -23,8 +23,8 @@ int sys_exec(trapframe* r)
     // uint32_t num = *(uint32_t*) r->esp;
     char* path = (char*) *(uint32_t*) (r->esp + 4);
     char** argv = (char**) *(uint32_t*) (r->esp + 8);
-    // printf("SYS_EXEC: eip: %u, path: %s\n", num, path);
-    return exec(path, argv);
+    char** envp = (char**) *(uint32_t*) (r->esp + 12);
+    return exec(path, argv, envp);
 }
 
 int sys_brk(trapframe* r)
