@@ -142,7 +142,7 @@ int ipv4_wait_for_next_packet(void* buf, uint buf_size, uint timeout_sec)
     while(pkt_received == n) {
         end = current_datetime();
         epoch1 = datetime2epoch(&end);
-        if(epoch1 - epoch0 > timeout_sec) {
+        if((uint)(epoch1 - epoch0) > timeout_sec) {
             return -1;
         }
         yield();
