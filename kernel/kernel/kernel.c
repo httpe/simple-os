@@ -103,7 +103,7 @@ uint test_video()
     uint64_t draw_time = 0;
     uint64_t refresh_time = 0;
     
-    const uint n_iteration = 100;
+    const uint n_iteration = 500;
 
     uint64_t t0 = rdtsc();
 
@@ -116,18 +116,25 @@ uint test_video()
         char c = (i%2 == 0)?'A':'B';
 
         uint64_t tt0 = rdtsc();
+		uint64_t tt01, tt02, tt03;
         for(uint y=0;y < char_h;y++) {
             for(uint x=0;x < char_w; x++) {
+				tt01 = rdtsc();
                 drawchar(c, x * FONT_WIDTH, y * FONT_HEIGHT, 0x0, 0x00FFFFFF);
+				tt02 = rdtsc();
                 // video_refresh_rect(x * FONT_WIDTH, y * FONT_HEIGHT, FONT_WIDTH, FONT_HEIGHT);
+				tt03 = rdtsc();
+				draw_time += tt02 - tt01;
+				refresh_time += tt03 - tt02;
             }
-        }
-        uint64_t tt1 = rdtsc();
-        video_refresh();
-        uint64_t tt2 = rdtsc();
 
-        draw_time += tt1 - tt0;
-        refresh_time += tt2 - tt1;
+        }
+
+		uint64_t tt1 = rdtsc();
+		video_refresh();
+		uint64_t tt2 = rdtsc();
+		refresh_time += tt2 - tt1;
+
     }
 
     uint64_t t1 = rdtsc();
@@ -139,6 +146,10 @@ uint test_video()
     uint refresh_pct = (refresh_time * 100) / total_cycle;
     uint refresh_fps = freq / (refresh_time / n_iteration);
 
+	// testing result:
+	// full draw + full screen refresh = 33 FPS (O2 compile: 53 FPS)
+	// draw one char and refresh rectangle = 22 FPS (O2 compile: 43 FPS)
+	// draw one line and full refresh = 3 FPS (O2 Compile: 10 FPS)
     printf("Video Benchmark: FPS[%d]:RefreshFPS[%d]:DRAW_PCT[%d]:REFRESH_PCT[%d]\n", fps, refresh_fps, draw_pct, refresh_pct);
     
     return fps;
