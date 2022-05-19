@@ -358,8 +358,8 @@ static int console_write(struct fs_mount_point* mount_point, const char * path, 
     // clear_screen_time = 0;
 
     // uint64_t t0 = rdtsc();
+    // tty_stop_refresh();
 
-    tty_stop_refresh();
     for(uint i=0; i<size; i++) {
         // uint64_t tt0 = rdtsc();
         char c = buf[i];
@@ -374,9 +374,7 @@ static int console_write(struct fs_mount_point* mount_point, const char * path, 
     }
 
     // uint64_t t1 = rdtsc();
-
-    tty_start_refresh();
-
+    // tty_start_refresh();
     // uint64_t t2 = rdtsc();
     // uint64_t d = t2 - t0;
     // volatile uint64_t fps = 3600750000 / (d+1);
