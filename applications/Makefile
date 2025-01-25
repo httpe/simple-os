@@ -83,11 +83,9 @@ fasm/fasm.elf: $(TOOL_CHAIN_BUILD_DIR)/fasm/fasm
 
 $(TOOL_CHAIN_BUILD_DIR)/SmallerC:
 	cd $(TOOL_CHAIN_BUILD_DIR); git clone https://github.com/httpe/SmallerC
-	cd $(TOOL_CHAIN_BUILD_DIR)/SmallerC; make smlrc smlrl smlrcc smlrpp n2f lcs.a
+	cd $(TOOL_CHAIN_BUILD_DIR)/SmallerC; export SIMPLEOS_SRC=$(PROJECT_ROOT); make smlrc smlrl smlrcc smlrpp n2f lcs.a
 
 SmallerC/test_SmallerC.elf: $(TOOL_CHAIN_BUILD_DIR)/SmallerC
-	# make sure Smaller C libc is the latest
-	cd $(TOOL_CHAIN_BUILD_DIR)/SmallerC; git pull; export SIMPLEOS_SRC=$(PROJECT_ROOT); make smlrc smlrl smlrcc smlrpp n2f lcs.a
 	export PATH=$(TOOL_CHAIN_BUILD_DIR)/SmallerC:$(TOOL_CHAIN_BUILD_DIR)/fasm:$$PATH; smlrcc -simpleos -o SmallerC/test_SmallerC.elf -SI $(TOOL_CHAIN_BUILD_DIR)/SmallerC/v0100/include/ -SI $(PROJECT_ROOT)/kernel/include -SL $(TOOL_CHAIN_BUILD_DIR)/SmallerC -asm n2f -map SmallerC/test_SmallerC.map SmallerC/test_SmallerC.c
 
 %.elf: %.c
