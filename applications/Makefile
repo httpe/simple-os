@@ -66,9 +66,12 @@ test/test.elf:
 	$(TOOL_CHAIN_ROOT)/usr/bin/i686-elf-gcc -MD -MP -ffreestanding -std=gnu11 -g -isystem $(SYSROOT)/usr/include -c test/test.c -o test/test.o
 	$(TOOL_CHAIN_ROOT)/usr/bin/i686-elf-gcc --sysroot $(SYSROOT) -o $@ -g $(APP_LINK_LIST_HEAD) test/test.o $(APP_LINK_LIST_TAIL)
 
+# Download the FASM assembler. The WSL2 docker cannot run the 32bit FASM binary, so link to the 64bit version instead.
 $(TOOL_CHAIN_BUILD_DIR)/fasm/fasm:
 	curl https://flatassembler.net/fasm-1.73.30.tgz --output $(TOOL_CHAIN_BUILD_DIR)/fasm-1.73.30.tgz
 	cd  $(TOOL_CHAIN_BUILD_DIR) && tar -xf fasm-1.73.30.tgz
+	mv $(TOOL_CHAIN_BUILD_DIR)/fasm/fasm $(TOOL_CHAIN_BUILD_DIR)/fasm/fasm.x86
+	ln -s $(TOOL_CHAIN_BUILD_DIR)/fasm/fasm.x64 $(TOOL_CHAIN_BUILD_DIR)/fasm/fasm
 
 fasm/fasm.elf: $(TOOL_CHAIN_BUILD_DIR)/fasm/fasm
 	$(TOOL_CHAIN_BUILD_DIR)/fasm/fasm $(TOOL_CHAIN_BUILD_DIR)/fasm/source/libc/fasm.asm fasm/fasm.o
