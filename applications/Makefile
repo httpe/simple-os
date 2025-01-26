@@ -66,10 +66,13 @@ test/test.elf:
 	$(TOOL_CHAIN_ROOT)/usr/bin/i686-elf-gcc -MD -MP -ffreestanding -std=gnu11 -g -isystem $(SYSROOT)/usr/include -c test/test.c -o test/test.o
 	$(TOOL_CHAIN_ROOT)/usr/bin/i686-elf-gcc --sysroot $(SYSROOT) -o $@ -g $(APP_LINK_LIST_HEAD) test/test.o $(APP_LINK_LIST_TAIL)
 
+$(TOOL_CHAIN_BUILD_DIR):
+	mkdir -p $(TOOL_CHAIN_BUILD_DIR)
+
 # Download the FASM assembler. The WSL2 docker cannot run the 32bit FASM binary, so link to the 64bit version instead.
-$(TOOL_CHAIN_BUILD_DIR)/fasm/fasm:
+$(TOOL_CHAIN_BUILD_DIR)/fasm/fasm: $(TOOL_CHAIN_BUILD_DIR)
 	curl https://flatassembler.net/fasm-1.73.30.tgz --output $(TOOL_CHAIN_BUILD_DIR)/fasm-1.73.30.tgz
-	cd  $(TOOL_CHAIN_BUILD_DIR) && tar -xf fasm-1.73.30.tgz
+	cd $(TOOL_CHAIN_BUILD_DIR) && tar -xf fasm-1.73.30.tgz
 	mv $(TOOL_CHAIN_BUILD_DIR)/fasm/fasm $(TOOL_CHAIN_BUILD_DIR)/fasm/fasm.x86
 	ln -s $(TOOL_CHAIN_BUILD_DIR)/fasm/fasm.x64 $(TOOL_CHAIN_BUILD_DIR)/fasm/fasm
 
@@ -81,11 +84,13 @@ fasm/fasm.elf: $(TOOL_CHAIN_BUILD_DIR)/fasm/fasm
 	cp fasm/test_fasm.asm $(SYSROOT)/src
 	cp -r $(TOOL_CHAIN_BUILD_DIR)/fasm/source $(SYSROOT)/src/fasm
 
-$(TOOL_CHAIN_BUILD_DIR)/SmallerC:
+$(TOOL_CHAIN_BUILD_DIR)/SmallerC: $(TOOL_CHAIN_BUILD_DIR)
 	cd $(TOOL_CHAIN_BUILD_DIR); git clone https://github.com/httpe/SmallerC
+
+$(TOOL_CHAIN_BUILD_DIR)/SmallerC/smlrcc: $(TOOL_CHAIN_BUILD_DIR)/SmallerC
 	cd $(TOOL_CHAIN_BUILD_DIR)/SmallerC; export SIMPLEOS_SRC=$(PROJECT_ROOT); make smlrc smlrl smlrcc smlrpp n2f lcs.a
 
-SmallerC/test_SmallerC.elf: $(TOOL_CHAIN_BUILD_DIR)/SmallerC
+SmallerC/test_SmallerC.elf: $(TOOL_CHAIN_BUILD_DIR)/SmallerC/smlrcc
 	export PATH=$(TOOL_CHAIN_BUILD_DIR)/SmallerC:$(TOOL_CHAIN_BUILD_DIR)/fasm:$$PATH; smlrcc -simpleos -o SmallerC/test_SmallerC.elf -SI $(TOOL_CHAIN_BUILD_DIR)/SmallerC/v0100/include/ -SI $(PROJECT_ROOT)/kernel/include -SL $(TOOL_CHAIN_BUILD_DIR)/SmallerC -asm n2f -map SmallerC/test_SmallerC.map SmallerC/test_SmallerC.c
 
 %.elf: %.c

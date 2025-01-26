@@ -103,6 +103,22 @@ Although the final goal is to make the system self-hosting, we have planned for 
     - Compile the source code of the system inside the system (self-compiling)
     - Compile the compiling toolchain in the system and use them to compile the system (self-hosting)
 
+## Docker Image
+
+You can either follow the instructions below to install dependencies and build, or directly build a docker image using our `Dockerfile`.
+
+```bash
+docker build -t simple-os/final:local .
+```
+
+This might take 30+ minutes.
+
+To run Simple-OS (in WSL Linux):
+
+```bash
+docker run --rm -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY -it simple-os/final:local
+```
+
 ## Dependencies
 
 1. [NASM Assembler](https://www.nasm.us/).
@@ -119,6 +135,7 @@ Although the final goal is to make the system self-hosting, we have planned for 
         sudo apt -y install bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo libisl-dev curl
         sudo apt -y install gcc-multilib
         sudo apt -y install qemu-system-x86 nasm
+        sudo apt -y install dosfstools xterm
     ```
 
     Installing 1-3 on `Arch Linux`:
